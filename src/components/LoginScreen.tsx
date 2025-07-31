@@ -21,10 +21,41 @@ export default function LoginScreen() {
         await signUp(email, password, name);
         alert('アカウントが作成されました。運営チームの承認をお待ちください。');
       } else {
-        await signIn(email, password);
+        const { user } = await signIn(email, password);
+        
+        // Check if user is approved
+        if (user) {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('is_approved, name')
+            .eq('id', user.id)
+            .maybeSingle();
+          
+          if (profileError) {
+            console.error('Profile check error:', profileError);
+          } else if (profile && !profile.is_approved) {
+            // Show approval message for unapproved users
+            setError(`${profile.name || 'ユーザー'}さん、アカウントの承認をお待ちください。運営チームが確認後、ご利用いただけるようになります。`);
+            // Sign out the user since they can't use the app yet
+            await supabase.auth.signOut();
+            return;
+          }
+        }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'エラーが発生しました');
+      let errorMessage = 'エラーが発生しました';
+      
+      if (err instanceof Error) {
+        if (err.message.includes('Invalid login credentials')) {
+          errorMessage = 'メールアドレスまたはパスワードが正しくありません。';
+        } else if (err.message.includes('Email not confirmed')) {
+          errorMessage = 'メールアドレスの確認が完了していません。';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
