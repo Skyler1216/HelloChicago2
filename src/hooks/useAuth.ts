@@ -65,7 +65,7 @@ export function useAuth() {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (!mounted || !initialized) return;
+        if (!mounted) return;
         
         // Handle authentication errors by clearing session
         if (event === 'TOKEN_REFRESHED' && !session) {

@@ -23,7 +23,10 @@ export default function LoginScreen() {
       } else {
         const { user } = await signIn(email, password);
         
-        // Let the app handle approval check and show approval page
+        // Force a small delay to ensure auth state is updated
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // The useAuth hook will automatically handle the approval check
       }
     } catch (err) {
       let errorMessage = 'エラーが発生しました';
