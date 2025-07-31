@@ -53,8 +53,15 @@ export const signIn = async (email: string, password: string) => {
 
 export const signOut = async () => {
   const { error } = await supabase.auth.signOut();
-  if (error && error.message !== 'Session from session_id claim in JWT does not exist') {
-    throw error;
+  // Always clear local storage to ensure clean logout
+  localStorage.clear();
+  sessionStorage.clear();
+  
+  // Only throw error if it's not a session-related error
+  if (error && 
+      error.message !== 'Session from session_id claim in JWT does not exist' &&
+      error.message !== 'Invalid Refresh Token: Refresh Token Not Found') {
+    console.warn('Logout warning:', error.message);
   }
 };
 
