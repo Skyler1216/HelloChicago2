@@ -25,6 +25,19 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Debug logging
+  useEffect(() => {
+    console.log('App state:', {
+      showSplash,
+      loading,
+      isAuthenticated,
+      isApproved,
+      hasAdminUsers,
+      user: user?.id,
+      profile: profile?.id
+    });
+  }, [showSplash, loading, isAuthenticated, isApproved, hasAdminUsers, user, profile]);
+
   if (showSplash) {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }

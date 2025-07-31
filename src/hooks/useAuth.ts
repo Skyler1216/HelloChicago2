@@ -130,6 +130,7 @@ export function useAuth() {
       checkAdminUsers();
     }
   }, [initialized, user]);
+
   return {
     user,
     profile,
