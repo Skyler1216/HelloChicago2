@@ -53,6 +53,27 @@ export default function App() {
             通常、1-2営業日以内に承認いたします。
           </p>
           
+          {/* Logout Button */}
+          <button
+            onClick={async () => {
+              try {
+                await supabase.auth.signOut();
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.reload();
+              } catch (error) {
+                console.error('Logout error:', error);
+                // Force reload even if logout fails
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.reload();
+              }
+            }}
+            className="mt-4 w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-xl font-semibold hover:bg-gray-200 transition-all duration-200"
+          >
+            別のアカウントでログイン
+          </button>
+          
           {/* Self-approval button for first user only */}
           {hasAdminUsers === false && (
             <button
