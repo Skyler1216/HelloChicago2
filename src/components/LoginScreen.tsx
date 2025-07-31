@@ -23,24 +23,7 @@ export default function LoginScreen() {
       } else {
         const { user } = await signIn(email, password);
         
-        // Check if user is approved
-        if (user) {
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('is_approved, name')
-            .eq('id', user.id)
-            .maybeSingle();
-          
-          if (profileError) {
-            console.error('Profile check error:', profileError);
-          } else if (profile && !profile.is_approved) {
-            // Show approval message for unapproved users
-            setError(`${profile.name || 'ユーザー'}さん、アカウントの承認をお待ちください。運営チームが確認後、ご利用いただけるようになります。`);
-            // Sign out the user since they can't use the app yet
-            await supabase.auth.signOut();
-            return;
-          }
-        }
+        // Let the app handle approval check and show approval page
       }
     } catch (err) {
       let errorMessage = 'エラーが発生しました';
