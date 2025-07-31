@@ -75,7 +75,7 @@ export default function App() {
           </button>
           
           {/* Self-approval button for first user only */}
-          {hasAdminUsers === false && (
+          {hasAdminUsers === false && !loading && (
             <button
             onClick={async () => {
               try {

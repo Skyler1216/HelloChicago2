@@ -106,8 +106,29 @@ export function useAuth() {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [user, profile]);
 
+  // Re-check admin users when user changes
+  useEffect(() => {
+    const checkAdminUsers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('role', 'admin')
+        if (error) throw error;
+        setHasAdminUsers((data?.length || 0) > 0);
+      } catch (error) {
+        console.error('Error checking admin users:', error);
+        setHasAdminUsers(false);
+      }
+    };
+          .eq('is_approved', true)
+    if (initialized) {
+      checkAdminUsers();
+    }
+  }, [initialized, user]);
+          .limit(1);
   return {
     user,
     profile,
