@@ -1,0 +1,20 @@
+{
+  "name": "HelloChicago",
+  "short_name": "HelloChicago",
+  "description": "シカゴの日本人駐在妻向けのコミュニティプラットフォーム",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ff6b6b",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["lifestyle", "social", "travel"],
+  "lang": "ja"
+}
