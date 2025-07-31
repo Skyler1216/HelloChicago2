@@ -116,6 +116,9 @@ export function useAuth() {
           .from('profiles')
           .select('id')
           .eq('role', 'admin')
+          .eq('is_approved', true)
+          .limit(1);
+
         if (error) throw error;
         setHasAdminUsers((data?.length || 0) > 0);
       } catch (error) {
@@ -123,12 +126,10 @@ export function useAuth() {
         setHasAdminUsers(false);
       }
     };
-          .eq('is_approved', true)
     if (initialized) {
       checkAdminUsers();
     }
   }, [initialized, user]);
-          .limit(1);
   return {
     user,
     profile,
