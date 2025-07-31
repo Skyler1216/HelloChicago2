@@ -42,7 +42,8 @@ export default function App() {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
 
-  if (loading) {
+  // Show loading screen only if we're still initializing auth
+  if (loading && !showSplash) {
     return <LoadingScreen />;
   }
 
