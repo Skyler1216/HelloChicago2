@@ -4,56 +4,11 @@ import { Database } from '../types/database';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Declare supabase variable at module level
-let supabase: any;
-
-// Check for missing or placeholder values
-const isPlaceholderUrl = !supabaseUrl || supabaseUrl.includes('your-supabase-url-here') || supabaseUrl.includes('placeholder');
-const isPlaceholderKey = !supabaseAnonKey || supabaseAnonKey.includes('your-supabase-anon-key') || supabaseAnonKey.includes('placeholder');
-
-if (isPlaceholderUrl || isPlaceholderKey) {
-  console.warn('Supabase configuration contains placeholder values. Please update your .env file with actual Supabase credentials.');
-  
-  // Create a mock client that will show helpful error messages
-  const mockSupabase = {
-    auth: {
-      signUp: () => Promise.reject(new Error('Please configure your Supabase credentials in the .env file')),
-      signInWithPassword: () => Promise.reject(new Error('Please configure your Supabase credentials in the .env file')),
-      signOut: () => Promise.resolve({ error: null }),
-      getSession: () => Promise.resolve({ data: { session: null }, error: null }),
-      getUser: () => Promise.resolve({ data: { user: null }, error: null }),
-      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
-    },
-    from: () => ({
-      select: () => ({ eq: () => ({ maybeSingle: () => Promise.reject(new Error('Please configure your Supabase credentials')) }) }),
-      insert: () => Promise.reject(new Error('Please configure your Supabase credentials')),
-      update: () => ({ eq: () => Promise.reject(new Error('Please configure your Supabase credentials')) }),
-      delete: () => ({ eq: () => Promise.reject(new Error('Please configure your Supabase credentials')) })
-    })
-  };
-  
-  // Assign mock client
-  supabase = mockSupabase;
-} else {
-  // Validate URL format only if it's not a placeholder
-  try {
-    new URL(supabaseUrl);
-    if (!supabaseUrl.includes('.supabase.co')) {
-      throw new Error(`Invalid Supabase URL format: ${supabaseUrl}. Expected format: https://your-project-ref.supabase.co`);
-    }
-  } catch (error) {
-    if (error instanceof TypeError) {
-      throw new Error(`Invalid Supabase URL format: ${supabaseUrl}. Expected format: https://your-project-ref.supabase.co`);
-    }
-    throw error;
-  }
-  
-  // Assign real Supabase client
-  supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables');
 }
 
-// Export supabase client
-export { supabase };
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
 
 // Auth helpers
 export const signUp = async (email: string, password: string, name: string) => {
@@ -93,18 +48,6 @@ export const signUp = async (email: string, password: string, name: string) => {
 
 export const signIn = async (email: string, password: string) => {
   try {
-    // Test connectivity first
-    const response = await fetch(`${supabaseUrl}/rest/v1/`, {
-      method: 'HEAD',
-      headers: {
-        'apikey': supabaseAnonKey,
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error('Unable to connect to Supabase. Please check your configuration.');
-    }
-
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
