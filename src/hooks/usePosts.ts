@@ -19,7 +19,7 @@ export function usePosts(type?: 'post' | 'consultation' | 'transfer', categoryId
   const loadPosts = async () => {
     try {
       setLoading(true);
-      console.log('📝 Loading posts with type:', type, 'category:', categoryId);
+      console.log('📝 Loading posts with type:', type || 'all', 'category:', categoryId || 'all');
       
       let query = supabase
         .from('posts')
@@ -54,7 +54,16 @@ export function usePosts(type?: 'post' | 'consultation' | 'transfer', categoryId
       if (error) throw error;
 
       console.log('📝 Posts loaded:', data?.length || 0, 'posts');
-      console.log('📝 Sample post data:', data?.[0]);
+      if (data && data.length > 0) {
+        console.log('📝 Sample post data:', {
+          id: data[0].id,
+          title: data[0].title,
+          likes: data[0].likes,
+          replies: data[0].replies,
+          hasProfile: !!data[0].profiles,
+          hasCategory: !!data[0].categories
+        });
+      }
       
       setPosts(data || []);
     } catch (err) {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase, getProfile } from '../lib/supabase';
 import { Database } from '../types/database';
@@ -9,18 +9,26 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
+  
+  const initializationRef = useRef(false);
+  const profileLoadingRef = useRef(false);
 
   useEffect(() => {
+    if (initializationRef.current) return;
+    initializationRef.current = true;
+
     console.log('🔄 useAuth: Starting initialization');
     
-    // Get initial session
-    const getInitialSession = async () => {
+    const initializeAuth = async () => {
       try {
+        // Get initial session
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('❌ Session error:', error);
           setLoading(false);
+          setInitialized(true);
           return;
         }
 
@@ -29,55 +37,19 @@ export function useAuth() {
         if (session?.user) {
           setUser(session.user);
           await loadUserProfile(session.user.id);
-        } else {
-          setLoading(false);
         }
-      } catch (error) {
-        console.error('❌ Get session error:', error);
-        setLoading(false);
-      }
-    };
-
-    // Load user profile
-    const loadUserProfile = async (userId: string) => {
-      try {
-        console.log('👤 Loading profile for:', userId);
-        const profileData = await getProfile(userId);
         
-        if (profileData) {
-          console.log('✅ Profile loaded:', profileData.name);
-          setProfile(profileData);
-        } else {
-          console.log('⚠️ No profile found, creating new one');
-          // Create profile if it doesn't exist
-          const newProfile = {
-            id: userId,
-            name: user?.user_metadata?.name || user?.email?.split('@')[0] || 'User',
-            email: user?.email || '',
-            is_approved: true,
-            role: 'user' as const
-          };
-
-          const { data: createdProfile, error } = await supabase
-            .from('profiles')
-            .insert(newProfile)
-            .select()
-            .single();
-
-          if (!error && createdProfile) {
-            console.log('✅ Profile created:', createdProfile.name);
-            setProfile(createdProfile);
-          }
-        }
-      } catch (error) {
-        console.error('❌ Profile loading error:', error);
-      } finally {
+        setInitialized(true);
         setLoading(false);
+      } catch (error) {
+        console.error('❌ Auth initialization error:', error);
+        setLoading(false);
+        setInitialized(true);
       }
     };
 
-    // Initialize
-    getInitialSession();
+    // Initialize auth
+    initializeAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -95,27 +67,71 @@ export function useAuth() {
           setUser(session.user);
           setLoading(true);
           await loadUserProfile(session.user.id);
+          setLoading(false);
         }
       }
     );
 
-    // Cleanup
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  // Force completion after 8 seconds
-  useEffect(() => {
+    // Force completion after timeout
     const timeout = setTimeout(() => {
-      if (loading) {
+      if (!initialized) {
         console.warn('⏰ Auth timeout - forcing completion');
         setLoading(false);
+        setInitialized(true);
       }
     }, 8000);
 
-    return () => clearTimeout(timeout);
-  }, [loading]);
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
+  }, []);
+
+  const loadUserProfile = async (userId: string) => {
+    if (profileLoadingRef.current) {
+      console.log('⚠️ Profile loading already in progress, skipping');
+      return;
+    }
+
+    profileLoadingRef.current = true;
+    
+    try {
+      console.log('👤 Loading profile for user:', userId);
+      
+      const profileData = await getProfile(userId);
+      
+      if (profileData) {
+        console.log('✅ Profile loaded:', profileData.name, 'approved:', profileData.is_approved);
+        setProfile(profileData);
+      } else {
+        console.log('⚠️ No profile found, creating new one');
+        
+        // Create profile if it doesn't exist
+        const { data: createdProfile, error } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            name: user?.user_metadata?.name || user?.email?.split('@')[0] || 'User',
+            email: user?.email || '',
+            is_approved: true, // Auto-approve new users
+            role: 'user'
+          })
+          .select()
+          .single();
+
+        if (!error && createdProfile) {
+          console.log('✅ Profile created:', createdProfile.name);
+          setProfile(createdProfile);
+        } else {
+          console.error('❌ Failed to create profile:', error);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Profile loading error:', error);
+    } finally {
+      profileLoadingRef.current = false;
+    }
+  };
 
   const isAuthenticated = !!user;
   const isApproved = profile?.is_approved ?? false;
@@ -124,7 +140,8 @@ export function useAuth() {
     hasUser: !!user,
     hasProfile: !!profile,
     isApproved,
-    loading
+    loading,
+    initialized
   });
 
   return {

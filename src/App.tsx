@@ -17,18 +17,9 @@ export default function App() {
   const [showAdminView, setShowAdminView] = useState(false);
   const { user, profile, loading, isAuthenticated, isApproved } = useAuth();
 
-  console.log('🎨 App render - Auth state:', {
-    showSplash,
-    loading,
-    isAuthenticated,
-    hasProfile: !!profile,
-    isApproved
-  });
-
   // Splash screen timer
   useEffect(() => {
     const timer = setTimeout(() => {
-      console.log('✨ Splash screen completed');
       setShowSplash(false);
     }, 2500);
     return () => clearTimeout(timer);
@@ -68,12 +59,10 @@ export default function App() {
           
           <button
             onClick={async () => {
-              console.log('🚪 Logout button clicked');
               try {
                 await signOut();
                 window.location.reload();
               } catch (error) {
-                console.error('Logout error:', error);
                 window.location.reload();
               }
             }}

@@ -77,15 +77,24 @@ export const getCurrentUser = async () => {
 export const getProfile = async (userId: string) => {
   console.log('Getting profile for user:', userId);
   
+  if (!userId) {
+    console.error('❌ No userId provided to getProfile');
+    return null;
+  }
+
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', userId)
-    .maybeSingle();
+    .single();
 
   if (error) {
-    console.error('Error getting profile:', error);
-    throw error;
+    if (error.code === 'PGRST116') {
+      console.log('📝 Profile not found for user:', userId);
+      return null;
+    }
+    console.error('❌ Error getting profile:', error);
+    return null;
   }
   
   console.log('Profile data:', data);
