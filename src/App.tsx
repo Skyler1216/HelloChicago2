@@ -26,7 +26,7 @@ export default function App() {
   }, []);
 
   // 認証状態のデバッグログ
-  console.log('App render state:', {
+  console.log('🎯 App render state:', {
     showSplash,
     loading,
     isAuthenticated,

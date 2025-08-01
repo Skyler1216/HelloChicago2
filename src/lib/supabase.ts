@@ -39,12 +39,16 @@ export const signUp = async (email: string, password: string, name: string) => {
 };
 
 export const signIn = async (email: string, password: string) => {
+  console.log('🔐 Attempting sign in for:', email);
+  
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
   if (error) throw error;
+  
+  console.log('✅ Sign in successful:', data.user?.id);
   return data;
 };
 

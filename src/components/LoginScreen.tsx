@@ -13,22 +13,26 @@ export default function LoginScreen() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    console.log('Login attempt started:', { email, isSignUp });
     setIsLoading(true);
     setError(null);
     
     try {
       if (isSignUp) {
+        console.log('Attempting sign up...');
         await signUp(email, password, name);
         alert('アカウントが作成されました。運営チームの承認をお待ちください。');
       } else {
+        console.log('Attempting sign in...');
         const { user } = await signIn(email, password);
+        console.log('Sign in successful:', user?.id);
         
-        // Force a small delay to ensure auth state is updated
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // The useAuth hook will automatically handle the approval check
+        // Don't do anything else - let useAuth handle the state
+        console.log('Login completed, waiting for auth state update...');
       }
     } catch (err) {
+      console.error('Login error:', err);
       let errorMessage = 'エラーが発生しました';
       
       if (err instanceof Error) {
@@ -42,8 +46,13 @@ export default function LoginScreen() {
       }
       
       setError(errorMessage);
-    } finally {
       setIsLoading(false);
+    } finally {
+      // Only set loading to false for sign up or errors
+      // For sign in, let the auth state change handle it
+      if (isSignUp) {
+        setIsLoading(false);
+      }
     }
   };
 

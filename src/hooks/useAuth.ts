@@ -74,10 +74,12 @@ export function useAuth() {
 
   // 認証状態の更新
   const updateAuthState = async (user: User | null) => {
+    console.log('🔄 Updating auth state for user:', user?.id);
     console.log('Updating auth state for user:', user?.id);
     
     if (!user) {
       // ユーザーがいない場合
+      console.log('❌ No user found, setting unauthenticated state');
       setAuthState({
         user: null,
         profile: null,
@@ -91,6 +93,7 @@ export function useAuth() {
     }
 
     // ユーザーがいる場合、プロフィールを読み込む
+    console.log('👤 User found, loading profile...');
     const profile = await loadProfile(user.id);
     const hasAdmins = await checkAdminUsers();
 
@@ -125,7 +128,7 @@ export function useAuth() {
     // 最終的な認証状態を設定
     const isApproved = finalProfile?.is_approved ?? false;
     
-    console.log('Final auth state:', {
+    console.log('✅ Final auth state:', {
       userId: user.id,
       profileExists: !!finalProfile,
       isApproved,
@@ -188,12 +191,12 @@ export function useAuth() {
     // 認証状態変更の監視
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('🔔 Auth state change event:', event, 'User ID:', session?.user?.id);
         if (!mounted) return;
-        
-        console.log('Auth state change:', event, session?.user?.id);
         
         // サインアウト時は即座に状態をクリア
         if (event === 'SIGNED_OUT') {
+          console.log('🚪 User signed out, clearing state');
           setAuthState({
             user: null,
             profile: null,
