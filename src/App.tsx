@@ -29,7 +29,7 @@ export default function App() {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
 
-  if (loading && !isAuthenticated) {
+  if (loading) {
     return <LoadingScreen />;
   }
 
@@ -37,7 +37,37 @@ export default function App() {
     return <LoginScreen />;
   }
 
-  if (!isApproved) {
+  // If user is authenticated but no profile exists, show approval screen
+  if (isAuthenticated && profile === null && !loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-coral-50 to-teal-50 flex items-center justify-center px-4">
+        <div className="bg-white rounded-3xl shadow-xl p-8 max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-gradient-to-r from-coral-500 to-coral-400 rounded-full mx-auto mb-6 flex items-center justify-center">
+            <span className="text-white font-bold text-lg">❌</span>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">プロフィールが見つかりません</h2>
+          <p className="text-gray-600 mb-6">
+            アカウントに問題が発生している可能性があります。<br />
+            管理者にお問い合わせください。
+          </p>
+          <button
+            onClick={async () => {
+              try {
+                await signOut();
+              } catch (error) {
+                console.error('Logout error:', error);
+              }
+            }}
+            className="w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-xl font-semibold hover:bg-gray-200 transition-all duration-200"
+          >
+            ログアウト
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (profile && !isApproved) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-coral-50 to-teal-50 flex items-center justify-center px-4">
         <div className="bg-white rounded-3xl shadow-xl p-8 max-w-md w-full text-center">

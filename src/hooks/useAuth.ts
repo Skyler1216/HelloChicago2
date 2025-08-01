@@ -126,6 +126,6 @@ export function useAuth() {
     loading,
     hasAdminUsers,
     isAuthenticated: !!user,
-    isApproved: profile?.is_approved ?? false,
+    isApproved: profile?.is_approved === true,
   };
 }
