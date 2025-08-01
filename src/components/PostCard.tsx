@@ -20,17 +20,8 @@ export default function PostCard({ post, onClick }: PostCardProps) {
   const { user } = useAuth();
   const { isLiked, likesCount, loading: likesLoading, toggleLike } = useLikes(post.id, user?.id);
   const { totalCount: commentsCount } = useComments(post.id);
-  const IconComponent = LucideIcons[post.categories.icon as keyof typeof LucideIcons];
   
-  console.log('🎴 PostCard render:', {
-    postId: post.id,
-    title: post.title,
-    likes: post.likes,
-    replies: post.replies,
-    actualLikesCount: likesCount,
-    actualCommentsCount: commentsCount,
-    isLiked
-  });
+  const IconComponent = LucideIcons[post.categories.icon as keyof typeof LucideIcons];
   
   const getPostTypeInfo = () => {
     switch (post.type) {

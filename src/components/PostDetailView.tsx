@@ -22,15 +22,9 @@ export default function PostDetailView({ post, onBack }: PostDetailViewProps) {
   const { comments, loading: commentsLoading, addComment, totalCount: commentsCount } = useComments(post.id);
   const [newComment, setNewComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
 
   const IconComponent = LucideIcons[post.categories.icon as keyof typeof LucideIcons];
-
-  console.log('📄 PostDetailView render:', {
-    postId: post.id,
-    commentsCount,
-    likesCount,
-    isLiked
-  });
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
