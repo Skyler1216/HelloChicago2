@@ -56,12 +56,9 @@ export function useAuth() {
       } catch (error) {
         console.error('Error initializing auth:', error);
         if (mounted) {
-          // Clear any corrupted session data
-          try {
-            await supabase.auth.signOut();
-          } catch (signOutError) {
-            console.error('Error signing out:', signOutError);
-          }
+          // Don't try to sign out if there's a connection error
+          setUser(null);
+          setProfile(null);
           setLoading(false);
           setInitialized(true);
         }
@@ -76,11 +73,6 @@ export function useAuth() {
         if (!mounted) return;
         
         console.log('Auth state change:', event, session?.user?.id || 'No session');
-        
-        // Handle authentication errors by clearing session
-        if (event === 'TOKEN_REFRESHED' && !session) {
-          await supabase.auth.signOut();
-        }
         
         setUser(session?.user ?? null);
         if (session?.user) {
@@ -103,7 +95,12 @@ export function useAuth() {
           .eq('is_approved', true)
           .limit(1);
 
-        if (error) throw error;
+        if (error) {
+          console.warn('Error checking admin users:', error);
+          setHasAdminUsers(false);
+          return;
+        }
+        
         const adminCount = (data?.length || 0);
         console.log('Admin users found:', adminCount);
         setHasAdminUsers(adminCount > 0);
@@ -132,7 +129,12 @@ export function useAuth() {
           .eq('is_approved', true)
           .limit(1);
 
-        if (error) throw error;
+        if (error) {
+          console.warn('Error checking admin users:', error);
+          setHasAdminUsers(false);
+          return;
+        }
+        
         setHasAdminUsers((data?.length || 0) > 0);
       } catch (error) {
         console.error('Error checking admin users:', error);

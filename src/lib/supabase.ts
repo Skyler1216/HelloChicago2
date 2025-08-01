@@ -9,11 +9,33 @@ console.log('Supabase config:', {
   key: supabaseAnonKey ? 'Set' : 'Missing'
 });
 
+// Create a dummy client if environment variables are missing
+let supabase: any;
+
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+  console.warn('Missing Supabase environment variables - using mock client');
+  // Create a mock client that returns empty results
+  supabase = {
+    auth: {
+      getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+      getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+      signUp: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+      signInWithPassword: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+      signOut: () => Promise.resolve({ error: null }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
+    },
+    from: () => ({
+      select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: null, error: null }) }) }),
+      insert: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+      update: () => ({ eq: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }) }),
+      delete: () => ({ eq: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }) })
+    })
+  };
+} else {
+  supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+export { supabase };
 
 // Auth helpers
 export const signUp = async (email: string, password: string, name: string) => {

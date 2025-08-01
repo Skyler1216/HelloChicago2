@@ -21,9 +21,20 @@ export default function App() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 2500);
+    }, 1500); // Reduce splash time
     return () => clearTimeout(timer);
   }, []);
+
+  // Force splash to end after maximum time
+  useEffect(() => {
+    const maxTimer = setTimeout(() => {
+      if (showSplash) {
+        console.log('Force ending splash screen');
+        setShowSplash(false);
+      }
+    }, 3000);
+    return () => clearTimeout(maxTimer);
+  }, [showSplash]);
 
   // Debug logging
   useEffect(() => {
@@ -42,8 +53,8 @@ export default function App() {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
 
-  // Show loading screen only if we're still initializing auth
-  if (loading && !showSplash) {
+  // Show loading screen only if we're still initializing auth and it's been reasonable time
+  if (loading && !isAuthenticated && !user) {
     return <LoadingScreen />;
   }
 
