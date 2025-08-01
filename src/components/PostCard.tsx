@@ -4,6 +4,7 @@ import * as LucideIcons from 'lucide-react';
 import { Database } from '../types/database';
 import { useLikes } from '../hooks/useLikes';
 import { useAuth } from '../hooks/useAuth';
+import { useComments } from '../hooks/useComments';
 
 type Post = Database['public']['Tables']['posts']['Row'] & {
   profiles: Database['public']['Tables']['profiles']['Row'];
@@ -18,6 +19,7 @@ interface PostCardProps {
 export default function PostCard({ post, onClick }: PostCardProps) {
   const { user } = useAuth();
   const { isLiked, likesCount, loading: likesLoading, toggleLike } = useLikes(post.id, user?.id);
+  const { totalCount: commentsCount } = useComments(post.id);
   const IconComponent = LucideIcons[post.categories.icon as keyof typeof LucideIcons];
   
   console.log('🎴 PostCard render:', {
@@ -25,7 +27,8 @@ export default function PostCard({ post, onClick }: PostCardProps) {
     title: post.title,
     likes: post.likes,
     replies: post.replies,
-    likesCount,
+    actualLikesCount: likesCount,
+    actualCommentsCount: commentsCount,
     isLiked
   });
   
@@ -159,7 +162,7 @@ export default function PostCard({ post, onClick }: PostCardProps) {
           } disabled:opacity-50`}
         >
           <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
-          <span className="text-sm font-medium">{likesCount || 0}</span>
+          <span className="text-sm font-medium">{likesCount}</span>
         </button>
         <button 
           onClick={(e) => {
@@ -170,7 +173,7 @@ export default function PostCard({ post, onClick }: PostCardProps) {
         >
           <MessageCircle className="w-5 h-5" />
           <span className="text-sm font-medium">
-            {post.replies && post.replies > 0 ? `${post.replies}件の返信` : 'コメント'}
+            {commentsCount > 0 ? `${commentsCount}件のコメント` : 'コメント'}
           </span>
         </button>
       </div>

@@ -23,7 +23,8 @@ export function useComments(postId: string) {
       setLoading(true);
       console.log('💬 Loading comments for post:', postId);
       
-      const { data, error } = await supabase
+      // Load top-level comments
+      const { data: topLevelComments, error: commentsError } = await supabase
         .from('comments')
         .select(`
           *,
@@ -38,14 +39,17 @@ export function useComments(postId: string) {
         .is('parent_id', null)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (commentsError) {
+        console.error('❌ Error loading comments:', commentsError);
+        throw commentsError;
+      }
 
-      console.log('💬 Comments loaded:', data?.length || 0, 'comments');
+      console.log('💬 Top-level comments loaded:', topLevelComments?.length || 0);
       
       // Load replies for each comment
       const commentsWithReplies = await Promise.all(
-        (data || []).map(async (comment) => {
-          const { data: replies } = await supabase
+        (topLevelComments || []).map(async (comment) => {
+          const { data: replies, error: repliesError } = await supabase
             .from('comments')
             .select(`
               *,
@@ -59,6 +63,10 @@ export function useComments(postId: string) {
             .eq('approved', true)
             .order('created_at', { ascending: true });
 
+          if (repliesError) {
+            console.error('❌ Error loading replies for comment:', comment.id, repliesError);
+          }
+
           return {
             ...comment,
             replies: replies || []
@@ -66,9 +74,21 @@ export function useComments(postId: string) {
         })
       );
 
+      const totalComments = commentsWithReplies.reduce((total, comment) => {
+        return total + 1 + (comment.replies?.length || 0);
+      }, 0);
+
+      console.log('💬 Total comments (including replies):', totalComments);
       setComments(commentsWithReplies);
+      
+      // Update post replies count in database
+      await supabase
+        .from('posts')
+        .update({ replies: totalComments })
+        .eq('id', postId);
+
     } catch (err) {
-      console.error('❌ Error loading comments:', err);
+      console.error('❌ Error in loadComments:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
@@ -112,11 +132,18 @@ export function useComments(postId: string) {
     }
   };
 
+  const getTotalCommentsCount = () => {
+    return comments.reduce((total, comment) => {
+      return total + 1 + (comment.replies?.length || 0);
+    }, 0);
+  };
+
   return {
     comments,
     loading,
     error,
     addComment,
     refetch: loadComments,
+    totalCount: getTotalCommentsCount(),
   };
 }

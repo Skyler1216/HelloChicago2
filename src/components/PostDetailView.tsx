@@ -19,7 +19,7 @@ interface PostDetailViewProps {
 export default function PostDetailView({ post, onBack }: PostDetailViewProps) {
   const { user } = useAuth();
   const { isLiked, likesCount, loading: likesLoading, toggleLike } = useLikes(post.id, user?.id);
-  const { comments, loading: commentsLoading, addComment } = useComments(post.id);
+  const { comments, loading: commentsLoading, addComment, totalCount: commentsCount } = useComments(post.id);
   const [newComment, setNewComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -27,7 +27,7 @@ export default function PostDetailView({ post, onBack }: PostDetailViewProps) {
 
   console.log('📄 PostDetailView render:', {
     postId: post.id,
-    commentsCount: comments.length,
+    commentsCount,
     likesCount,
     isLiked
   });
@@ -111,11 +111,11 @@ export default function PostDetailView({ post, onBack }: PostDetailViewProps) {
               } disabled:opacity-50`}
             >
               <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
-              <span className="text-sm font-medium">{likesCount || 0}</span>
+              <span className="text-sm font-medium">{likesCount}</span>
             </button>
             <div className="flex items-center space-x-2 text-gray-500">
               <MessageCircle className="w-5 h-5" />
-              <span className="text-sm font-medium">{comments.length}件のコメント</span>
+              <span className="text-sm font-medium">{commentsCount}件のコメント</span>
             </div>
           </div>
         </div>
