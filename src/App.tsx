@@ -15,7 +15,6 @@ export default function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [currentView, setCurrentView] = useState<'home' | 'map' | 'post' | 'profile'>('home');
   const [showAdminView, setShowAdminView] = useState(false);
-  const [isApproving, setIsApproving] = useState(false);
   const { user, profile, loading, profileLoaded, hasAdminUsers, isAuthenticated, isApproved } = useAuth();
 
   useEffect(() => {
@@ -26,39 +25,39 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Debug logging
-  useEffect(() => {
-    console.log('App state:', {
-      showSplash,
-      loading,
-      isAuthenticated,
-      profileLoaded,
-      isApproved,
-      hasProfile: !!profile
-    });
-  }, [showSplash, loading, isAuthenticated, profileLoaded, isApproved, profile]);
+  // 認証状態のデバッグログ
+  console.log('App render state:', {
+    showSplash,
+    loading,
+    isAuthenticated,
+    profileLoaded,
+    isApproved,
+    hasProfile: !!profile,
+    profileRole: profile?.role
+  });
 
+  // スプラッシュ画面
   if (showSplash) {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
 
-  // Show loading screen only when we're still loading auth state and not authenticated yet
-  if (loading && !isAuthenticated) {
+  // ローディング画面（認証状態が不明な場合のみ）
+  if (loading) {
     return <LoadingScreen />;
   }
 
-  // Show login screen if not authenticated
+  // ログイン画面（未認証の場合）
   if (!isAuthenticated) {
     return <LoginScreen />;
   }
 
-  // If authenticated but profile not loaded yet, show a brief loading
-  if (isAuthenticated && !profileLoaded) {
+  // プロフィール読み込み中
+  if (!profileLoaded) {
     return <LoadingScreen />;
   }
 
-  // Show approval screen only if profile is loaded and user is not approved
-  if (profileLoaded && !isApproved) {
+  // 承認待ち画面（プロフィールが存在し、かつ承認されていない場合のみ）
+  if (profile && !isApproved) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-coral-50 to-teal-50 flex items-center justify-center px-4">
         <div className="bg-white rounded-3xl shadow-xl p-8 max-w-md w-full text-center">
@@ -101,82 +100,56 @@ export default function App() {
           {hasAdminUsers === false && profileLoaded && (
             <button
               onClick={async () => {
+                const [isApproving, setIsApproving] = useState(false);
                 try {
                   setIsApproving(true);
-                 
-                 const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
-                 if (userError || !currentUser) {
-                   throw new Error('ユーザー情報を取得できませんでした');
-                 }
-                 
-                 const { data: existingProfile, error: checkError } = await supabase
-                   .from('profiles')
-                   .select('*')
-                   .eq('id', currentUser.id)
-                   .maybeSingle();
-                 
-                 if (checkError) {
-                   throw checkError;
-                 }
-                 
-                 if (!existingProfile) {
-                  const { error: createError } = await supabase
-                    .from('profiles')
-                    .insert({
-                      id: currentUser.id,
-                      email: currentUser.email || '',
-                      name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'User',
-                      is_approved: true,
-                      role: 'admin'
-                    });
                   
-                  if (createError) {
-                    throw createError;
+                  if (!user) {
+                    throw new Error('ユーザー情報を取得できませんでした');
                   }
-                } else {
+                  
                   const { error } = await supabase
                     .from('profiles')
                     .update({ 
                       is_approved: true,
                       role: 'admin'
                     })
-                    .eq('id', currentUser.id);
+                    .eq('id', user.id);
                   
                   if (error) {
                     throw error;
                   }
-                 }
                   
-                 alert('承認が完了しました！ページをリロードします。');
-                 
-                 setTimeout(() => {
-                   window.location.reload();
-                 }, 1000);
-                 
+                  alert('承認が完了しました！ページをリロードします。');
+                  
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 1000);
+                  
                 } catch (error) {
                   console.error('Self-approval error:', error);
-                 alert(`承認に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
+                  alert(`承認に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
                 } finally {
                   setIsApproving(false);
                 }
               }}
-              disabled={isApproving}
-             className="mt-6 w-full bg-gradient-to-r from-coral-500 to-coral-400 text-white py-3 px-6 rounded-xl font-semibold hover:from-coral-600 hover:to-coral-500 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              className="mt-6 w-full bg-gradient-to-r from-coral-500 to-coral-400 text-white py-3 px-6 rounded-xl font-semibold hover:from-coral-600 hover:to-coral-500 transition-all duration-200 shadow-lg hover:shadow-xl"
             >
-              {isApproving ? '承認中...' : '管理者として承認する'}
+              管理者として承認する
             </button>
           )}
           
           {hasAdminUsers === false && (
             <p className="text-xs text-gray-400 mt-3">
-            ※ システムに管理者がいない場合のみ表示されます
-          </p>
+              ※ システムに管理者がいない場合のみ表示されます
+            </p>
           )}
         </div>
       </div>
     );
   }
 
+  // 管理者画面
   if (showAdminView) {
     return (
       <Layout
@@ -201,6 +174,7 @@ export default function App() {
     );
   }
 
+  // メイン画面の表示
   const renderCurrentView = () => {
     switch (currentView) {
       case 'home':

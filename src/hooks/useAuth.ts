@@ -5,150 +5,228 @@ import { Database } from '../types/database';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
+interface AuthState {
+  user: User | null;
+  profile: Profile | null;
+  loading: boolean;
+  isAuthenticated: boolean;
+  isApproved: boolean;
+  hasAdminUsers: boolean | null;
+  initialized: boolean;
+}
+
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [profileLoaded, setProfileLoaded] = useState(false);
-  const [hasAdminUsers, setHasAdminUsers] = useState<boolean | null>(null);
-  const [initialized, setInitialized] = useState(false);
+  const [authState, setAuthState] = useState<AuthState>({
+    user: null,
+    profile: null,
+    loading: true,
+    isAuthenticated: false,
+    isApproved: false,
+    hasAdminUsers: null,
+    initialized: false,
+  });
 
-  useEffect(() => {
-    let mounted = true;
-    let profileLoadingInProgress = false;
+  const [profileLoadingInProgress, setProfileLoadingInProgress] = useState(false);
 
-    const loadProfile = async (userId: string) => {
-      if (!mounted || profileLoadingInProgress) return;
+  // プロフィール読み込み関数
+  const loadProfile = async (userId: string): Promise<Profile | null> => {
+    if (profileLoadingInProgress) {
+      console.log('Profile loading already in progress, skipping...');
+      return null;
+    }
+
+    setProfileLoadingInProgress(true);
+    
+    try {
+      console.log('Loading profile for user:', userId);
+      const profileData = await getProfile(userId);
+      console.log('Profile loaded:', profileData);
+      return profileData;
+    } catch (error) {
+      console.error('Error loading profile:', error);
+      return null;
+    } finally {
+      setProfileLoadingInProgress(false);
+    }
+  };
+
+  // 管理者ユーザーの存在確認
+  const checkAdminUsers = async (): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('role', 'admin')
+        .eq('is_approved', true)
+        .limit(1);
+
+      if (error) {
+        console.error('Error checking admin users:', error);
+        return false;
+      }
       
-      profileLoadingInProgress = true;
-      
+      return (data?.length || 0) > 0;
+    } catch (error) {
+      console.error('Error checking admin users:', error);
+      return false;
+    }
+  };
+
+  // 認証状態の更新
+  const updateAuthState = async (user: User | null) => {
+    console.log('Updating auth state for user:', user?.id);
+    
+    if (!user) {
+      // ユーザーがいない場合
+      setAuthState({
+        user: null,
+        profile: null,
+        loading: false,
+        isAuthenticated: false,
+        isApproved: false,
+        hasAdminUsers: null,
+        initialized: true,
+      });
+      return;
+    }
+
+    // ユーザーがいる場合、プロフィールを読み込む
+    const profile = await loadProfile(user.id);
+    const hasAdmins = await checkAdminUsers();
+
+    // プロフィールが存在しない場合は作成を試行
+    let finalProfile = profile;
+    if (!profile) {
+      console.log('Profile not found, attempting to create...');
       try {
-        const profileData = await getProfile(userId);
-        if (mounted) {
-          setProfile(profileData);
-          setProfileLoaded(true);
+        const newProfile = {
+          id: user.id,
+          name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+          email: user.email || '',
+          is_approved: true, // 新規ユーザーは自動承認
+          role: 'user' as const
+        };
+
+        const { data: createdProfile, error } = await supabase
+          .from('profiles')
+          .insert(newProfile)
+          .select()
+          .single();
+
+        if (!error && createdProfile) {
+          finalProfile = createdProfile;
+          console.log('Profile created successfully:', createdProfile);
         }
       } catch (error) {
-        console.error('Error loading profile:', error);
-        if (mounted) {
-          setProfile(null);
-          setProfileLoaded(true);
-        }
-      } finally {
-        profileLoadingInProgress = false;
-        if (mounted) {
-          setLoading(false);
-        }
+        console.error('Error creating profile:', error);
       }
-    };
+    }
 
-    // Get initial session
+    // 最終的な認証状態を設定
+    const isApproved = finalProfile?.is_approved ?? false;
+    
+    console.log('Final auth state:', {
+      userId: user.id,
+      profileExists: !!finalProfile,
+      isApproved,
+      hasAdmins
+    });
+
+    setAuthState({
+      user,
+      profile: finalProfile,
+      loading: false,
+      isAuthenticated: true,
+      isApproved,
+      hasAdminUsers: hasAdmins,
+      initialized: true,
+    });
+  };
+
+  // 初期化
+  useEffect(() => {
+    let mounted = true;
+    let initializationTimeout: NodeJS.Timeout;
+
     const initializeAuth = async () => {
-      if (!mounted) return;
-      
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Initializing auth...');
         
-        if (!mounted) return;
+        // セッション取得
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          await loadProfile(session.user.id);
-        } else {
-          setProfile(null);
-          setProfileLoaded(true);
-          setLoading(false);
+        if (error) {
+          console.error('Error getting session:', error);
+          if (mounted) {
+            setAuthState(prev => ({ ...prev, loading: false, initialized: true }));
+          }
+          return;
         }
-        
-        setInitialized(true);
+
+        if (mounted) {
+          await updateAuthState(session?.user || null);
+        }
       } catch (error) {
         console.error('Error initializing auth:', error);
         if (mounted) {
-          setUser(null);
-          setProfile(null);
-          setProfileLoaded(true);
-          setLoading(false);
-          setInitialized(true);
+          setAuthState(prev => ({ ...prev, loading: false, initialized: true }));
         }
       }
     };
 
+    // 初期化実行
     initializeAuth();
 
-    // Listen for auth changes
+    // タイムアウト設定（10秒後に強制完了）
+    initializationTimeout = setTimeout(() => {
+      if (mounted && !authState.initialized) {
+        console.warn('Auth initialization timeout - forcing completion');
+        setAuthState(prev => ({ ...prev, loading: false, initialized: true }));
+      }
+    }, 10000);
+
+    // 認証状態変更の監視
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
         
-        console.log('Auth state change:', event);
+        console.log('Auth state change:', event, session?.user?.id);
         
-        setUser(session?.user ?? null);
-        setProfileLoaded(false);
-        
-        if (session?.user) {
-          await loadProfile(session.user.id);
-        } else {
-          setProfile(null);
-          setProfileLoaded(true);
-          setLoading(false);
+        // サインアウト時は即座に状態をクリア
+        if (event === 'SIGNED_OUT') {
+          setAuthState({
+            user: null,
+            profile: null,
+            loading: false,
+            isAuthenticated: false,
+            isApproved: false,
+            hasAdminUsers: null,
+            initialized: true,
+          });
+          return;
         }
+
+        // その他の場合は通常の更新処理
+        await updateAuthState(session?.user || null);
       }
     );
-
-    // Timeout to prevent infinite loading
-    const timeout = setTimeout(() => {
-      if (mounted && !initialized) {
-        console.warn('Auth initialization timeout - forcing completion');
-        setLoading(false);
-        setProfileLoaded(true);
-        setInitialized(true);
-      }
-    }, 10000); // 10 second timeout
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
-      clearTimeout(timeout);
-    };
-  }, []);
-
-  // Check if there are any admin users in the system
-  useEffect(() => {
-    if (!user || !profileLoaded) return;
-
-    const checkAdminUsers = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('role', 'admin')
-          .eq('is_approved', true)
-          .limit(1);
-
-        if (error) {
-          console.error('Error checking admin users:', error);
-          setHasAdminUsers(false);
-          return;
-        }
-        
-        setHasAdminUsers((data?.length || 0) > 0);
-      } catch (error) {
-        console.error('Error checking admin users:', error);
-        setHasAdminUsers(false);
+      if (initializationTimeout) {
+        clearTimeout(initializationTimeout);
       }
     };
-
-    checkAdminUsers();
-  }, [user, profileLoaded]);
+  }, []); // 依存配列を空にして初回のみ実行
 
   return {
-    user,
-    profile,
-    loading: loading && !initialized,
-    profileLoaded,
-    hasAdminUsers,
-    isAuthenticated: !!user,
-    isApproved: profileLoaded ? (profile?.is_approved ?? false) : false,
+    user: authState.user,
+    profile: authState.profile,
+    loading: authState.loading,
+    profileLoaded: authState.initialized && !profileLoadingInProgress,
+    hasAdminUsers: authState.hasAdminUsers,
+    isAuthenticated: authState.isAuthenticated,
+    isApproved: authState.isApproved,
   };
 }

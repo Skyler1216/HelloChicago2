@@ -71,6 +71,8 @@ export const getCurrentUser = async () => {
 };
 
 export const getProfile = async (userId: string) => {
+  console.log('Getting profile for user:', userId);
+  
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -82,33 +84,7 @@ export const getProfile = async (userId: string) => {
     throw error;
   }
   
-  // If no profile exists, create one
-  if (!data) {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (user) {
-      const newProfile = {
-        id: userId,
-        name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
-        email: user.email || '',
-        is_approved: true, // Auto-approve new profiles
-        role: 'user' as const
-      };
-      
-      const { data: createdProfile, error: createError } = await supabase
-        .from('profiles')
-        .insert(newProfile)
-        .select()
-        .single();
-        
-      if (createError) {
-        console.error('Error creating profile:', createError);
-        throw createError;
-      }
-      
-      return createdProfile;
-    }
-  }
+  console.log('Profile data:', data);
   
   return data;
 };
