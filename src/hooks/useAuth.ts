@@ -16,7 +16,9 @@ export function useAuth() {
 
     const loadProfile = async (userId: string) => {
       try {
+        console.log('Loading profile for user:', userId);
         const profileData = await getProfile(userId);
+        console.log('Profile data loaded:', profileData);
         if (mounted) {
           setProfile(profileData);
         }
@@ -35,10 +37,12 @@ export function useAuth() {
     // Get initial session
     const initializeAuth = async () => {
       try {
+        console.log('Initializing auth...');
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!mounted) return;
         
+        console.log('Session:', session?.user?.id);
         setUser(session?.user ?? null);
         
         if (session?.user) {
