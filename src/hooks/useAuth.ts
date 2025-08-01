@@ -93,6 +93,7 @@ export function useAuth() {
   useEffect(() => {
     const checkAdminUsers = async () => {
       try {
+        console.log('Checking for admin users...');
         const { data, error } = await supabase
           .from('profiles')
           .select('id')
@@ -101,11 +102,12 @@ export function useAuth() {
           .limit(1);
 
         if (error) {
-          console.warn('Error checking admin users:', error);
+          console.error('Error checking admin users:', error);
           setHasAdminUsers(false);
           return;
         }
         
+        console.log('Admin users found:', data?.length || 0);
         setHasAdminUsers((data?.length || 0) > 0);
       } catch (error) {
         console.error('Error checking admin users:', error);

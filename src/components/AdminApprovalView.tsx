@@ -17,13 +17,19 @@ export default function AdminApprovalView() {
   const loadPendingUsers = async () => {
     try {
       setLoading(true);
+      console.log('Loading pending users...');
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('is_approved', false)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading pending users:', error);
+        throw error;
+      }
+      
+      console.log('Pending users data:', data);
       setPendingUsers(data || []);
     } catch (error) {
       console.error('Error loading pending users:', error);
