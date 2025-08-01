@@ -20,7 +20,7 @@ export default function LoadingScreen() {
               <MapPin className="w-6 h-6 text-teal-500 absolute -bottom-1 -right-1" />
             </div>
           </div>
-          
+
           {/* App Name */}
           <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">
             HelloChicago
@@ -30,13 +30,17 @@ export default function LoadingScreen() {
         {/* Loading Animation */}
         <div className="flex justify-center space-x-2 mt-8">
           <div className="w-3 h-3 bg-white rounded-full animate-bounce"></div>
-          <div className="w-3 h-3 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-          <div className="w-3 h-3 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+          <div
+            className="w-3 h-3 bg-white rounded-full animate-bounce"
+            style={{ animationDelay: '0.1s' }}
+          ></div>
+          <div
+            className="w-3 h-3 bg-white rounded-full animate-bounce"
+            style={{ animationDelay: '0.2s' }}
+          ></div>
         </div>
 
-        <p className="text-white/80 text-sm mt-6">
-          読み込み中...
-        </p>
+        <p className="text-white/80 text-sm mt-6">読み込み中...</p>
       </div>
     </div>
   );

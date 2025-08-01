@@ -28,7 +28,7 @@ export default function AdminApprovalView() {
         console.error('Error loading pending users:', error);
         throw error;
       }
-      
+
       console.log('Pending users data:', data);
       setPendingUsers(data || []);
     } catch (error) {
@@ -103,13 +103,20 @@ export default function AdminApprovalView() {
       {pendingUsers.length === 0 ? (
         <div className="text-center py-8">
           <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">承認待ちのユーザーはいません</h3>
-          <p className="text-gray-600">新しいユーザーが登録すると、ここに表示されます。</p>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            承認待ちのユーザーはいません
+          </h3>
+          <p className="text-gray-600">
+            新しいユーザーが登録すると、ここに表示されます。
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
-          {pendingUsers.map((user) => (
-            <div key={user.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+          {pendingUsers.map(user => (
+            <div
+              key={user.id}
+              className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm"
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
@@ -124,12 +131,12 @@ export default function AdminApprovalView() {
                         month: 'short',
                         day: 'numeric',
                         hour: '2-digit',
-                        minute: '2-digit'
+                        minute: '2-digit',
                       })}
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex space-x-2">
                   <button
                     onClick={() => approveUser(user.id)}

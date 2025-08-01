@@ -10,28 +10,26 @@ export function useLikes(postId: string, userId?: string) {
     if (postId) {
       loadLikeStatus();
     }
-  }, [postId, userId]);
+  }, [postId, userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadLikeStatus = async () => {
     try {
       console.log('❤️ Loading like status for post:', postId, 'user:', userId);
-      
+
       // Get likes count and user like status in parallel
       const [postResult, userLikeResult] = await Promise.all([
         // Get post likes count
-        supabase
-          .from('posts')
-          .select('likes')
-          .eq('id', postId)
-          .single(),
-        
+        supabase.from('posts').select('likes').eq('id', postId).single(),
+
         // Check if current user has liked this post (only if userId exists)
-        userId ? supabase
-          .from('likes')
-          .select('id')
-          .eq('post_id', postId)
-          .eq('user_id', userId)
-          .maybeSingle() : Promise.resolve({ data: null, error: null })
+        userId
+          ? supabase
+              .from('likes')
+              .select('id')
+              .eq('post_id', postId)
+              .eq('user_id', userId)
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
       ]);
 
       const { data: post, error: postError } = postResult;
@@ -54,12 +52,11 @@ export function useLikes(postId: string, userId?: string) {
         postId,
         likesCount: currentLikesCount,
         hasLiked,
-        userId
+        userId,
       });
 
       setLikesCount(currentLikesCount);
       setIsLiked(hasLiked);
-
     } catch (error) {
       console.error('❌ Error in loadLikeStatus:', error);
     }
@@ -77,14 +74,14 @@ export function useLikes(postId: string, userId?: string) {
     }
 
     setLoading(true);
-    
+
     // Store current state for rollback
     const previousIsLiked = isLiked;
     const previousLikesCount = likesCount;
 
     try {
       console.log('❤️ Toggling like, current state:', { isLiked, likesCount });
-      
+
       if (isLiked) {
         // Unlike: Optimistic update first
         setIsLiked(false);
@@ -109,12 +106,10 @@ export function useLikes(postId: string, userId?: string) {
         setLikesCount(prev => prev + 1);
 
         // Add to likes table
-        const { error } = await supabase
-          .from('likes')
-          .insert({
-            post_id: postId,
-            user_id: userId
-          });
+        const { error } = await supabase.from('likes').insert({
+          post_id: postId,
+          user_id: userId,
+        });
 
         if (error) {
           console.error('❌ Error liking post:', error);
@@ -139,15 +134,14 @@ export function useLikes(postId: string, userId?: string) {
         console.log('❤️ Final verification - likes count:', finalLikesCount);
         setLikesCount(finalLikesCount);
       }
-
     } catch (error) {
       console.error('❌ Error toggling like:', error);
-      
+
       // Rollback optimistic updates on error
       console.log('❤️ Rolling back optimistic updates');
       setIsLiked(previousIsLiked);
       setLikesCount(previousLikesCount);
-      
+
       // Show error to user
       alert('いいねの処理に失敗しました。もう一度お試しください。');
     } finally {
@@ -159,6 +153,6 @@ export function useLikes(postId: string, userId?: string) {
     isLiked,
     likesCount,
     loading,
-    toggleLike
+    toggleLike,
   };
 }

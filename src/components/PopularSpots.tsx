@@ -10,22 +10,22 @@ export default function PopularSpots() {
       name: 'Northwestern Memorial Hospital',
       category: { icon: 'Heart', name_ja: '病院', color: '#FF6B6B' },
       postCount: 5,
-      averageRating: 4.8
+      averageRating: 4.8,
     },
     {
       id: 'spot2',
       name: 'Whole Foods Market Lincoln Park',
       category: { icon: 'ShoppingBag', name_ja: '買い物', color: '#FFE66D' },
       postCount: 8,
-      averageRating: 4.5
+      averageRating: 4.5,
     },
     {
       id: 'spot3',
       name: 'Lincoln Park Zoo',
       category: { icon: 'Baby', name_ja: '子ども', color: '#F38BA8' },
       postCount: 12,
-      averageRating: 4.7
-    }
+      averageRating: 4.7,
+    },
   ];
 
   return (
@@ -34,13 +34,14 @@ export default function PopularSpots() {
         <TrendingUp className="w-5 h-5 text-coral-600" />
         <h2 className="text-lg font-bold text-gray-900">人気スポット</h2>
       </div>
-      
+
       <div className="space-y-3">
         {spots.map((spot, index) => {
-          const IconComponent = LucideIcons[spot.category.icon as keyof typeof LucideIcons];
-          
+          const IconComponent =
+            LucideIcons[spot.category.icon as keyof typeof LucideIcons];
+
           return (
-            <div 
+            <div
               key={spot.id}
               className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-md transition-all duration-200"
             >
@@ -50,11 +51,16 @@ export default function PopularSpots() {
                     {index + 1}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 text-sm">{spot.name}</h3>
+                    <h3 className="font-semibold text-gray-900 text-sm">
+                      {spot.name}
+                    </h3>
                     <div className="flex items-center space-x-1 mt-1">
-                      <div 
+                      <div
                         className="flex items-center space-x-1 px-2 py-1 rounded-full text-xs"
-                        style={{ backgroundColor: spot.category.color + '20', color: spot.category.color }}
+                        style={{
+                          backgroundColor: spot.category.color + '20',
+                          color: spot.category.color,
+                        }}
                       >
                         {IconComponent && <IconComponent className="w-4 h-4" />}
                         <span>{spot.category.name_ja}</span>
@@ -63,7 +69,7 @@ export default function PopularSpots() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-between text-sm text-gray-500">
                 <span>{spot.postCount}件の投稿</span>
                 <div className="flex items-center space-x-1">

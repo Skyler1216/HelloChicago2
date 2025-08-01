@@ -11,18 +11,26 @@ if (MAPBOX_TOKEN) {
 }
 
 interface MapboxMapProps {
-  posts: any[];
+  posts: any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
   selectedCategory: string | null;
-  onPostSelect: (post: any) => void;
+  onPostSelect: (post: any) => void; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
-export default function MapboxMap({ posts, selectedCategory, onPostSelect }: MapboxMapProps) {
+export default function MapboxMap({
+  posts,
+  selectedCategory,
+  onPostSelect,
+}: MapboxMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markers = useRef<mapboxgl.Marker[]>([]);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
-  const [mapStyle, setMapStyle] = useState('mapbox://styles/mapbox/streets-v12');
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(
+    null
+  );
+  const [mapStyle, setMapStyle] = useState(
+    'mapbox://styles/mapbox/streets-v12'
+  );
   const [mapError, setMapError] = useState<string | null>(null);
 
   // Chicago coordinates
@@ -45,19 +53,19 @@ export default function MapboxMap({ posts, selectedCategory, onPostSelect }: Map
         center: chicagoCenter,
         zoom: 11,
         pitch: 0,
-        bearing: 0
+        bearing: 0,
       });
-      
+
       // Add navigation controls
       map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
       // Add geolocate control
       const geolocate = new mapboxgl.GeolocateControl({
         positionOptions: {
-          enableHighAccuracy: true
+          enableHighAccuracy: true,
         },
         trackUserLocation: true,
-        showUserHeading: true
+        showUserHeading: true,
       });
 
       map.current.addControl(geolocate, 'top-right');
@@ -74,7 +82,7 @@ export default function MapboxMap({ posts, selectedCategory, onPostSelect }: Map
       });
 
       // Handle map errors
-      map.current.on('error', (e) => {
+      map.current.on('error', e => {
         console.error('Mapbox error:', e);
         setMapError('地図の読み込みに失敗しました');
       });
@@ -107,7 +115,7 @@ export default function MapboxMap({ posts, selectedCategory, onPostSelect }: Map
     markers.current = [];
 
     // Filter posts based on selected category
-    const filteredPosts = selectedCategory 
+    const filteredPosts = selectedCategory
       ? posts.filter(post => post.categories?.id === selectedCategory)
       : posts;
 
@@ -133,14 +141,20 @@ export default function MapboxMap({ posts, selectedCategory, onPostSelect }: Map
       `;
 
       // Add icon to marker
-      const IconComponent = post.categories?.icon ? LucideIcons[post.categories.icon as keyof typeof LucideIcons] : MapPin;
+      const IconComponent = post.categories?.icon
+        ? LucideIcons[post.categories.icon as keyof typeof LucideIcons]
+        : MapPin;
       if (IconComponent) {
-        const iconSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        const iconSvg = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'svg'
+        );
         iconSvg.setAttribute('width', '20');
         iconSvg.setAttribute('height', '20');
         iconSvg.setAttribute('fill', 'white');
         iconSvg.setAttribute('viewBox', '0 0 24 24');
-        iconSvg.innerHTML = '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>';
+        iconSvg.innerHTML =
+          '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>';
         markerElement.appendChild(iconSvg);
       }
 
@@ -157,7 +171,7 @@ export default function MapboxMap({ posts, selectedCategory, onPostSelect }: Map
       const popup = new mapboxgl.Popup({
         offset: 25,
         closeButton: true,
-        closeOnClick: false
+        closeOnClick: false,
       }).setHTML(`
         <div style="padding: 12px; max-width: 250px;">
           <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold; color: #1f2937;">
@@ -205,12 +219,15 @@ export default function MapboxMap({ posts, selectedCategory, onPostSelect }: Map
         onPostSelect(post);
       }
     };
-
   }, [posts, selectedCategory, mapLoaded, onPostSelect]);
 
   const mapStyles = [
     { id: 'mapbox://styles/mapbox/streets-v12', name: 'Streets', icon: '🗺️' },
-    { id: 'mapbox://styles/mapbox/satellite-streets-v12', name: 'Satellite', icon: '🛰️' },
+    {
+      id: 'mapbox://styles/mapbox/satellite-streets-v12',
+      name: 'Satellite',
+      icon: '🛰️',
+    },
     { id: 'mapbox://styles/mapbox/light-v11', name: 'Light', icon: '☀️' },
     { id: 'mapbox://styles/mapbox/dark-v11', name: 'Dark', icon: '🌙' },
   ];
@@ -220,7 +237,7 @@ export default function MapboxMap({ posts, selectedCategory, onPostSelect }: Map
       map.current.flyTo({
         center: chicagoCenter,
         zoom: 11,
-        duration: 1000
+        duration: 1000,
       });
     }
   };
@@ -230,24 +247,27 @@ export default function MapboxMap({ posts, selectedCategory, onPostSelect }: Map
       map.current.flyTo({
         center: userLocation,
         zoom: 14,
-        duration: 1000
+        duration: 1000,
       });
     } else {
       // Try to get user location
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const coords: [number, number] = [position.coords.longitude, position.coords.latitude];
+          position => {
+            const coords: [number, number] = [
+              position.coords.longitude,
+              position.coords.latitude,
+            ];
             setUserLocation(coords);
             if (map.current) {
               map.current.flyTo({
                 center: coords,
                 zoom: 14,
-                duration: 1000
+                duration: 1000,
               });
             }
           },
-          (error) => {
+          error => {
             console.error('Error getting location:', error);
             alert('位置情報の取得に失敗しました');
           }
@@ -261,7 +281,9 @@ export default function MapboxMap({ posts, selectedCategory, onPostSelect }: Map
       <div className="flex-1 flex items-center justify-center bg-gray-100">
         <div className="text-center p-6">
           <MapPin className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Mapbox設定が必要です</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Mapbox設定が必要です
+          </h3>
           <p className="text-gray-600 text-sm">
             環境変数にVITE_MAPBOX_ACCESS_TOKENを設定してください
           </p>
@@ -275,9 +297,14 @@ export default function MapboxMap({ posts, selectedCategory, onPostSelect }: Map
       <div className="flex-1 flex items-center justify-center bg-gray-100">
         <div className="text-center p-6">
           <MapPin className="w-16 h-16 text-red-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">地図エラー</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            地図エラー
+          </h3>
           <p className="text-gray-600 text-sm mb-4">{mapError}</p>
-          <button onClick={() => window.location.reload()} className="px-4 py-2 bg-coral-500 text-white rounded-lg hover:bg-coral-600">
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-coral-500 text-white rounded-lg hover:bg-coral-600"
+          >
             再読み込み
           </button>
         </div>
@@ -289,7 +316,7 @@ export default function MapboxMap({ posts, selectedCategory, onPostSelect }: Map
     <div className="flex-1 relative">
       {/* Map Container */}
       <div ref={mapContainer} className="w-full h-full min-h-[400px]" />
-      
+
       {/* Map Controls */}
       <div className="absolute top-4 left-4 z-10 space-y-2">
         {/* Style Selector */}
@@ -298,7 +325,7 @@ export default function MapboxMap({ posts, selectedCategory, onPostSelect }: Map
             <Layers className="w-4 h-4 text-gray-600" />
             <select
               value={mapStyle}
-              onChange={(e) => setMapStyle(e.target.value)}
+              onChange={e => setMapStyle(e.target.value)}
               className="text-xs border-none bg-transparent focus:outline-none"
             >
               {mapStyles.map(style => (
@@ -344,10 +371,10 @@ export default function MapboxMap({ posts, selectedCategory, onPostSelect }: Map
         <div className="flex items-center space-x-2">
           <div className="w-2 h-2 bg-coral-500 rounded-full"></div>
           <span className="text-xs text-gray-700">
-            {selectedCategory 
-              ? posts.filter(p => p.categories?.id === selectedCategory).length 
-              : posts.length
-            }件の投稿
+            {selectedCategory
+              ? posts.filter(p => p.categories?.id === selectedCategory).length
+              : posts.length}
+            件の投稿
           </span>
         </div>
       </div>

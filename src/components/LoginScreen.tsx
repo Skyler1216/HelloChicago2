@@ -13,11 +13,11 @@ export default function LoginScreen() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     console.log('🔐 Login attempt started:', { email, isSignUp });
     setIsLoading(true);
     setError(null);
-    
+
     try {
       if (isSignUp) {
         console.log('📝 Attempting sign up...');
@@ -28,24 +28,25 @@ export default function LoginScreen() {
         console.log('🔑 Attempting sign in...');
         const { user } = await signIn(email, password);
         console.log('✅ Sign in successful:', user?.id);
-        
+
         // Let useAuth handle the rest
         console.log('🎯 Login completed, waiting for auth state update...');
       }
     } catch (err) {
       console.error('❌ Login error:', err);
       let errorMessage = 'エラーが発生しました';
-      
+
       if (err instanceof Error) {
         if (err.message.includes('Invalid login credentials')) {
-          errorMessage = 'メールアドレスまたはパスワードが正しくありません。入力内容をご確認ください。';
+          errorMessage =
+            'メールアドレスまたはパスワードが正しくありません。入力内容をご確認ください。';
         } else if (err.message.includes('Email not confirmed')) {
           errorMessage = 'メールアドレスの確認が完了していません。';
         } else {
           errorMessage = err.message;
         }
       }
-      
+
       setError(errorMessage);
       setIsLoading(false);
     }
@@ -62,12 +63,14 @@ export default function LoginScreen() {
               <MapPin className="w-5 h-5 text-white absolute -bottom-1 -right-1" />
             </div>
           </div>
-          
+
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             HelloChicago
           </h1>
           <p className="text-gray-600">
-            {isSignUp ? 'アカウントを作成' : 'シカゴ駐在妻コミュニティへようこそ'}
+            {isSignUp
+              ? 'アカウントを作成'
+              : 'シカゴ駐在妻コミュニティへようこそ'}
           </p>
         </div>
 
@@ -89,7 +92,7 @@ export default function LoginScreen() {
                 <input
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={e => setName(e.target.value)}
                   placeholder="山田花子"
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-coral-500 focus:border-transparent transition-all"
                   required
@@ -107,7 +110,7 @@ export default function LoginScreen() {
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={e => setEmail(e.target.value)}
                   placeholder="your.email@example.com"
                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-coral-500 focus:border-transparent transition-all"
                   required
@@ -125,7 +128,7 @@ export default function LoginScreen() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={e => setPassword(e.target.value)}
                   placeholder="パスワードを入力"
                   className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-coral-500 focus:border-transparent transition-all"
                   required
@@ -135,7 +138,11 @@ export default function LoginScreen() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -149,10 +156,14 @@ export default function LoginScreen() {
               {isLoading ? (
                 <div className="flex items-center justify-center space-x-2">
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>{isSignUp ? 'アカウント作成中...' : 'ログイン中...'}</span>
+                  <span>
+                    {isSignUp ? 'アカウント作成中...' : 'ログイン中...'}
+                  </span>
                 </div>
+              ) : isSignUp ? (
+                'アカウント作成'
               ) : (
-                isSignUp ? 'アカウント作成' : 'ログイン'
+                'ログイン'
               )}
             </button>
           </form>
@@ -171,7 +182,9 @@ export default function LoginScreen() {
               onClick={() => setIsSignUp(!isSignUp)}
               className="text-coral-600 text-sm font-medium hover:text-coral-700 transition-colors"
             >
-              {isSignUp ? 'すでにアカウントをお持ちですか？ログイン' : 'アカウントをお持ちでない方はこちら'}
+              {isSignUp
+                ? 'すでにアカウントをお持ちですか？ログイン'
+                : 'アカウントをお持ちでない方はこちら'}
             </button>
           </div>
 
@@ -210,10 +223,14 @@ export default function LoginScreen() {
         {/* Footer */}
         <div className="text-center mt-6">
           <p className="text-sm text-gray-500">
-            {isSignUp ? '新規登録は運営チームの承認が必要です' : '招待制のコミュニティです'}
+            {isSignUp
+              ? '新規登録は運営チームの承認が必要です'
+              : '招待制のコミュニティです'}
           </p>
           <p className="text-xs text-gray-400 mt-2">
-            {isSignUp ? 'アカウント作成後、承認までお待ちください' : 'アカウントをお持ちでない方は新規登録してください'}
+            {isSignUp
+              ? 'アカウント作成後、承認までお待ちください'
+              : 'アカウントをお持ちでない方は新規登録してください'}
           </p>
         </div>
       </div>

@@ -1,19 +1,37 @@
 import React from 'react';
-import { Settings, Bell, HelpCircle, Heart, MessageSquare, Users, Award, Shield } from 'lucide-react';
+import {
+  Settings,
+  Bell,
+  HelpCircle,
+  Heart,
+  MessageSquare,
+  Users,
+  Award,
+  Shield,
+} from 'lucide-react';
 import { signOut } from '../lib/supabase';
 import { Database } from '../types/database';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
 interface ProfileViewProps {
-  user: any;
+  user: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   profile: Profile | null;
   onAdminClick?: () => void;
 }
 
-export default function ProfileView({ user, profile, onAdminClick }: ProfileViewProps) {
+export default function ProfileView({
+  user,
+  profile,
+  onAdminClick,
+}: ProfileViewProps) {
   const stats = [
-    { label: '投稿数', value: '3', icon: MessageSquare, color: 'text-coral-600' },
+    {
+      label: '投稿数',
+      value: '3',
+      icon: MessageSquare,
+      color: 'text-coral-600',
+    },
     { label: 'いいね', value: '24', icon: Heart, color: 'text-red-500' },
     { label: 'フォロワー', value: '12', icon: Users, color: 'text-teal-600' },
   ];
@@ -21,19 +39,24 @@ export default function ProfileView({ user, profile, onAdminClick }: ProfileView
   const baseMenuItems = [
     { icon: Settings, label: '設定', description: 'アカウント設定を変更' },
     { icon: Bell, label: '通知', description: '通知設定を管理' },
-    { icon: HelpCircle, label: 'ヘルプ', description: 'よくある質問とサポート' },
+    {
+      icon: HelpCircle,
+      label: 'ヘルプ',
+      description: 'よくある質問とサポート',
+    },
   ];
 
   const adminMenuItem = {
     icon: Shield,
     label: '管理者用画面',
     description: 'ユーザー承認とシステム管理',
-    onClick: onAdminClick
+    onClick: onAdminClick,
   };
 
-  const menuItems = profile?.role === 'admin' 
-    ? [...baseMenuItems, adminMenuItem]
-    : baseMenuItems;
+  const menuItems =
+    profile?.role === 'admin'
+      ? [...baseMenuItems, adminMenuItem]
+      : baseMenuItems;
 
   const handleSignOut = async () => {
     try {
@@ -59,7 +82,9 @@ export default function ProfileView({ user, profile, onAdminClick }: ProfileView
             </span>
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-900">{profile?.name || 'ユーザー'}</h2>
+            <h2 className="text-xl font-bold text-gray-900">
+              {profile?.name || 'ユーザー'}
+            </h2>
             <p className="text-gray-600 text-sm">シカゴ在住 2年目</p>
             <div className="flex items-center space-x-1 mt-1">
               <Award className="w-4 h-4 text-yellow-500" />
@@ -67,7 +92,7 @@ export default function ProfileView({ user, profile, onAdminClick }: ProfileView
             </div>
           </div>
         </div>
-        
+
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4">
           {stats.map((stat, index) => (
@@ -75,7 +100,9 @@ export default function ProfileView({ user, profile, onAdminClick }: ProfileView
               <div className={`${stat.color} mb-1`}>
                 <stat.icon className="w-5 h-5 mx-auto" />
               </div>
-              <div className="text-lg font-bold text-gray-900">{stat.value}</div>
+              <div className="text-lg font-bold text-gray-900">
+                {stat.value}
+              </div>
               <div className="text-xs text-gray-600">{stat.label}</div>
             </div>
           ))}
@@ -92,7 +119,9 @@ export default function ProfileView({ user, profile, onAdminClick }: ProfileView
           </button>
           <button className="flex flex-col items-center p-4 bg-teal-50 rounded-xl hover:bg-teal-100 transition-colors">
             <Heart className="w-6 h-6 text-teal-600 mb-2" />
-            <span className="text-sm font-medium text-teal-700">お気に入り</span>
+            <span className="text-sm font-medium text-teal-700">
+              お気に入り
+            </span>
           </button>
         </div>
       </div>
@@ -108,14 +137,24 @@ export default function ProfileView({ user, profile, onAdminClick }: ProfileView
             }`}
           >
             <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-              <item.icon className={`w-5 h-5 ${
-                item.label === '管理者用画面' ? 'text-coral-600' : 'text-gray-600'
-              }`} />
+              <item.icon
+                className={`w-5 h-5 ${
+                  item.label === '管理者用画面'
+                    ? 'text-coral-600'
+                    : 'text-gray-600'
+                }`}
+              />
             </div>
             <div className="flex-1 text-left">
-              <div className={`font-medium ${
-                item.label === '管理者用画面' ? 'text-coral-900' : 'text-gray-900'
-              }`}>{item.label}</div>
+              <div
+                className={`font-medium ${
+                  item.label === '管理者用画面'
+                    ? 'text-coral-900'
+                    : 'text-gray-900'
+                }`}
+              >
+                {item.label}
+              </div>
               <div className="text-sm text-gray-500">{item.description}</div>
             </div>
           </button>
