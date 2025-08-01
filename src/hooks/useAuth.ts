@@ -13,12 +13,14 @@ export function useAuth() {
 
   useEffect(() => {
     let mounted = true;
+    let profileLoading = false;
 
     const loadProfile = async (userId: string) => {
+      if (profileLoading) return;
+      profileLoading = true;
+
       try {
-        console.log('Loading profile for user:', userId);
         const profileData = await getProfile(userId);
-        console.log('Profile data loaded:', profileData);
         if (mounted) {
           setProfile(profileData);
         }
@@ -28,6 +30,7 @@ export function useAuth() {
           setProfile(null);
         }
       } finally {
+        profileLoading = false;
         if (mounted) {
           setLoading(false);
         }
@@ -37,12 +40,10 @@ export function useAuth() {
     // Get initial session
     const initializeAuth = async () => {
       try {
-        console.log('Initializing auth...');
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!mounted) return;
         
-        console.log('Session:', session?.user?.id);
         setUser(session?.user ?? null);
         
         if (session?.user) {
@@ -67,8 +68,6 @@ export function useAuth() {
       async (event, session) => {
         if (!mounted) return;
         
-        console.log('Auth state change:', event, session?.user?.id);
-        
         setUser(session?.user ?? null);
         if (session?.user) {
           await loadProfile(session.user.id);
@@ -89,7 +88,6 @@ export function useAuth() {
   useEffect(() => {
     const checkAdminUsers = async () => {
       try {
-        console.log('Checking for admin users...');
         const { data, error } = await supabase
           .from('profiles')
           .select('id')
@@ -103,7 +101,6 @@ export function useAuth() {
           return;
         }
         
-        console.log('Admin users found:', data?.length || 0);
         setHasAdminUsers((data?.length || 0) > 0);
       } catch (error) {
         console.error('Error checking admin users:', error);
@@ -111,10 +108,10 @@ export function useAuth() {
       }
     };
 
-    if (user) {
+    if (user && !loading) {
       checkAdminUsers();
     }
-  }, [user]);
+  }, [user, loading]);
 
   return {
     user,

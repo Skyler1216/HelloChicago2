@@ -4,99 +4,60 @@ import { Database } from '../types/database';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-// Check if environment variables are properly configured
-const isValidUrl = (url: string) => {
-  try {
-    new URL(url);
-    return url.includes('supabase.co') || url.includes('localhost');
-  } catch {
-    return false;
-  }
-};
-
-if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('your-supabase-url-here') || supabaseAnonKey.includes('your-supabase-anon-key')) {
-  throw new Error('Missing Supabase environment variables. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.');
-}
-
-if (!isValidUrl(supabaseUrl)) {
-  throw new Error('Missing Supabase environment variables');
-}
-
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
 
 // Auth helpers
 export const signUp = async (email: string, password: string, name: string) => {
-  try {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name,
-        },
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        name,
       },
-    });
+    },
+  });
 
-    if (error) throw error;
+  if (error) throw error;
 
-    // Create profile
-    if (data.user) {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: data.user.id,
-          name,
-          email,
-          is_approved: false,
-        });
+  // Create profile
+  if (data.user) {
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        id: data.user.id,
+        name,
+        email,
+        is_approved: true, // Auto-approve new users
+        role: 'user'
+      });
 
-      if (profileError) throw profileError;
-    }
-
-    return data;
-  } catch (error) {
-    console.error('SignUp error:', error);
-    throw new Error('Failed to create account. Please check your internet connection and try again.');
+    if (profileError) throw profileError;
   }
+
+  return data;
 };
 
 export const signIn = async (email: string, password: string) => {
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('SignIn error:', error);
-    if (error instanceof Error) {
-      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-        throw new Error('Network connection failed. Please check your internet connection and verify your Supabase URL is correct.');
-      }
-      if (error.message.includes('Invalid login credentials')) {
-        throw new Error('Invalid email or password. Please check your credentials.');
-      }
-    }
-    throw error;
-  }
+  if (error) throw error;
+  return data;
 };
 
 export const signOut = async () => {
-  try {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.warn('SignOut warning:', error.message);
-    }
-    
-    // Clear storage after successful signout
-    if (typeof window !== 'undefined') {
-      localStorage.clear();
-      sessionStorage.clear();
-    }
-  } catch (error) {
-    console.warn('SignOut error:', error);
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    console.warn('SignOut warning:', error.message);
+  }
+  
+  // Clear storage after signout
+  if (typeof window !== 'undefined') {
+    localStorage.clear();
+    sessionStorage.clear();
   }
 };
 
@@ -106,7 +67,6 @@ export const getCurrentUser = async () => {
 };
 
 export const getProfile = async (userId: string) => {
-  console.log('Getting profile for userId:', userId);
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -118,11 +78,8 @@ export const getProfile = async (userId: string) => {
     throw error;
   }
   
-  console.log('Profile query result:', data);
-  
   // If no profile exists, create one
   if (!data) {
-    console.log('No profile found, creating new profile...');
     const { data: { user } } = await supabase.auth.getUser();
     
     if (user) {
@@ -130,7 +87,7 @@ export const getProfile = async (userId: string) => {
         id: userId,
         name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
         email: user.email || '',
-        is_approved: true, // Auto-approve for now
+        is_approved: true, // Auto-approve new profiles
         role: 'user' as const
       };
       
@@ -145,7 +102,6 @@ export const getProfile = async (userId: string) => {
         throw createError;
       }
       
-      console.log('Created new profile:', createdProfile);
       return createdProfile;
     }
   }
