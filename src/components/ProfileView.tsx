@@ -38,12 +38,13 @@ export default function ProfileView({ user, profile, onAdminClick }: ProfileView
   const handleSignOut = async () => {
     try {
       await signOut();
-      // Force page reload to ensure clean state
-      window.location.reload();
     } catch (error) {
       console.error('Sign out error:', error);
-      // Even if there's an error, try to reload to clear any corrupted state
-      window.location.reload();
+    } finally {
+      // Always reload to ensure clean state
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     }
   };
 

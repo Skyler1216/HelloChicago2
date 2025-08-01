@@ -180,10 +180,17 @@ export default function LoginScreen() {
               <div className="mt-2 space-y-2 text-xs text-gray-500">
                 <button
                   onClick={async () => {
-                    localStorage.clear();
-                    sessionStorage.clear();
-                    await supabase.auth.signOut();
-                    window.location.reload();
+                    try {
+                      await supabase.auth.signOut();
+                      localStorage.clear();
+                      sessionStorage.clear();
+                      window.location.reload();
+                    } catch (error) {
+                      console.error('Reset error:', error);
+                      localStorage.clear();
+                      sessionStorage.clear();
+                      window.location.reload();
+                    }
                   }}
                   className="block w-full text-left p-2 bg-white rounded border hover:bg-gray-50"
                 >
