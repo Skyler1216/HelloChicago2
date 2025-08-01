@@ -4,8 +4,11 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { MapPin, Navigation, Layers } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 
-// Set your Mapbox access token
-mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || '';
+// Set your Mapbox access token with fallback
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+if (MAPBOX_TOKEN) {
+  mapboxgl.accessToken = MAPBOX_TOKEN;
+}
 
 interface MapboxMapProps {
   posts: any[];
@@ -20,6 +23,7 @@ export default function MapboxMap({ posts, selectedCategory, onPostSelect }: Map
   const [mapLoaded, setMapLoaded] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [mapStyle, setMapStyle] = useState('mapbox://styles/mapbox/streets-v12');
+  const [mapError, setMapError] = useState<string | null>(null);
 
   // Chicago coordinates
   const chicagoCenter: [number, number] = [-87.6298, 41.8781];
@@ -27,39 +31,57 @@ export default function MapboxMap({ posts, selectedCategory, onPostSelect }: Map
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
+    // Check if Mapbox token is available
+    if (!MAPBOX_TOKEN) {
+      setMapError('Mapbox APIキーが設定されていません');
+      return;
+    }
+
     // Initialize map
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: mapStyle,
-      center: chicagoCenter,
-      zoom: 11,
-      pitch: 0,
-      bearing: 0
-    });
+    try {
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: mapStyle,
+        center: chicagoCenter,
+        zoom: 11,
+        pitch: 0,
+        bearing: 0
+      });
+      
+      // Add navigation controls
+      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-    // Add navigation controls
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      // Add geolocate control
+      const geolocate = new mapboxgl.GeolocateControl({
+        positionOptions: {
+          enableHighAccuracy: true
+        },
+        trackUserLocation: true,
+        showUserHeading: true
+      });
 
-    // Add geolocate control
-    const geolocate = new mapboxgl.GeolocateControl({
-      positionOptions: {
-        enableHighAccuracy: true
-      },
-      trackUserLocation: true,
-      showUserHeading: true
-    });
+      map.current.addControl(geolocate, 'top-right');
 
-    map.current.addControl(geolocate, 'top-right');
+      // Handle map load
+      map.current.on('load', () => {
+        setMapLoaded(true);
+        setMapError(null);
+      });
 
-    // Handle map load
-    map.current.on('load', () => {
-      setMapLoaded(true);
-    });
+      // Handle geolocate
+      geolocate.on('geolocate', (e: any) => {
+        setUserLocation([e.coords.longitude, e.coords.latitude]);
+      });
 
-    // Handle geolocate
-    geolocate.on('geolocate', (e: any) => {
-      setUserLocation([e.coords.longitude, e.coords.latitude]);
-    });
+      // Handle map errors
+      map.current.on('error', (e) => {
+        console.error('Mapbox error:', e);
+        setMapError('地図の読み込みに失敗しました');
+      });
+    } catch (error) {
+      console.error('Map initialization error:', error);
+      setMapError('地図の初期化に失敗しました');
+    }
 
     return () => {
       if (map.current) {
@@ -67,7 +89,7 @@ export default function MapboxMap({ posts, selectedCategory, onPostSelect }: Map
         map.current = null;
       }
     };
-  }, []);
+  }, [MAPBOX_TOKEN]);
 
   // Update map style
   useEffect(() => {
@@ -234,7 +256,7 @@ export default function MapboxMap({ posts, selectedCategory, onPostSelect }: Map
     }
   };
 
-  if (!mapboxgl.accessToken) {
+  if (!MAPBOX_TOKEN) {
     return (
       <div className="flex-1 flex items-center justify-center bg-gray-100">
         <div className="text-center p-6">
@@ -248,10 +270,25 @@ export default function MapboxMap({ posts, selectedCategory, onPostSelect }: Map
     );
   }
 
+  if (mapError) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-gray-100">
+        <div className="text-center p-6">
+          <MapPin className="w-16 h-16 text-red-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">地図エラー</h3>
+          <p className="text-gray-600 text-sm mb-4">{mapError}</p>
+          <button onClick={() => window.location.reload()} className="px-4 py-2 bg-coral-500 text-white rounded-lg hover:bg-coral-600">
+            再読み込み
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 relative">
       {/* Map Container */}
-      <div ref={mapContainer} className="w-full h-full" />
+      <div ref={mapContainer} className="w-full h-full min-h-[400px]" />
       
       {/* Map Controls */}
       <div className="absolute top-4 left-4 z-10 space-y-2">
@@ -314,6 +351,15 @@ export default function MapboxMap({ posts, selectedCategory, onPostSelect }: Map
           </span>
         </div>
       </div>
+
+      {/* Debug Info */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="absolute bottom-4 right-4 bg-black bg-opacity-75 text-white text-xs p-2 rounded">
+          <div>Token: {MAPBOX_TOKEN ? '✓' : '✗'}</div>
+          <div>Loaded: {mapLoaded ? '✓' : '✗'}</div>
+          <div>Posts: {posts.length}</div>
+        </div>
+      )}
     </div>
   );
 }
