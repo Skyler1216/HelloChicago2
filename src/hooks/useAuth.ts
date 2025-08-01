@@ -63,6 +63,8 @@ export function useAuth() {
       async (event, session) => {
         if (!mounted) return;
         
+        console.log('Auth state change:', event, session?.user?.id);
+        
         setUser(session?.user ?? null);
         if (session?.user) {
           await loadProfile(session.user.id);

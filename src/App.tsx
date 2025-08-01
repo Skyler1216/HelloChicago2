@@ -57,14 +57,10 @@ export default function App() {
           <button
             onClick={async () => {
               try {
-                await supabase.auth.signOut();
-                localStorage.clear();
-                sessionStorage.clear();
-                window.location.reload();
+                await signOut();
               } catch (error) {
                 console.error('Logout error:', error);
-                localStorage.clear();
-                sessionStorage.clear();
+                // Force reload even if signOut fails
                 window.location.reload();
               }
             }}

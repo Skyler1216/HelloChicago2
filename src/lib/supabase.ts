@@ -52,15 +52,19 @@ export const signIn = async (email: string, password: string) => {
 };
 
 export const signOut = async () => {
-  const { error } = await supabase.auth.signOut();
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.warn('SignOut warning:', error.message);
+    }
+  } catch (error) {
+    console.warn('SignOut error:', error);
+  }
+  
+  // Always clear local storage and reload
   localStorage.clear();
   sessionStorage.clear();
-  
-  if (error && 
-      error.message !== 'Session from session_id claim in JWT does not exist' &&
-      error.message !== 'Invalid Refresh Token: Refresh Token Not Found') {
-    console.warn('Logout warning:', error.message);
-  }
+  window.location.reload();
 };
 
 export const getCurrentUser = async () => {
