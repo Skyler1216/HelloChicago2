@@ -1,10 +1,24 @@
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '../types/database';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-if (!supabaseUrl || !supabaseAnonKey) {
+// Check if environment variables are properly configured
+const isValidUrl = (url: string) => {
+  try {
+    new URL(url);
+    return url.includes('supabase.co') || url.includes('localhost');
+  } catch {
+    return false;
+  }
+};
+
+if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('your-supabase-url-here') || supabaseAnonKey.includes('your-supabase-anon-key')) {
+  throw new Error('Missing Supabase environment variables. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.');
+}
+
+if (!isValidUrl(supabaseUrl)) {
   throw new Error('Missing Supabase environment variables');
 }
 
