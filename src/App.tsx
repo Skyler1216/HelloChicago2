@@ -57,10 +57,6 @@ export default function App() {
           <button
             onClick={async () => {
               try {
-                // Clear auth state immediately
-                setUser(null);
-                setProfile(null);
-                
                 await signOut();
               } catch (error) {
                 console.error('Logout error:', error);
