@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, Heart, MapPin } from 'lucide-react';
-import { signIn, signUp } from '../lib/supabase';
+import { signIn, signUp, supabase } from '../lib/supabase';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -21,10 +21,27 @@ export default function LoginScreen() {
         await signUp(email, password, name);
         alert('アカウントが作成されました。運営チームの承認をお待ちください。');
       } else {
-        await signIn(email, password);
+        const { user } = await signIn(email, password);
+        
+        // Force a small delay to ensure auth state is updated
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // The useAuth hook will automatically handle the approval check
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'エラーが発生しました');
+      let errorMessage = 'エラーが発生しました';
+      
+      if (err instanceof Error) {
+        if (err.message.includes('Invalid login credentials')) {
+          errorMessage = 'メールアドレスまたはパスワードが正しくありません。入力内容をご確認ください。';
+        } else if (err.message.includes('Email not confirmed')) {
+          errorMessage = 'メールアドレスの確認が完了していません。';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -152,6 +169,30 @@ export default function LoginScreen() {
             >
               {isSignUp ? 'すでにアカウントをお持ちですか？ログイン' : 'アカウントをお持ちでない方はこちら'}
             </button>
+          </div>
+
+          {/* Troubleshooting Section */}
+          <div className="mt-6 p-3 bg-gray-50 rounded-lg">
+            <details className="text-sm">
+              <summary className="cursor-pointer text-gray-600 hover:text-gray-800">
+                ログインできない場合のトラブルシューティング
+              </summary>
+              <div className="mt-2 space-y-2 text-xs text-gray-500">
+                <button
+                  onClick={async () => {
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    await supabase.auth.signOut();
+                    window.location.reload();
+                  }}
+                  className="block w-full text-left p-2 bg-white rounded border hover:bg-gray-50"
+                >
+                  🔄 認証状態をリセット
+                </button>
+                <p>• アカウント作成後は管理者の承認が必要です</p>
+                <p>• 問題が続く場合は管理者にお問い合わせください</p>
+              </div>
+            </details>
           </div>
         </div>
 

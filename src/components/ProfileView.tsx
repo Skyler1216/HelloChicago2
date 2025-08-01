@@ -38,8 +38,12 @@ export default function ProfileView({ user, profile, onAdminClick }: ProfileView
   const handleSignOut = async () => {
     try {
       await signOut();
+      // Force page reload to ensure clean state
+      window.location.reload();
     } catch (error) {
       console.error('Sign out error:', error);
+      // Even if there's an error, try to reload to clear any corrupted state
+      window.location.reload();
     }
   };
 
@@ -98,13 +102,19 @@ export default function ProfileView({ user, profile, onAdminClick }: ProfileView
           <button
             key={index}
             onClick={item.onClick}
-            className="w-full flex items-center space-x-3 p-4 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+            className={`w-full flex items-center space-x-3 p-4 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 ${
+              item.label === '管理者用画面' ? 'bg-coral-50' : ''
+            }`}
           >
             <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-              <item.icon className="w-5 h-5 text-gray-600" />
+              <item.icon className={`w-5 h-5 ${
+                item.label === '管理者用画面' ? 'text-coral-600' : 'text-gray-600'
+              }`} />
             </div>
             <div className="flex-1 text-left">
-              <div className="font-medium text-gray-900">{item.label}</div>
+              <div className={`font-medium ${
+                item.label === '管理者用画面' ? 'text-coral-900' : 'text-gray-900'
+              }`}>{item.label}</div>
               <div className="text-sm text-gray-500">{item.description}</div>
             </div>
           </button>
