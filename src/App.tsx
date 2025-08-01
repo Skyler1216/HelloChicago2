@@ -17,24 +17,13 @@ export default function App() {
   const [showAdminView, setShowAdminView] = useState(false);
   const { user, profile, loading, profileLoaded, hasAdminUsers, isAuthenticated, isApproved } = useAuth();
 
+  // スプラッシュ画面のタイマー
   useEffect(() => {
-    // Force splash screen to complete after 3 seconds max
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 3000);
+    }, 2500);
     return () => clearTimeout(timer);
   }, []);
-
-  // 認証状態のデバッグログ
-  console.log('🎯 App render state:', {
-    showSplash,
-    loading,
-    isAuthenticated,
-    profileLoaded,
-    isApproved,
-    hasProfile: !!profile,
-    profileRole: profile?.role
-  });
 
   // スプラッシュ画面
   if (showSplash) {

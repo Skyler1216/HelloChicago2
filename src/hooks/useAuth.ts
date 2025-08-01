@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase, getProfile } from '../lib/supabase';
 import { Database } from '../types/database';
@@ -26,27 +26,26 @@ export function useAuth() {
     initialized: false,
   });
 
-  const [profileLoadingInProgress, setProfileLoadingInProgress] = useState(false);
+  const initializationRef = useRef(false);
+  const profileLoadingRef = useRef(false);
+  const mountedRef = useRef(true);
 
   // プロフィール読み込み関数
   const loadProfile = async (userId: string): Promise<Profile | null> => {
-    if (profileLoadingInProgress) {
-      console.log('Profile loading already in progress, skipping...');
+    if (profileLoadingRef.current) {
       return null;
     }
 
-    setProfileLoadingInProgress(true);
+    profileLoadingRef.current = true;
     
     try {
-      console.log('Loading profile for user:', userId);
       const profileData = await getProfile(userId);
-      console.log('Profile loaded:', profileData);
       return profileData;
     } catch (error) {
       console.error('Error loading profile:', error);
       return null;
     } finally {
-      setProfileLoadingInProgress(false);
+      profileLoadingRef.current = false;
     }
   };
 
@@ -72,14 +71,11 @@ export function useAuth() {
     }
   };
 
-  // 認証状態の更新
+  // 認証状態の更新（一度だけ実行）
   const updateAuthState = async (user: User | null) => {
-    console.log('🔄 Updating auth state for user:', user?.id);
-    console.log('Updating auth state for user:', user?.id);
+    if (!mountedRef.current) return;
     
     if (!user) {
-      // ユーザーがいない場合
-      console.log('❌ No user found, setting unauthenticated state');
       setAuthState({
         user: null,
         profile: null,
@@ -92,15 +88,13 @@ export function useAuth() {
       return;
     }
 
-    // ユーザーがいる場合、プロフィールを読み込む
-    console.log('👤 User found, loading profile...');
+    // プロフィール読み込み
     const profile = await loadProfile(user.id);
     const hasAdmins = await checkAdminUsers();
 
     // プロフィールが存在しない場合は作成を試行
     let finalProfile = profile;
-    if (!profile) {
-      console.log('Profile not found, attempting to create...');
+    if (!profile && mountedRef.current) {
       try {
         const newProfile = {
           id: user.id,
@@ -118,23 +112,17 @@ export function useAuth() {
 
         if (!error && createdProfile) {
           finalProfile = createdProfile;
-          console.log('Profile created successfully:', createdProfile);
         }
       } catch (error) {
         console.error('Error creating profile:', error);
       }
     }
 
+    if (!mountedRef.current) return;
+
     // 最終的な認証状態を設定
     const isApproved = finalProfile?.is_approved ?? false;
     
-    console.log('✅ Final auth state:', {
-      userId: user.id,
-      profileExists: !!finalProfile,
-      isApproved,
-      hasAdmins
-    });
-
     setAuthState({
       user,
       profile: finalProfile,
@@ -146,32 +134,30 @@ export function useAuth() {
     });
   };
 
-  // 初期化
+  // 初期化（一度だけ実行）
   useEffect(() => {
-    let mounted = true;
+    if (initializationRef.current) return;
+    initializationRef.current = true;
+
     let initializationTimeout: NodeJS.Timeout;
 
     const initializeAuth = async () => {
       try {
-        console.log('Initializing auth...');
-        
         // セッション取得
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Error getting session:', error);
-          if (mounted) {
+          if (mountedRef.current) {
             setAuthState(prev => ({ ...prev, loading: false, initialized: true }));
           }
           return;
         }
 
-        if (mounted) {
-          await updateAuthState(session?.user || null);
-        }
+        await updateAuthState(session?.user || null);
       } catch (error) {
         console.error('Error initializing auth:', error);
-        if (mounted) {
+        if (mountedRef.current) {
           setAuthState(prev => ({ ...prev, loading: false, initialized: true }));
         }
       }
@@ -180,23 +166,21 @@ export function useAuth() {
     // 初期化実行
     initializeAuth();
 
-    // タイムアウト設定（10秒後に強制完了）
+    // タイムアウト設定（5秒後に強制完了）
     initializationTimeout = setTimeout(() => {
-      if (mounted && !authState.initialized) {
+      if (mountedRef.current && !authState.initialized) {
         console.warn('Auth initialization timeout - forcing completion');
         setAuthState(prev => ({ ...prev, loading: false, initialized: true }));
       }
-    }, 10000);
+    }, 5000);
 
     // 認証状態変更の監視
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔔 Auth state change event:', event, 'User ID:', session?.user?.id);
-        if (!mounted) return;
+        if (!mountedRef.current) return;
         
         // サインアウト時は即座に状態をクリア
         if (event === 'SIGNED_OUT') {
-          console.log('🚪 User signed out, clearing state');
           setAuthState({
             user: null,
             profile: null,
@@ -209,25 +193,27 @@ export function useAuth() {
           return;
         }
 
-        // その他の場合は通常の更新処理
-        await updateAuthState(session?.user || null);
+        // サインイン時のみ状態を更新
+        if (event === 'SIGNED_IN' && session?.user) {
+          await updateAuthState(session.user);
+        }
       }
     );
 
     return () => {
-      mounted = false;
+      mountedRef.current = false;
       subscription.unsubscribe();
       if (initializationTimeout) {
         clearTimeout(initializationTimeout);
       }
     };
-  }, []); // 依存配列を空にして初回のみ実行
+  }, []); // 空の依存配列で一度だけ実行
 
   return {
     user: authState.user,
     profile: authState.profile,
     loading: authState.loading,
-    profileLoaded: authState.initialized && !profileLoadingInProgress,
+    profileLoaded: authState.initialized,
     hasAdminUsers: authState.hasAdminUsers,
     isAuthenticated: authState.isAuthenticated,
     isApproved: authState.isApproved,
