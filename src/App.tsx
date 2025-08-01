@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { signOut } from './lib/supabase';
 import SplashScreen from './components/SplashScreen';
 import LoginScreen from './components/LoginScreen';
