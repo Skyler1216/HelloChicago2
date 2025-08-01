@@ -16,7 +16,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState<'home' | 'map' | 'post' | 'profile'>('home');
   const [showAdminView, setShowAdminView] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
-  const { user, profile, loading, hasAdminUsers, isAuthenticated, isApproved } = useAuth();
+  const { user, profile, loading, profileLoaded, hasAdminUsers, isAuthenticated, isApproved } = useAuth();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -29,15 +29,18 @@ export default function App() {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
 
-  if (loading && !isAuthenticated) {
+  // Show loading screen only when we're still loading auth state
+  if (loading || (isAuthenticated && !profileLoaded)) {
     return <LoadingScreen />;
   }
 
+  // Show login screen if not authenticated
   if (!isAuthenticated) {
     return <LoginScreen />;
   }
 
-  if (!isApproved) {
+  // Show approval screen only if profile is loaded and user is not approved
+  if (profileLoaded && !isApproved) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-coral-50 to-teal-50 flex items-center justify-center px-4">
         <div className="bg-white rounded-3xl shadow-xl p-8 max-w-md w-full text-center">
@@ -77,7 +80,7 @@ export default function App() {
           </button>
           
           {/* Self-approval button for first user only */}
-          {hasAdminUsers === false && !loading && (
+          {hasAdminUsers === false && profileLoaded && (
             <button
               onClick={async () => {
                 try {

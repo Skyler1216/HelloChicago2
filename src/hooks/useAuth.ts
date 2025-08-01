@@ -9,6 +9,7 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [hasAdminUsers, setHasAdminUsers] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -23,11 +24,13 @@ export function useAuth() {
         if (mounted) {
           console.log('Profile loaded:', profileData);
           setProfile(profileData);
+          setProfileLoaded(true);
         }
       } catch (error) {
         console.error('Error loading profile:', error);
         if (mounted) {
           setProfile(null);
+          setProfileLoaded(true);
         }
       } finally {
         if (mounted) {
@@ -51,6 +54,7 @@ export function useAuth() {
           await loadProfile(session.user.id);
         } else {
           setProfile(null);
+          setProfileLoaded(true);
           setLoading(false);
         }
       } catch (error) {
@@ -58,6 +62,7 @@ export function useAuth() {
         if (mounted) {
           setUser(null);
           setProfile(null);
+          setProfileLoaded(true);
           setLoading(false);
         }
       }
@@ -72,10 +77,13 @@ export function useAuth() {
         
         console.log('Auth state change:', event, session?.user?.id || 'No user');
         setUser(session?.user ?? null);
+        setProfileLoaded(false);
+        
         if (session?.user) {
           await loadProfile(session.user.id);
         } else {
           setProfile(null);
+          setProfileLoaded(true);
           setLoading(false);
         }
       }
@@ -111,17 +119,18 @@ export function useAuth() {
       }
     };
 
-    if (user && !loading) {
+    if (user && profileLoaded) {
       checkAdminUsers();
     }
-  }, [user, loading]);
+  }, [user, profileLoaded]);
 
   return {
     user,
     profile,
     loading,
+    profileLoaded,
     hasAdminUsers,
     isAuthenticated: !!user,
-    isApproved: profile?.is_approved ?? false,
+    isApproved: profileLoaded ? (profile?.is_approved ?? false) : false,
   };
 }
