@@ -11,9 +11,24 @@ if (MAPBOX_TOKEN) {
 }
 
 interface MapboxMapProps {
-  posts: any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+  posts: Array<{
+    id: string;
+    title: string;
+    content: string;
+    summary?: string;
+    location_lat: number;
+    location_lng: number;
+    categories?: {
+      id: string;
+      name: string;
+      name_ja: string;
+      icon: string;
+      color: string;
+    };
+    created_at: string;
+  }>;
   selectedCategory: string | null;
-  onPostSelect: (post: any) => void; // eslint-disable-line @typescript-eslint/no-explicit-any
+  onPostSelect: (post: MapboxMapProps['posts'][0]) => void;
 }
 
 export default function MapboxMap({
@@ -77,9 +92,12 @@ export default function MapboxMap({
       });
 
       // Handle geolocate
-      geolocate.on('geolocate', (e: any) => {
-        setUserLocation([e.coords.longitude, e.coords.latitude]);
-      });
+      geolocate.on(
+        'geolocate',
+        (e: { coords: { longitude: number; latitude: number } }) => {
+          setUserLocation([e.coords.longitude, e.coords.latitude]);
+        }
+      );
 
       // Handle map errors
       map.current.on('error', e => {
@@ -97,7 +115,7 @@ export default function MapboxMap({
         map.current = null;
       }
     };
-  }, [MAPBOX_TOKEN]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Update map style
   useEffect(() => {
@@ -213,12 +231,13 @@ export default function MapboxMap({
     });
 
     // Add global function for popup button clicks
-    (window as any).selectPost = (postId: string) => {
-      const post = posts.find(p => p.id === postId);
-      if (post) {
-        onPostSelect(post);
-      }
-    };
+    (window as unknown as { selectPost: (postId: string) => void }).selectPost =
+      (postId: string) => {
+        const post = posts.find(p => p.id === postId);
+        if (post) {
+          onPostSelect(post);
+        }
+      };
   }, [posts, selectedCategory, mapLoaded, onPostSelect]);
 
   const mapStyles = [
