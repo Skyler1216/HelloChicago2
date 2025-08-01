@@ -103,7 +103,9 @@ export function useAuth() {
       }
     };
 
-    checkAdminUsers();
+    if (user) {
+      checkAdminUsers();
+    }
   }, [user]);
 
   return {
