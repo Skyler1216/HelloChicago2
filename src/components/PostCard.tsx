@@ -20,6 +20,15 @@ export default function PostCard({ post, onClick }: PostCardProps) {
   const { isLiked, likesCount, loading: likesLoading, toggleLike } = useLikes(post.id, user?.id);
   const IconComponent = LucideIcons[post.categories.icon as keyof typeof LucideIcons];
   
+  console.log('🎴 PostCard render:', {
+    postId: post.id,
+    title: post.title,
+    likes: post.likes,
+    replies: post.replies,
+    likesCount,
+    isLiked
+  });
+  
   const getPostTypeInfo = () => {
     switch (post.type) {
       case 'consultation':
@@ -138,7 +147,6 @@ export default function PostCard({ post, onClick }: PostCardProps) {
       {/* Actions */}
       <div className="flex items-center justify-between pt-3 border-t border-gray-100">
         <button 
-          onClick={toggleLike}
           onClick={(e) => {
             e.stopPropagation();
             toggleLike();
@@ -151,7 +159,7 @@ export default function PostCard({ post, onClick }: PostCardProps) {
           } disabled:opacity-50`}
         >
           <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
-          <span className="text-sm font-medium">{likesCount}</span>
+          <span className="text-sm font-medium">{likesCount || 0}</span>
         </button>
         <button 
           onClick={(e) => {

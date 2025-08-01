@@ -15,6 +15,8 @@ export function useLikes(postId: string, userId?: string) {
 
   const loadLikeStatus = async () => {
     try {
+      console.log('❤️ Loading like status for post:', postId, 'user:', userId);
+      
       // Get likes count
       const { data: post } = await supabase
         .from('posts')
@@ -23,6 +25,7 @@ export function useLikes(postId: string, userId?: string) {
         .single();
 
       if (post) {
+        console.log('❤️ Post likes count:', post.likes);
         setLikesCount(post.likes);
       }
 
@@ -35,6 +38,7 @@ export function useLikes(postId: string, userId?: string) {
           .eq('user_id', userId)
           .maybeSingle();
 
+        console.log('❤️ User has liked:', !!like);
         setIsLiked(!!like);
       }
     } catch (error) {
@@ -47,6 +51,8 @@ export function useLikes(postId: string, userId?: string) {
 
     setLoading(true);
     try {
+      console.log('❤️ Toggling like, current state:', isLiked);
+      
       if (isLiked) {
         // Unlike
         await supabase
@@ -57,6 +63,7 @@ export function useLikes(postId: string, userId?: string) {
 
         setIsLiked(false);
         setLikesCount(prev => prev - 1);
+        console.log('❤️ Unliked post');
       } else {
         // Like
         await supabase
@@ -68,6 +75,7 @@ export function useLikes(postId: string, userId?: string) {
 
         setIsLiked(true);
         setLikesCount(prev => prev + 1);
+        console.log('❤️ Liked post');
       }
     } catch (error) {
       console.error('Error toggling like:', error);

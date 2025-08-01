@@ -19,6 +19,8 @@ export function usePosts(type?: 'post' | 'consultation' | 'transfer', categoryId
   const loadPosts = async () => {
     try {
       setLoading(true);
+      console.log('📝 Loading posts with type:', type, 'category:', categoryId);
+      
       let query = supabase
         .from('posts')
         .select(`
@@ -51,8 +53,12 @@ export function usePosts(type?: 'post' | 'consultation' | 'transfer', categoryId
 
       if (error) throw error;
 
+      console.log('📝 Posts loaded:', data?.length || 0, 'posts');
+      console.log('📝 Sample post data:', data?.[0]);
+      
       setPosts(data || []);
     } catch (err) {
+      console.error('❌ Error loading posts:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
