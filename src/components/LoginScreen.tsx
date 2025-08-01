@@ -14,25 +14,26 @@ export default function LoginScreen() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('Login attempt started:', { email, isSignUp });
+    console.log('🔐 Login attempt started:', { email, isSignUp });
     setIsLoading(true);
     setError(null);
     
     try {
       if (isSignUp) {
-        console.log('Attempting sign up...');
+        console.log('📝 Attempting sign up...');
         await signUp(email, password, name);
         alert('アカウントが作成されました。運営チームの承認をお待ちください。');
+        setIsLoading(false);
       } else {
-        console.log('Attempting sign in...');
+        console.log('🔑 Attempting sign in...');
         const { user } = await signIn(email, password);
-        console.log('Sign in successful:', user?.id);
+        console.log('✅ Sign in successful:', user?.id);
         
-        // Don't do anything else - let useAuth handle the state
-        console.log('Login completed, waiting for auth state update...');
+        // Let useAuth handle the rest
+        console.log('🎯 Login completed, waiting for auth state update...');
       }
     } catch (err) {
-      console.error('Login error:', err);
+      console.error('❌ Login error:', err);
       let errorMessage = 'エラーが発生しました';
       
       if (err instanceof Error) {
@@ -47,12 +48,6 @@ export default function LoginScreen() {
       
       setError(errorMessage);
       setIsLoading(false);
-    } finally {
-      // Only set loading to false for sign up or errors
-      // For sign in, let the auth state change handle it
-      if (isSignUp) {
-        setIsLoading(false);
-      }
     }
   };
 
