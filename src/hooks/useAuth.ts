@@ -13,15 +13,15 @@ export function useAuth() {
 
   useEffect(() => {
     let mounted = true;
-    let profileLoading = false;
 
     const loadProfile = async (userId: string) => {
-      if (profileLoading) return;
-      profileLoading = true;
+      if (!mounted) return;
 
       try {
+        console.log('Loading profile for user:', userId);
         const profileData = await getProfile(userId);
         if (mounted) {
+          console.log('Profile loaded:', profileData);
           setProfile(profileData);
         }
       } catch (error) {
@@ -30,7 +30,6 @@ export function useAuth() {
           setProfile(null);
         }
       } finally {
-        profileLoading = false;
         if (mounted) {
           setLoading(false);
         }
@@ -40,15 +39,18 @@ export function useAuth() {
     // Get initial session
     const initializeAuth = async () => {
       try {
+        console.log('Initializing auth...');
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!mounted) return;
         
+        console.log('Session:', session?.user?.id || 'No session');
         setUser(session?.user ?? null);
         
         if (session?.user) {
           await loadProfile(session.user.id);
         } else {
+          setProfile(null);
           setLoading(false);
         }
       } catch (error) {
@@ -68,6 +70,7 @@ export function useAuth() {
       async (event, session) => {
         if (!mounted) return;
         
+        console.log('Auth state change:', event, session?.user?.id || 'No user');
         setUser(session?.user ?? null);
         if (session?.user) {
           await loadProfile(session.user.id);

@@ -57,9 +57,18 @@ export default function App() {
           <button
             onClick={async () => {
               try {
+                console.log('Logout button clicked');
                 await signOut();
+                // Force reload after signout
+                setTimeout(() => {
+                  window.location.reload();
+                }, 100);
               } catch (error) {
                 console.error('Logout error:', error);
+                // Force reload even if signout fails
+                setTimeout(() => {
+                  window.location.reload();
+                }, 100);
               }
             }}
             className="mt-4 w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-xl font-semibold hover:bg-gray-200 transition-all duration-200"

@@ -49,16 +49,20 @@ export const signIn = async (email: string, password: string) => {
 };
 
 export const signOut = async () => {
-  const { error } = await supabase.auth.signOut();
-  if (error) {
-    console.warn('SignOut warning:', error.message);
-  }
+  console.log('SignOut called');
   
-  // Clear storage after signout
+  // Clear storage first
   if (typeof window !== 'undefined') {
     localStorage.clear();
     sessionStorage.clear();
   }
+  
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    console.error('SignOut error:', error.message);
+  }
+  
+  console.log('SignOut completed');
 };
 
 export const getCurrentUser = async () => {
