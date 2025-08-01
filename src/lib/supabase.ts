@@ -60,6 +60,18 @@ export const signUp = async (email: string, password: string, name: string) => {
 
 export const signIn = async (email: string, password: string) => {
   try {
+    // Test connectivity first
+    const response = await fetch(`${supabaseUrl}/rest/v1/`, {
+      method: 'HEAD',
+      headers: {
+        'apikey': supabaseAnonKey,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Unable to connect to Supabase. Please check your configuration.');
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -69,8 +81,13 @@ export const signIn = async (email: string, password: string) => {
     return data;
   } catch (error) {
     console.error('SignIn error:', error);
-    if (error instanceof Error && error.message.includes('Failed to fetch')) {
-      throw new Error('Unable to connect to the server. Please check your internet connection and Supabase configuration.');
+    if (error instanceof Error) {
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        throw new Error('Network connection failed. Please check your internet connection and verify your Supabase URL is correct.');
+      }
+      if (error.message.includes('Invalid login credentials')) {
+        throw new Error('Invalid email or password. Please check your credentials.');
+      }
     }
     throw error;
   }
