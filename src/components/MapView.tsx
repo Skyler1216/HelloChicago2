@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
-import { MapPin, TrendingUp, Map, X } from "lucide-react";
+import { MapPin, TrendingUp, Map, X, AlertCircle } from "lucide-react";
 import { mockPosts } from "../data/mockData";
 import CategoryFilter from "./CategoryFilter";
 import PopularSpots from "./PopularSpots";
 import { useCategories } from "../hooks/useCategories";
-import { mapboxgl, mapConfig } from "../lib/mapbox";
+import { mapboxgl, mapConfig, isMapboxAvailable, alternativeStyles } from "../lib/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 export default function MapView() {
@@ -14,6 +14,8 @@ export default function MapView() {
   const [map, setMap] = useState<mapboxgl.Map | null>(null);
   const [markers, setMarkers] = useState<mapboxgl.Marker[]>([]);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [isMapLoading, setIsMapLoading] = useState(true);
+  const [currentStyleIndex, setCurrentStyleIndex] = useState(0);
   const mapContainer = useRef<HTMLDivElement>(null);
   const { categories, loading: categoriesLoading } = useCategories();
 
@@ -30,102 +32,107 @@ export default function MapView() {
   useEffect(() => {
     if (!mapContainer.current || map) return;
 
-    try {
-      // Debug: Check environment variables
-      console.log("Mapbox Token:", mapboxgl.accessToken ? "Set" : "Not set");
-      console.log("Map Container:", mapContainer.current);
+    // Check if Mapbox is available
+    if (!isMapboxAvailable) {
+      console.warn("Mapbox not available, showing fallback");
+      setMapError("Mapbox APIキーが設定されていません");
+      setIsMapLoading(false);
+      return;
+    }
 
-      // Check if Mapbox token is available
-      if (!mapboxgl.accessToken) {
-        console.error("Mapbox APIキーが設定されていません");
-        setMapError("Mapbox APIキーが設定されていません");
-        return;
-      }
+    const initializeMap = async () => {
+      try {
+        setIsMapLoading(true);
+        console.log("Initializing map...");
 
-      // Ensure container is ready
-      if (!mapContainer.current) {
-        console.error("Map container not ready");
-        return;
-      }
+        const newMap = new mapboxgl.Map({
+          container: mapContainer.current!,
+          style: alternativeStyles[currentStyleIndex],
+          center: mapConfig.center,
+          zoom: mapConfig.zoom,
+          minZoom: mapConfig.minZoom,
+          maxZoom: mapConfig.maxZoom,
+          preserveDrawingBuffer: true,
+          failIfMajorPerformanceCaveat: false
+        });
 
-      const newMap = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: mapConfig.style,
-        center: mapConfig.center,
-        zoom: mapConfig.zoom,
-        minZoom: mapConfig.minZoom,
-        maxZoom: mapConfig.maxZoom,
-      });
+        // Enhanced error handling
+        newMap.on("error", (e) => {
+          console.error("Map error:", e);
+          if (currentStyleIndex < alternativeStyles.length - 1) {
+            console.log(`Trying alternative style ${currentStyleIndex + 1}...`);
+            setCurrentStyleIndex(prev => prev + 1);
+            newMap.remove();
+            return;
+          }
+          setMapError("マップの読み込みでエラーが発生しました");
+          setIsMapLoading(false);
+        });
 
-      console.log("Map initialized successfully");
-      console.log("Map style URL:", mapConfig.style);
+        // Success handlers
+        newMap.on("load", () => {
+          console.log("Map loaded successfully");
+          setIsMapLoading(false);
+          setMapError(null);
 
-      // Add error handling for map loading
-      newMap.on("error", (e) => {
-        console.error("Map error:", e);
-        setMapError("マップの読み込みでエラーが発生しました");
-      });
+          // Add navigation controls
+          newMap.addControl(new mapboxgl.NavigationControl(), "top-right");
 
-      // Wait for map to load before adding controls
-      newMap.on("load", () => {
-        console.log("Map loaded successfully");
-        console.log("Map style loaded:", newMap.isStyleLoaded());
-        console.log("Map bounds:", newMap.getBounds());
-
-        // Add navigation controls
-        newMap.addControl(new mapboxgl.NavigationControl(), "top-right");
-
-        // Add geolocate control
-        newMap.addControl(
-          new mapboxgl.GeolocateControl({
+          // Add geolocate control
+          const geolocateControl = new mapboxgl.GeolocateControl({
             positionOptions: {
               enableHighAccuracy: true,
+              timeout: 10000
             },
-            trackUserLocation: true,
-            showUserHeading: true,
-          }),
-          "top-right"
-        );
-      });
+            trackUserLocation: false,
+            showUserHeading: false,
+          });
 
-      // Add style load event
-      newMap.on("styledata", () => {
-        console.log("Map style data loaded");
-      });
+          newMap.addControl(geolocateControl, "top-right");
+        });
 
-      // Fallback: If style doesn't load, try alternative
-      setTimeout(() => {
-        if (!newMap.isStyleLoaded()) {
-          console.log("Style not loaded, trying alternative...");
-          newMap.setStyle("mapbox://styles/mapbox/outdoors-v12");
-        }
-      }, 5000);
+        newMap.on("styledata", () => {
+          console.log("Map style data loaded");
+        });
 
-      setMap(newMap);
+        // Timeout fallback
+        const timeout = setTimeout(() => {
+          if (!newMap.loaded()) {
+            console.warn("Map loading timeout, trying next style...");
+            if (currentStyleIndex < alternativeStyles.length - 1) {
+              setCurrentStyleIndex(prev => prev + 1);
+              newMap.remove();
+            } else {
+              setMapError("マップの読み込みがタイムアウトしました");
+              setIsMapLoading(false);
+            }
+          }
+        }, 10000);
 
-      return () => {
-        if (newMap) {
-          newMap.remove();
-        }
-      };
-    } catch (error) {
-      console.error("Map initialization error:", error);
-      setMapError("マップの初期化に失敗しました");
-    }
-  }, [map]);
+        setMap(newMap);
+
+        return () => {
+          clearTimeout(timeout);
+          if (newMap) {
+            newMap.remove();
+          }
+        };
+      } catch (error) {
+        console.error("Map initialization error:", error);
+        setMapError("マップの初期化に失敗しました");
+        setIsMapLoading(false);
+      }
+    };
+
+    initializeMap();
+  }, [mapContainer, map, currentStyleIndex]);
 
   // Update markers when posts or category filter changes
   useEffect(() => {
-    if (!map) return;
+    if (!map || !map.loaded()) return;
 
     try {
-      // Wait for map to be fully loaded
-      if (!map.isStyleLoaded()) {
-        console.log("Map style not loaded yet, waiting...");
-        return;
-      }
-
-      // Remove existing markers
+      // Remove existing markers safely
       markers.forEach((marker) => {
         try {
           marker.remove();
@@ -142,8 +149,13 @@ export default function MapView() {
           try {
             const markerElement = document.createElement("div");
             markerElement.className =
-              "w-8 h-8 rounded-full border-2 border-white shadow-lg cursor-pointer transform hover:scale-110 transition-transform";
+              "w-8 h-8 rounded-full border-2 border-white shadow-lg cursor-pointer transform hover:scale-110 transition-transform flex items-center justify-center";
             markerElement.style.backgroundColor = post.category.color;
+
+            // Add inner dot
+            const innerDot = document.createElement("div");
+            innerDot.className = "w-3 h-3 bg-white rounded-full";
+            markerElement.appendChild(innerDot);
 
             const marker = new mapboxgl.Marker(markerElement)
               .setLngLat([post.location.lng, post.location.lat])
@@ -169,31 +181,96 @@ export default function MapView() {
 
   // Fit map to markers when category changes
   useEffect(() => {
-    if (!map || filteredPosts.length === 0) return;
+    if (!map || !map.loaded() || filteredPosts.length === 0) return;
 
     try {
-      // Wait for map to be fully loaded
-      if (!map.isStyleLoaded()) {
-        return;
-      }
-
       const bounds = new mapboxgl.LngLatBounds();
+      let hasValidLocation = false;
+
       filteredPosts.forEach((post) => {
         if (post.location) {
           bounds.extend([post.location.lng, post.location.lat]);
+          hasValidLocation = true;
         }
       });
 
-      if (!bounds.isEmpty()) {
+      if (hasValidLocation && !bounds.isEmpty()) {
         map.fitBounds(bounds, {
           padding: 50,
           maxZoom: 15,
+          duration: 1000
         });
       }
     } catch (error) {
       console.error("Map bounds error:", error);
     }
   }, [map, filteredPosts]);
+
+  // Enhanced fallback map component
+  const FallbackMap = () => (
+    <div className="w-full h-full bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center">
+      <div className="text-center p-6 max-w-md">
+        <AlertCircle className="w-16 h-16 text-blue-400 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          マップが利用できません
+        </h3>
+        <p className="text-gray-600 text-sm mb-4">
+          {mapError || "Mapbox APIキーが設定されていません"}
+        </p>
+        <p className="text-xs text-gray-500 mb-6">
+          .env.localファイルにVITE_MAPBOX_TOKENを設定してください
+        </p>
+
+        {/* Interactive fallback display */}
+        <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+          <div className="text-center">
+            <div className="text-xs text-gray-500 mb-3">
+              シカゴ周辺エリア - {filteredPosts.length}件の投稿
+            </div>
+            <div className="relative bg-gray-50 rounded-lg h-48 overflow-hidden">
+              {/* Grid background */}
+              <div className="absolute inset-0 opacity-20">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="border-b border-gray-300" style={{height: '12.5%'}} />
+                ))}
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="absolute border-r border-gray-300 h-full" style={{left: `${i * 12.5}%`, width: '1px'}} />
+                ))}
+              </div>
+
+              {/* Mock markers */}
+              {filteredPosts.slice(0, 6).map((post, index) => (
+                <div
+                  key={post.id}
+                  className="absolute cursor-pointer transform hover:scale-110 transition-transform"
+                  style={{
+                    left: `${15 + (index % 3) * 30}%`,
+                    top: `${20 + Math.floor(index / 3) * 35}%`,
+                  }}
+                  onClick={() =>
+                    setSelectedPost(
+                      selectedPost === post.id ? null : post.id
+                    )
+                  }
+                >
+                  <div
+                    className="w-6 h-6 rounded-full border-2 border-white shadow-lg flex items-center justify-center"
+                    style={{ backgroundColor: post.category.color }}
+                  >
+                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="mt-3 text-xs text-gray-600">
+              スポット一覧タブで詳細をご確認ください
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="h-full flex flex-col">
@@ -255,60 +332,25 @@ export default function MapView() {
         </div>
       ) : (
         <div className="flex-1 relative">
-          {/* Map Container */}
-          <div
-            ref={mapContainer}
-            className="w-full h-full"
-            style={{ minHeight: "400px" }}
-          />
-
-          {/* Error Message */}
-          {mapError && (
-            <div className="absolute inset-0 bg-white bg-opacity-95 flex items-center justify-center">
-              <div className="text-center p-6">
-                <MapPin className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  マップの読み込みエラー
-                </h3>
-                <p className="text-gray-600 text-sm mb-4">{mapError}</p>
-                <p className="text-xs text-gray-500 mb-4">
-                  .env.localファイルにMapbox APIキーを設定してください
-                </p>
-
-                {/* Fallback Map Display */}
-                <div className="bg-gradient-to-br from-blue-50 to-green-50 rounded-lg p-4 border border-gray-200">
-                  <div className="text-center">
-                    <div className="w-64 h-48 mx-auto bg-white rounded-lg shadow-lg p-4 relative">
-                      <div className="text-xs text-gray-500 mb-2">
-                        シカゴ周辺エリア
-                      </div>
-                      {filteredPosts.slice(0, 3).map((post, index) => (
-                        <div
-                          key={post.id}
-                          className="absolute cursor-pointer transform hover:scale-110 transition-transform"
-                          style={{
-                            left: `${20 + index * 60}px`,
-                            top: `${40 + index * 20}px`,
-                          }}
-                          onClick={() =>
-                            setSelectedPost(
-                              selectedPost === post.id ? null : post.id
-                            )
-                          }
-                        >
-                          <div
-                            className="w-6 h-6 rounded-full border-2 border-white shadow-lg flex items-center justify-center"
-                            style={{ backgroundColor: post.category.color }}
-                          >
-                            <div className="w-2 h-2 bg-white rounded-full"></div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+          {/* Loading indicator */}
+          {isMapLoading && (
+            <div className="absolute inset-0 bg-white bg-opacity-95 flex items-center justify-center z-20">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">マップを読み込み中...</p>
               </div>
             </div>
+          )}
+
+          {/* Map Container or Fallback */}
+          {mapError ? (
+            <FallbackMap />
+          ) : (
+            <div
+              ref={mapContainer}
+              className="w-full h-full"
+              style={{ minHeight: "400px" }}
+            />
           )}
 
           {/* Selected Post Popup */}
@@ -333,7 +375,7 @@ export default function MapView() {
                         <p className="text-xs text-gray-500 mb-3">
                           {post.content.substring(0, 100)}...
                         </p>
-                        <button className="text-sm text-coral-600 font-medium">
+                        <button className="text-sm text-coral-600 font-medium hover:text-coral-700 transition-colors">
                           詳細を見る
                         </button>
                       </>
@@ -342,7 +384,7 @@ export default function MapView() {
                 </div>
                 <button
                   onClick={() => setSelectedPost(null)}
-                  className="ml-2 p-1 text-gray-400 hover:text-gray-600"
+                  className="ml-2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
