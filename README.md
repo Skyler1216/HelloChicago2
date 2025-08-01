@@ -42,9 +42,47 @@ VITE_MAPBOX_TOKEN=your_mapbox_api_key_here
 npm run dev
 ```
 
+## 開発ツール
+
+### ESLint & Prettier
+
+プロジェクトにはESLintとPrettierが設定されており、コードの品質とフォーマットを自動的に管理します。
+
+#### 利用可能なコマンド
+
+```bash
+# コードの品質チェック
+npm run lint
+
+# ESLintエラーの自動修正
+npm run lint:fix
+
+# Prettierによるコードフォーマット
+npm run format
+
+# フォーマットチェック（CI/CD用）
+npm run format:check
+```
+
+#### VSCode設定
+
+プロジェクトには `.vscode/settings.json` が含まれており、以下の機能が自動的に有効になります：
+
+- **保存時の自動フォーマット**: ファイル保存時にPrettierが自動実行
+- **ESLint自動修正**: 保存時にESLintエラーが自動修正
+- **推奨拡張機能**: 必要なVSCode拡張機能が自動提案
+
+#### 推奨VSCode拡張機能
+
+- Prettier - Code formatter
+- ESLint
+- Tailwind CSS IntelliSense
+- TypeScript Importer
+
 ## マップ機能について
 
 ### 利用可能な機能
+
 - インタラクティブなマップ表示（Mapbox使用）
 - カテゴリ別マーカー表示
 - 投稿詳細のポップアップ表示
@@ -53,7 +91,9 @@ npm run dev
 - マップスタイルの自動フォールバック
 
 ### フォールバック機能
+
 Mapbox APIキーが設定されていない場合は、以下の機能が利用できます：
+
 - 静的なマップ風表示
 - マーカーのクリック機能
 - カテゴリフィルタリング
@@ -67,6 +107,7 @@ Mapbox APIキーが設定されていない場合は、以下の機能が利用�
 - **Mapbox GL JS** (マップ機能)
 - **Lucide React** (アイコン)
 - **Supabase** (データベース)
+- **ESLint** + **Prettier** (コード品質・フォーマット)
 
 ## ディレクトリ構成
 
@@ -89,19 +130,21 @@ src/
 npm run build
 ```
 
-## Lint
-
-```bash
-npm run lint
-```
-
 ## トラブルシューティング
 
 ### マップが表示されない場合
+
 1. `.env.local` ファイルが存在し、正しいAPIキーが設定されているか確認
 2. ブラウザのコンソールでエラーメッセージを確認
 3. フォールバック表示が正常に動作するか確認
 
 ### パフォーマンスの問題
+
 - ブラウザのハードウェアアクセラレーションが有効になっているか確認
 - 古いブラウザの場合、最新版への更新を推奨
+
+### ESLint/Prettierの問題
+
+- VSCode拡張機能が正しくインストールされているか確認
+- プロジェクトの設定ファイル（`.prettierrc`, `eslint.config.js`）が存在するか確認
+- 必要に応じて `npm run lint:fix` を実行してエラーを修正

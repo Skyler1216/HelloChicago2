@@ -11,13 +11,22 @@ interface CategoryFilterProps {
   onCategorySelect: (categoryId: string | null) => void;
 }
 
-export default function CategoryFilter({ categories, loading, selectedCategory, onCategorySelect }: CategoryFilterProps) {
+export default function CategoryFilter({
+  categories,
+  loading,
+  selectedCategory,
+  onCategorySelect,
+}: CategoryFilterProps) {
   if (loading) {
     return (
-      <div className="px-4 py-3 bg-white border-b border-gray-100">
-        <div className="flex space-x-2">
+      <div className='px-4 py-3 bg-white border-b border-gray-100'>
+        <div className='flex space-x-2'>
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-8 bg-gray-200 rounded-full animate-pulse" style={{ width: `${60 + i * 20}px` }}></div>
+            <div
+              key={i}
+              className='h-8 bg-gray-200 rounded-full animate-pulse'
+              style={{ width: `${60 + i * 20}px` }}
+            ></div>
           ))}
         </div>
       </div>
@@ -25,8 +34,8 @@ export default function CategoryFilter({ categories, loading, selectedCategory, 
   }
 
   return (
-    <div className="px-4 py-3 bg-white border-b border-gray-100">
-      <div className="flex space-x-2 overflow-x-auto scrollbar-hide">
+    <div className='px-4 py-3 bg-white border-b border-gray-100'>
+      <div className='flex space-x-2 overflow-x-auto scrollbar-hide'>
         <button
           onClick={() => onCategorySelect(null)}
           className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
@@ -37,9 +46,10 @@ export default function CategoryFilter({ categories, loading, selectedCategory, 
         >
           すべて
         </button>
-        {categories.map((category) => {
-          const IconComponent = LucideIcons[category.icon as keyof typeof LucideIcons];
-          
+        {categories.map(category => {
+          const IconComponent =
+            LucideIcons[category.icon as keyof typeof LucideIcons];
+
           return (
             <button
               key={category.id}
@@ -49,9 +59,13 @@ export default function CategoryFilter({ categories, loading, selectedCategory, 
                   ? 'text-white border-2 border-transparent'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
-              style={selectedCategory === category.id ? { backgroundColor: category.color } : {}}
+              style={
+                selectedCategory === category.id
+                  ? { backgroundColor: category.color }
+                  : {}
+              }
             >
-              {IconComponent && <IconComponent className="w-4 h-4" />}
+              {IconComponent && <IconComponent className='w-4 h-4' />}
               <span>{category.name_ja}</span>
             </button>
           );

@@ -39,10 +39,17 @@ export default {
           700: '#b45309',
           800: '#92400e',
           900: '#78350f',
-        }
+        },
       },
       fontFamily: {
-        sans: ['-apple-system', 'BlinkMacSystemFont', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'sans-serif'],
+        sans: [
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Hiragino Sans',
+          'Hiragino Kaku Gothic ProN',
+          'Noto Sans JP',
+          'sans-serif',
+        ],
       },
     },
   },

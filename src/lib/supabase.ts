@@ -26,14 +26,12 @@ export const signUp = async (email: string, password: string, name: string) => {
 
   // Create profile
   if (data.user) {
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert({
-        id: data.user.id,
-        name,
-        email,
-        is_approved: false,
-      });
+    const { error: profileError } = await supabase.from('profiles').insert({
+      id: data.user.id,
+      name,
+      email,
+      is_approved: false,
+    });
 
     if (profileError) throw profileError;
   }
@@ -56,7 +54,7 @@ export const signOut = async () => {
     // Clear all storage first
     localStorage.clear();
     sessionStorage.clear();
-    
+
     // Clear any cached auth state
     if (typeof window !== 'undefined') {
       // Clear any Supabase cached data
@@ -66,7 +64,7 @@ export const signOut = async () => {
         }
       });
     }
-    
+
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.warn('SignOut warning:', error.message);
@@ -74,13 +72,15 @@ export const signOut = async () => {
   } catch (error) {
     console.warn('SignOut error:', error);
   }
-  
+
   // Force reload to ensure clean state
   window.location.reload();
 };
 
 export const getCurrentUser = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   return user;
 };
 

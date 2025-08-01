@@ -35,12 +35,14 @@ export function useAuth() {
     // Get initial session
     const initializeAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
         if (!mounted) return;
-        
+
         setUser(session?.user ?? null);
-        
+
         if (session?.user) {
           await loadProfile(session.user.id);
         } else {
@@ -59,29 +61,29 @@ export function useAuth() {
     initializeAuth();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!mounted) return;
-        
-        console.log('Auth state change:', event, session?.user?.id);
-        
-        // Handle sign out event specifically
-        if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setProfile(null);
-          setLoading(false);
-          return;
-        }
-        
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await loadProfile(session.user.id);
-        } else {
-          setProfile(null);
-          setLoading(false);
-        }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+
+      console.log('Auth state change:', event, session?.user?.id);
+
+      // Handle sign out event specifically
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
+        return;
       }
-    );
+
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        await loadProfile(session.user.id);
+      } else {
+        setProfile(null);
+        setLoading(false);
+      }
+    });
 
     return () => {
       mounted = false;
@@ -106,7 +108,7 @@ export function useAuth() {
           setHasAdminUsers(false);
           return;
         }
-        
+
         console.log('Admin users found:', data?.length || 0);
         setHasAdminUsers((data?.length || 0) > 0);
       } catch (error) {

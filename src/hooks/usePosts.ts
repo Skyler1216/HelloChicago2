@@ -7,7 +7,10 @@ type Post = Database['public']['Tables']['posts']['Row'] & {
   categories: Database['public']['Tables']['categories']['Row'];
 };
 
-export function usePosts(type?: 'post' | 'consultation' | 'transfer', categoryId?: string) {
+export function usePosts(
+  type?: 'post' | 'consultation' | 'transfer',
+  categoryId?: string
+) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +24,8 @@ export function usePosts(type?: 'post' | 'consultation' | 'transfer', categoryId
       setLoading(true);
       let query = supabase
         .from('posts')
-        .select(`
+        .select(
+          `
           *,
           profiles (
             id,
@@ -35,7 +39,8 @@ export function usePosts(type?: 'post' | 'consultation' | 'transfer', categoryId
             icon,
             color
           )
-        `)
+        `
+        )
         .eq('approved', true)
         .order('created_at', { ascending: false });
 
@@ -59,12 +64,15 @@ export function usePosts(type?: 'post' | 'consultation' | 'transfer', categoryId
     }
   };
 
-  const createPost = async (postData: Database['public']['Tables']['posts']['Insert']) => {
+  const createPost = async (
+    postData: Database['public']['Tables']['posts']['Insert']
+  ) => {
     try {
       const { data, error } = await supabase
         .from('posts')
         .insert(postData)
-        .select(`
+        .select(
+          `
           *,
           profiles (
             id,
@@ -78,7 +86,8 @@ export function usePosts(type?: 'post' | 'consultation' | 'transfer', categoryId
             icon,
             color
           )
-        `)
+        `
+        )
         .single();
 
       if (error) throw error;

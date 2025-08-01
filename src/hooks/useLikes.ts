@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Database } from '../types/database';
 
 export function useLikes(postId: string, userId?: string) {
   const [isLiked, setIsLiked] = useState(false);
@@ -59,12 +58,10 @@ export function useLikes(postId: string, userId?: string) {
         setLikesCount(prev => prev - 1);
       } else {
         // Like
-        await supabase
-          .from('likes')
-          .insert({
-            post_id: postId,
-            user_id: userId
-          });
+        await supabase.from('likes').insert({
+          post_id: postId,
+          user_id: userId,
+        });
 
         setIsLiked(true);
         setLikesCount(prev => prev + 1);
@@ -80,6 +77,6 @@ export function useLikes(postId: string, userId?: string) {
     isLiked,
     likesCount,
     loading,
-    toggleLike
+    toggleLike,
   };
 }

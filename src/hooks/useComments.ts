@@ -23,14 +23,16 @@ export function useComments(postId: string) {
       setLoading(true);
       const { data, error } = await supabase
         .from('comments')
-        .select(`
+        .select(
+          `
           *,
           profiles (
             id,
             name,
             avatar_url
           )
-        `)
+        `
+        )
         .eq('post_id', postId)
         .eq('approved', true)
         .is('parent_id', null)
@@ -40,24 +42,26 @@ export function useComments(postId: string) {
 
       // Load replies for each comment
       const commentsWithReplies = await Promise.all(
-        (data || []).map(async (comment) => {
+        (data || []).map(async comment => {
           const { data: replies } = await supabase
             .from('comments')
-            .select(`
+            .select(
+              `
               *,
               profiles (
                 id,
                 name,
                 avatar_url
               )
-            `)
+            `
+            )
             .eq('parent_id', comment.id)
             .eq('approved', true)
             .order('created_at', { ascending: true });
 
           return {
             ...comment,
-            replies: replies || []
+            replies: replies || [],
           };
         })
       );
@@ -70,7 +74,11 @@ export function useComments(postId: string) {
     }
   };
 
-  const addComment = async (content: string, userId: string, parentId?: string) => {
+  const addComment = async (
+    content: string,
+    userId: string,
+    parentId?: string
+  ) => {
     try {
       const { data, error } = await supabase
         .from('comments')
@@ -79,16 +87,18 @@ export function useComments(postId: string) {
           author_id: userId,
           content,
           parent_id: parentId || null,
-          approved: true
+          approved: true,
         })
-        .select(`
+        .select(
+          `
           *,
           profiles (
             id,
             name,
             avatar_url
           )
-        `)
+        `
+        )
         .single();
 
       if (error) throw error;
