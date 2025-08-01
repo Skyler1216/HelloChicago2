@@ -19,24 +19,42 @@ export default function App() {
   const { user, profile, loading, profileLoaded, hasAdminUsers, isAuthenticated, isApproved } = useAuth();
 
   useEffect(() => {
+    // Force splash screen to complete after 3 seconds max
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 2500);
+    }, 3000);
     return () => clearTimeout(timer);
   }, []);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('App state:', {
+      showSplash,
+      loading,
+      isAuthenticated,
+      profileLoaded,
+      isApproved,
+      hasProfile: !!profile
+    });
+  }, [showSplash, loading, isAuthenticated, profileLoaded, isApproved, profile]);
 
   if (showSplash) {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
 
-  // Show loading screen only when we're still loading auth state
-  if (loading || (isAuthenticated && !profileLoaded)) {
+  // Show loading screen only when we're still loading auth state and not authenticated yet
+  if (loading && !isAuthenticated) {
     return <LoadingScreen />;
   }
 
   // Show login screen if not authenticated
   if (!isAuthenticated) {
     return <LoginScreen />;
+  }
+
+  // If authenticated but profile not loaded yet, show a brief loading
+  if (isAuthenticated && !profileLoaded) {
+    return <LoadingScreen />;
   }
 
   // Show approval screen only if profile is loaded and user is not approved

@@ -11,18 +11,20 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [hasAdminUsers, setHasAdminUsers] = useState<boolean | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     let mounted = true;
+    let profileLoadingInProgress = false;
 
     const loadProfile = async (userId: string) => {
-      if (!mounted) return;
-
+      if (!mounted || profileLoadingInProgress) return;
+      
+      profileLoadingInProgress = true;
+      
       try {
-        console.log('Loading profile for user:', userId);
         const profileData = await getProfile(userId);
         if (mounted) {
-          console.log('Profile loaded:', profileData);
           setProfile(profileData);
           setProfileLoaded(true);
         }
@@ -33,6 +35,7 @@ export function useAuth() {
           setProfileLoaded(true);
         }
       } finally {
+        profileLoadingInProgress = false;
         if (mounted) {
           setLoading(false);
         }
@@ -41,13 +44,13 @@ export function useAuth() {
 
     // Get initial session
     const initializeAuth = async () => {
+      if (!mounted) return;
+      
       try {
-        console.log('Initializing auth...');
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!mounted) return;
         
-        console.log('Session:', session?.user?.id || 'No session');
         setUser(session?.user ?? null);
         
         if (session?.user) {
@@ -57,6 +60,8 @@ export function useAuth() {
           setProfileLoaded(true);
           setLoading(false);
         }
+        
+        setInitialized(true);
       } catch (error) {
         console.error('Error initializing auth:', error);
         if (mounted) {
@@ -64,6 +69,7 @@ export function useAuth() {
           setProfile(null);
           setProfileLoaded(true);
           setLoading(false);
+          setInitialized(true);
         }
       }
     };
@@ -75,7 +81,8 @@ export function useAuth() {
       async (event, session) => {
         if (!mounted) return;
         
-        console.log('Auth state change:', event, session?.user?.id || 'No user');
+        console.log('Auth state change:', event);
+        
         setUser(session?.user ?? null);
         setProfileLoaded(false);
         
@@ -89,14 +96,27 @@ export function useAuth() {
       }
     );
 
+    // Timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      if (mounted && !initialized) {
+        console.warn('Auth initialization timeout - forcing completion');
+        setLoading(false);
+        setProfileLoaded(true);
+        setInitialized(true);
+      }
+    }, 10000); // 10 second timeout
+
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      clearTimeout(timeout);
     };
   }, []);
 
   // Check if there are any admin users in the system
   useEffect(() => {
+    if (!user || !profileLoaded) return;
+
     const checkAdminUsers = async () => {
       try {
         const { data, error } = await supabase
@@ -119,15 +139,13 @@ export function useAuth() {
       }
     };
 
-    if (user && profileLoaded) {
-      checkAdminUsers();
-    }
+    checkAdminUsers();
   }, [user, profileLoaded]);
 
   return {
     user,
     profile,
-    loading,
+    loading: loading && !initialized,
     profileLoaded,
     hasAdminUsers,
     isAuthenticated: !!user,
