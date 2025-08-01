@@ -38,8 +38,11 @@ export function useAuth() {
         console.log('📋 Initial session:', session?.user?.id || 'No session');
 
         if (session?.user) {
+          console.log('👤 Setting user from initial session');
           setUser(session.user);
           await loadUserProfile(session.user.id);
+        } else {
+          console.log('❌ No user in initial session');
         }
 
         setInitialized(true);
@@ -68,10 +71,17 @@ export function useAuth() {
       }
 
       if (event === 'SIGNED_IN' && session?.user) {
+        console.log('🔔 SIGNED_IN event detected, setting user');
         setUser(session.user);
         setLoading(true);
         await loadUserProfile(session.user.id);
         setLoading(false);
+      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+        console.log('🔔 TOKEN_REFRESHED event detected, updating user');
+        setUser(session.user);
+        if (!profile) {
+          await loadUserProfile(session.user.id);
+        }
       }
     });
 
@@ -119,9 +129,8 @@ export function useAuth() {
           .from('profiles')
           .insert({
             id: userId,
-            name:
-              user?.user_metadata?.name || user?.email?.split('@')[0] || 'User',
-            email: user?.email || '',
+            name: 'User', // Default name, can be updated later
+            email: '', // Will be updated when user is available
             is_approved: true, // Auto-approve new users
             role: 'user',
           })
@@ -130,7 +139,37 @@ export function useAuth() {
 
         if (!error && createdProfile) {
           console.log('✅ Profile created:', createdProfile.name);
-          setProfile(createdProfile);
+
+          // Update profile with user information if available
+          if (user?.email) {
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({
+                name:
+                  user.user_metadata?.name ||
+                  user.email.split('@')[0] ||
+                  'User',
+                email: user.email,
+              })
+              .eq('id', userId);
+
+            if (!updateError) {
+              console.log('✅ Profile updated with user info');
+              setProfile({
+                ...createdProfile,
+                name:
+                  user.user_metadata?.name ||
+                  user.email.split('@')[0] ||
+                  'User',
+                email: user.email,
+              });
+            } else {
+              console.error('❌ Failed to update profile:', updateError);
+              setProfile(createdProfile);
+            }
+          } else {
+            setProfile(createdProfile);
+          }
         } else {
           console.error('❌ Failed to create profile:', error);
         }

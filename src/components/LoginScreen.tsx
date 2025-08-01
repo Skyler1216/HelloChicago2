@@ -29,8 +29,14 @@ export default function LoginScreen() {
         const { user } = await signIn(email, password);
         console.log('✅ Sign in successful:', user?.id);
 
-        // Let useAuth handle the rest
-        console.log('🎯 Login completed, waiting for auth state update...');
+        // Force auth state update by triggering a re-render
+        console.log('🎯 Login completed, triggering auth state update...');
+        setIsLoading(false);
+
+        // Small delay to ensure Supabase session is set
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
       }
     } catch (err) {
       console.error('❌ Login error:', err);
