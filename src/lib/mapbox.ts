@@ -13,8 +13,8 @@ export { mapboxgl };
 
 // Map configuration
 export const mapConfig = {
-  style: "mapbox://styles/mapbox/streets-v12",
-  center: [-87.6298, 41.8781], // Chicago coordinates
+  style: "mapbox://styles/mapbox/light-v11", // より確実なスタイルに変更
+  center: [-87.6298, 41.8781] as [number, number], // Chicago coordinates
   zoom: 10,
   minZoom: 8,
   maxZoom: 18,
