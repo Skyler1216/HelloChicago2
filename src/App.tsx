@@ -21,40 +21,15 @@ export default function App() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 1500); // Reduce splash time
+    }, 2500);
     return () => clearTimeout(timer);
   }, []);
-
-  // Force splash to end after maximum time
-  useEffect(() => {
-    const maxTimer = setTimeout(() => {
-      if (showSplash) {
-        console.log('Force ending splash screen');
-        setShowSplash(false);
-      }
-    }, 3000);
-    return () => clearTimeout(maxTimer);
-  }, [showSplash]);
-
-  // Debug logging
-  useEffect(() => {
-    console.log('App state:', {
-      showSplash,
-      loading,
-      isAuthenticated,
-      isApproved,
-      hasAdminUsers,
-      user: user?.id,
-      profile: profile?.id
-    });
-  }, [showSplash, loading, isAuthenticated, isApproved, hasAdminUsers, user, profile]);
 
   if (showSplash) {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
 
-  // Show loading screen only if we're still initializing auth and it's been reasonable time
-  if (loading && !isAuthenticated && !user) {
+  if (loading && !isAuthenticated) {
     return <LoadingScreen />;
   }
 
@@ -88,7 +63,6 @@ export default function App() {
                 window.location.reload();
               } catch (error) {
                 console.error('Logout error:', error);
-                // Force reload even if logout fails
                 localStorage.clear();
                 sessionStorage.clear();
                 window.location.reload();
@@ -102,102 +76,71 @@ export default function App() {
           {/* Self-approval button for first user only */}
           {hasAdminUsers === false && !loading && (
             <button
-            onClick={async () => {
-              try {
-                setIsApproving(true);
-               
-               // Get current user
-               const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
-               if (userError || !currentUser) {
-                 throw new Error('ユーザー情報を取得できませんでした');
-               }
-               
-               console.log('Current user ID:', currentUser.id);
-               
-               // Check if profile exists
-               const { data: existingProfile, error: checkError } = await supabase
-                 .from('profiles')
-                 .select('*')
-                 .eq('id', currentUser.id)
-                 .maybeSingle();
-               
-               if (checkError) {
-                 console.error('Profile check error:', checkError);
-                 throw checkError;
-               }
-               
-               if (!existingProfile) {
-                console.log('No profile found, creating new profile for user:', currentUser.id);
-                
-                // Create new profile
-                const { error: createError } = await supabase
-                  .from('profiles')
-                  .insert({
-                    id: currentUser.id,
-                    email: currentUser.email || '',
-                    name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'User',
-                    is_approved: true,
-                    role: 'admin'
-                  });
-                
-                if (createError) {
-                  console.error('Profile creation error:', createError);
-                  throw createError;
+              onClick={async () => {
+                try {
+                  setIsApproving(true);
+                 
+                 const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
+                 if (userError || !currentUser) {
+                   throw new Error('ユーザー情報を取得できませんでした');
+                 }
+                 
+                 const { data: existingProfile, error: checkError } = await supabase
+                   .from('profiles')
+                   .select('*')
+                   .eq('id', currentUser.id)
+                   .maybeSingle();
+                 
+                 if (checkError) {
+                   throw checkError;
+                 }
+                 
+                 if (!existingProfile) {
+                  const { error: createError } = await supabase
+                    .from('profiles')
+                    .insert({
+                      id: currentUser.id,
+                      email: currentUser.email || '',
+                      name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'User',
+                      is_approved: true,
+                      role: 'admin'
+                    });
+                  
+                  if (createError) {
+                    throw createError;
+                  }
+                } else {
+                  const { error } = await supabase
+                    .from('profiles')
+                    .update({ 
+                      is_approved: true,
+                      role: 'admin'
+                    })
+                    .eq('id', currentUser.id);
+                  
+                  if (error) {
+                    throw error;
+                  }
+                 }
+                  
+                 alert('承認が完了しました！ページをリロードします。');
+                 
+                 setTimeout(() => {
+                   window.location.reload();
+                 }, 1000);
+                 
+                } catch (error) {
+                  console.error('Self-approval error:', error);
+                 alert(`承認に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
+                } finally {
+                  setIsApproving(false);
                 }
-                
-                console.log('Profile created and approved successfully');
-              } else {
-                console.log('Existing profile:', existingProfile);
-                
-                // Update existing profile
-                const { error } = await supabase
-                  .from('profiles')
-                  .update({ 
-                    is_approved: true,
-                    role: 'admin'
-                  })
-                  .eq('id', currentUser.id);
-                
-                if (error) {
-                  console.error('Update error:', error);
-                  throw error;
-                }
-                
-                console.log('Profile updated successfully');
-               }
-               
-               // Verify the update
-               const { data: updatedProfile, error: verifyError } = await supabase
-                 .from('profiles')
-                 .select('*')
-                 .eq('id', currentUser.id)
-                 .maybeSingle();
-               
-               if (verifyError) {
-                 console.error('Verification error:', verifyError);
-               } else {
-                 console.log('Updated profile:', updatedProfile);
-               }
-                
-               alert('承認が完了しました！ページをリロードします。');
-               
-               // Wait a moment then reload
-               setTimeout(() => {
-                 window.location.reload();
-               }, 1000);
-               
-              } catch (error) {
-                console.error('Self-approval error:', error);
-               alert(`承認に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
-              } finally {
-                setIsApproving(false);
-              }
-            }}
-            disabled={isApproving}
-           className="mt-6 w-full bg-gradient-to-r from-coral-500 to-coral-400 text-white py-3 px-6 rounded-xl font-semibold hover:from-coral-600 hover:to-coral-500 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isApproving ? '承認中...' : '管理者として承認する'}
-          </button>
+              }}
+              disabled={isApproving}
+             className="mt-6 w-full bg-gradient-to-r from-coral-500 to-coral-400 text-white py-3 px-6 rounded-xl font-semibold hover:from-coral-600 hover:to-coral-500 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isApproving ? '承認中...' : '管理者として承認する'}
+            </button>
           )}
           
           {hasAdminUsers === false && (
@@ -210,7 +153,6 @@ export default function App() {
     );
   }
 
-  // If admin view is requested, show it regardless of current view
   if (showAdminView) {
     return (
       <Layout
