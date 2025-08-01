@@ -14,8 +14,6 @@ export function useLikes(postId: string, userId?: string) {
 
   const loadLikeStatus = async () => {
     try {
-      console.log('❤️ Loading like status for post:', postId, 'user:', userId);
-
       // Get likes count and user like status in parallel
       const [postResult, userLikeResult] = await Promise.all([
         // Get post likes count
@@ -48,13 +46,6 @@ export function useLikes(postId: string, userId?: string) {
       const currentLikesCount = post?.likes || 0;
       const hasLiked = !!userLike;
 
-      console.log('❤️ Loaded like status:', {
-        postId,
-        likesCount: currentLikesCount,
-        hasLiked,
-        userId,
-      });
-
       setLikesCount(currentLikesCount);
       setIsLiked(hasLiked);
     } catch (error) {
@@ -64,12 +55,10 @@ export function useLikes(postId: string, userId?: string) {
 
   const toggleLike = async () => {
     if (!userId) {
-      console.log('❤️ No user ID, cannot toggle like');
       return;
     }
 
     if (loading) {
-      console.log('❤️ Already processing like toggle, skipping');
       return;
     }
 
@@ -80,8 +69,6 @@ export function useLikes(postId: string, userId?: string) {
     const previousLikesCount = likesCount;
 
     try {
-      console.log('❤️ Toggling like, current state:', { isLiked, likesCount });
-
       if (isLiked) {
         // Unlike: Optimistic update first
         setIsLiked(false);
@@ -98,8 +85,6 @@ export function useLikes(postId: string, userId?: string) {
           console.error('❌ Error unliking post:', error);
           throw error;
         }
-
-        console.log('❤️ Successfully unliked post');
       } else {
         // Like: Optimistic update first
         setIsLiked(true);
@@ -115,8 +100,6 @@ export function useLikes(postId: string, userId?: string) {
           console.error('❌ Error liking post:', error);
           throw error;
         }
-
-        console.log('❤️ Successfully liked post');
       }
 
       // Wait a moment for database triggers to complete
@@ -131,14 +114,12 @@ export function useLikes(postId: string, userId?: string) {
 
       if (!verifyError && finalPost) {
         const finalLikesCount = finalPost.likes || 0;
-        console.log('❤️ Final verification - likes count:', finalLikesCount);
         setLikesCount(finalLikesCount);
       }
     } catch (error) {
       console.error('❌ Error toggling like:', error);
 
       // Rollback optimistic updates on error
-      console.log('❤️ Rolling back optimistic updates');
       setIsLiked(previousIsLiked);
       setLikesCount(previousLikesCount);
 

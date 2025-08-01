@@ -37,8 +37,6 @@ export const signUp = async (email: string, password: string, name: string) => {
 };
 
 export const signIn = async (email: string, password: string) => {
-  console.log('🔐 Attempting sign in for:', email);
-
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -46,13 +44,10 @@ export const signIn = async (email: string, password: string) => {
 
   if (error) throw error;
 
-  console.log('✅ Sign in successful:', data.user?.id);
   return data;
 };
 
 export const signOut = async () => {
-  console.log('SignOut called');
-
   // Clear storage first
   if (typeof window !== 'undefined') {
     localStorage.clear();
@@ -63,8 +58,6 @@ export const signOut = async () => {
   if (error) {
     console.error('SignOut error:', error.message);
   }
-
-  console.log('SignOut completed');
 };
 
 export const getCurrentUser = async () => {
@@ -75,8 +68,6 @@ export const getCurrentUser = async () => {
 };
 
 export const getProfile = async (userId: string) => {
-  console.log('Getting profile for user:', userId);
-
   if (!userId) {
     console.error('❌ No userId provided to getProfile');
     return null;
@@ -90,14 +81,15 @@ export const getProfile = async (userId: string) => {
 
   if (error) {
     if (error.code === 'PGRST116') {
-      console.log('📝 Profile not found for user:', userId);
+      // Only log in development mode
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📝 Profile not found for user:', userId);
+      }
       return null;
     }
     console.error('❌ Error getting profile:', error);
     return null;
   }
-
-  console.log('Profile data:', data);
 
   return data;
 };

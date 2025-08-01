@@ -21,7 +21,6 @@ export function useComments(postId: string) {
   const loadComments = async () => {
     try {
       setLoading(true);
-      console.log('💬 Loading comments for post:', postId);
 
       // Load top-level comments
       const { data: topLevelComments, error: commentsError } = await supabase
@@ -45,11 +44,6 @@ export function useComments(postId: string) {
         console.error('❌ Error loading comments:', commentsError);
         throw commentsError;
       }
-
-      console.log(
-        '💬 Top-level comments loaded:',
-        topLevelComments?.length || 0
-      );
 
       // Load replies for each comment
       const commentsWithReplies = await Promise.all(
@@ -89,7 +83,6 @@ export function useComments(postId: string) {
         return total + 1 + (comment.replies?.length || 0);
       }, 0);
 
-      console.log('💬 Total comments (including replies):', totalComments);
       setComments(commentsWithReplies);
 
       // Update post replies count in database
@@ -111,8 +104,6 @@ export function useComments(postId: string) {
     parentId?: string
   ) => {
     try {
-      console.log('💬 Adding comment:', { content, userId, parentId });
-
       const { data, error } = await supabase
         .from('comments')
         .insert({
@@ -135,8 +126,6 @@ export function useComments(postId: string) {
         .single();
 
       if (error) throw error;
-
-      console.log('💬 Comment added successfully');
 
       // Refresh comments to get updated data
       await loadComments();
