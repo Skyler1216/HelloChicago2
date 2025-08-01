@@ -20,9 +20,12 @@ export default function AdminApprovalView() {
       console.log('Loading pending users...');
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select(
+          'id, name, email, avatar_url, is_approved, role, created_at, updated_at'
+        ) // 必要なフィールドのみ選択
         .eq('is_approved', false)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(50); // 最大50件まで制限
 
       if (error) {
         console.error('Error loading pending users:', error);
