@@ -33,7 +33,7 @@ export default function LoginScreen() {
       
       if (err instanceof Error) {
         if (err.message.includes('Invalid login credentials')) {
-          errorMessage = 'メールアドレスまたはパスワードが正しくありません。';
+          errorMessage = 'メールアドレスまたはパスワードが正しくありません。入力内容をご確認ください。';
         } else if (err.message.includes('Email not confirmed')) {
           errorMessage = 'メールアドレスの確認が完了していません。';
         } else {
