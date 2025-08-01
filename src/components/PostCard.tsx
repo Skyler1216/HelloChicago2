@@ -4,6 +4,7 @@ import * as LucideIcons from 'lucide-react';
 import { Database } from '../types/database';
 import { useLikes } from '../hooks/useLikes';
 import { useAuth } from '../hooks/useAuth';
+import { useComments } from '../hooks/useComments';
 
 type Post = Database['public']['Tables']['posts']['Row'] & {
   profiles: Database['public']['Tables']['profiles']['Row'];
@@ -17,34 +18,42 @@ interface PostCardProps {
 
 export default function PostCard({ post, onClick }: PostCardProps) {
   const { user } = useAuth();
-  const { isLiked, likesCount, loading: likesLoading, toggleLike } = useLikes(post.id, user?.id);
-  const IconComponent = LucideIcons[post.categories.icon as keyof typeof LucideIcons];
-  
+  const {
+    isLiked,
+    likesCount,
+    loading: likesLoading,
+    toggleLike,
+  } = useLikes(post.id, user?.id);
+  const { totalCount: commentsCount } = useComments(post.id);
+
+  const IconComponent =
+    LucideIcons[post.categories.icon as keyof typeof LucideIcons];
+
   const getPostTypeInfo = () => {
     switch (post.type) {
       case 'consultation':
-        return { 
-          icon: HelpCircle, 
-          label: '相談', 
+        return {
+          icon: HelpCircle,
+          label: '相談',
           color: 'text-teal-600',
           bgColor: 'bg-teal-50',
-          borderColor: 'border-teal-200'
+          borderColor: 'border-teal-200',
         };
       case 'transfer':
-        return { 
-          icon: Gift, 
-          label: '譲渡', 
+        return {
+          icon: Gift,
+          label: '譲渡',
           color: 'text-coral-600',
           bgColor: 'bg-coral-50',
-          borderColor: 'border-coral-200'
+          borderColor: 'border-coral-200',
         };
       default:
-        return { 
-          icon: MessageCircle, 
-          label: '投稿', 
+        return {
+          icon: MessageCircle,
+          label: '投稿',
           color: 'text-gray-600',
           bgColor: 'bg-gray-50',
-          borderColor: 'border-gray-200'
+          borderColor: 'border-gray-200',
         };
     }
   };
@@ -53,7 +62,7 @@ export default function PostCard({ post, onClick }: PostCardProps) {
   const PostTypeIcon = postTypeInfo.icon;
 
   return (
-    <div 
+    <div
       className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4 hover:shadow-md transition-shadow duration-200 cursor-pointer"
       onClick={onClick}
     >
@@ -74,14 +83,19 @@ export default function PostCard({ post, onClick }: PostCardProps) {
         </div>
         <div className="flex items-center space-x-2">
           {/* Post Type Badge */}
-          <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${postTypeInfo.bgColor} ${postTypeInfo.color} border ${postTypeInfo.borderColor}`}>
+          <div
+            className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${postTypeInfo.bgColor} ${postTypeInfo.color} border ${postTypeInfo.borderColor}`}
+          >
             <PostTypeIcon className="w-3 h-3" />
             <span>{postTypeInfo.label}</span>
           </div>
           {/* Category Badge */}
-          <div 
+          <div
             className="flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium"
-            style={{ backgroundColor: post.categories.color + '20', color: post.categories.color }}
+            style={{
+              backgroundColor: post.categories.color + '20',
+              color: post.categories.color,
+            }}
           >
             {IconComponent && <IconComponent className="w-4 h-4" />}
             <span>{post.categories.name_ja}</span>
@@ -90,19 +104,24 @@ export default function PostCard({ post, onClick }: PostCardProps) {
       </div>
 
       {/* Status Badge for consultations and transfers */}
-      {(post.type === 'consultation' || post.type === 'transfer') && post.status && (
-        <div className="mb-3">
-          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-            post.status === 'open' ? 'bg-green-100 text-green-800' :
-            post.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
-            'bg-gray-100 text-gray-800'
-          }`}>
-            {post.status === 'open' && '受付中'}
-            {post.status === 'in_progress' && '対応中'}
-            {post.status === 'closed' && '解決済み'}
-          </span>
-        </div>
-      )}
+      {(post.type === 'consultation' || post.type === 'transfer') &&
+        post.status && (
+          <div className="mb-3">
+            <span
+              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                post.status === 'open'
+                  ? 'bg-green-100 text-green-800'
+                  : post.status === 'in_progress'
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : 'bg-gray-100 text-gray-800'
+              }`}
+            >
+              {post.status === 'open' && '受付中'}
+              {post.status === 'in_progress' && '対応中'}
+              {post.status === 'closed' && '解決済み'}
+            </span>
+          </div>
+        )}
 
       {/* Title */}
       <h3 className="font-bold text-gray-900 mb-2 text-lg leading-tight">
@@ -112,8 +131,8 @@ export default function PostCard({ post, onClick }: PostCardProps) {
       {/* Image */}
       {post.images.length > 0 && (
         <div className="mb-3 rounded-xl overflow-hidden">
-          <img 
-            src={post.images[0]} 
+          <img
+            src={post.images[0]}
             alt={post.title}
             className="w-full h-48 object-cover"
           />
@@ -137,24 +156,21 @@ export default function PostCard({ post, onClick }: PostCardProps) {
 
       {/* Actions */}
       <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-        <button 
-          onClick={toggleLike}
-          onClick={(e) => {
+        <button
+          onClick={e => {
             e.stopPropagation();
             toggleLike();
           }}
           disabled={likesLoading || !user}
           className={`flex items-center space-x-2 transition-colors ${
-            isLiked 
-              ? 'text-coral-600' 
-              : 'text-gray-500 hover:text-coral-600'
+            isLiked ? 'text-coral-600' : 'text-gray-500 hover:text-coral-600'
           } disabled:opacity-50`}
         >
           <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
           <span className="text-sm font-medium">{likesCount}</span>
         </button>
-        <button 
-          onClick={(e) => {
+        <button
+          onClick={e => {
             e.stopPropagation();
             onClick?.();
           }}
@@ -162,7 +178,7 @@ export default function PostCard({ post, onClick }: PostCardProps) {
         >
           <MessageCircle className="w-5 h-5" />
           <span className="text-sm font-medium">
-            {post.replies && post.replies > 0 ? `${post.replies}件の返信` : 'コメント'}
+            {commentsCount > 0 ? `${commentsCount}件のコメント` : 'コメント'}
           </span>
         </button>
       </div>

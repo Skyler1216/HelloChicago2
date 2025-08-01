@@ -5,22 +5,39 @@ import PostDetailView from './PostDetailView';
 import { usePosts } from '../hooks/usePosts';
 
 export default function HomeView() {
-  const [selectedPostType, setSelectedPostType] = useState<'post' | 'consultation' | 'transfer'>('post');
-  const [selectedPost, setSelectedPost] = useState<any>(null);
+  const [selectedPostType, setSelectedPostType] = useState<
+    'post' | 'consultation' | 'transfer'
+  >('post');
+  const [selectedPost, setSelectedPost] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
 
   const { posts, loading: postsLoading } = usePosts(selectedPostType);
-  
+
   const postTypeTabs = [
-    { id: 'post' as const, label: '投稿', icon: MessageSquare, color: 'text-blue-600' },
-    { id: 'consultation' as const, label: '相談', icon: HelpCircle, color: 'text-teal-600' },
-    { id: 'transfer' as const, label: '譲渡', icon: Gift, color: 'text-coral-600' },
+    {
+      id: 'post' as const,
+      label: '投稿',
+      icon: MessageSquare,
+      color: 'text-blue-600',
+    },
+    {
+      id: 'consultation' as const,
+      label: '相談',
+      icon: HelpCircle,
+      color: 'text-teal-600',
+    },
+    {
+      id: 'transfer' as const,
+      label: '譲渡',
+      icon: Gift,
+      color: 'text-coral-600',
+    },
   ];
 
   if (selectedPost) {
     return (
-      <PostDetailView 
-        post={selectedPost} 
-        onBack={() => setSelectedPost(null)} 
+      <PostDetailView
+        post={selectedPost}
+        onBack={() => setSelectedPost(null)}
       />
     );
   }
@@ -30,21 +47,23 @@ export default function HomeView() {
       {/* Post Type Tabs */}
       <div className="px-4 py-4 bg-white border-b border-gray-100">
         <div className="flex space-x-1">
-          {postTypeTabs.map((tab) => {
+          {postTypeTabs.map(tab => {
             const IconComponent = tab.icon;
             const isActive = selectedPostType === tab.id;
-            
+
             return (
               <button
                 key={tab.id}
                 onClick={() => setSelectedPostType(tab.id)}
                 className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-lg font-medium text-sm transition-all duration-200 ${
-                  isActive 
-                    ? 'bg-gray-100 text-gray-900' 
+                  isActive
+                    ? 'bg-gray-100 text-gray-900'
                     : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                <IconComponent className={`w-4 h-4 ${isActive ? 'text-gray-900' : tab.color}`} />
+                <IconComponent
+                  className={`w-4 h-4 ${isActive ? 'text-gray-900' : tab.color}`}
+                />
                 <span>{tab.label}</span>
               </button>
             );
@@ -53,17 +72,20 @@ export default function HomeView() {
         {/* Active tab indicator */}
         <div className="flex mt-2">
           {postTypeTabs.map((tab, index) => (
-            <div 
+            <div
               key={tab.id}
               className={`flex-1 h-0.5 ${
                 selectedPostType === tab.id ? 'bg-teal-500' : 'bg-transparent'
               } transition-colors duration-200`}
-              style={{ marginLeft: index === 0 ? '0' : '4px', marginRight: index === postTypeTabs.length - 1 ? '0' : '4px' }}
+              style={{
+                marginLeft: index === 0 ? '0' : '4px',
+                marginRight: index === postTypeTabs.length - 1 ? '0' : '4px',
+              }}
             />
           ))}
         </div>
       </div>
-      
+
       <div className="px-4">
         <h2 className="text-lg font-bold text-gray-900 mb-4">
           {selectedPostType === 'post' && '最新の投稿'}
@@ -78,9 +100,9 @@ export default function HomeView() {
             </div>
           ) : posts.length > 0 ? (
             posts.map(post => (
-              <PostCard 
-                key={post.id} 
-                post={post} 
+              <PostCard
+                key={post.id}
+                post={post}
                 onClick={() => setSelectedPost(post)}
               />
             ))
@@ -89,7 +111,8 @@ export default function HomeView() {
               <p className="text-gray-500">
                 {selectedPostType === 'post' && 'まだ投稿がありません'}
                 {selectedPostType === 'consultation' && 'まだ相談がありません'}
-                {selectedPostType === 'transfer' && 'まだ譲渡の投稿がありません'}
+                {selectedPostType === 'transfer' &&
+                  'まだ譲渡の投稿がありません'}
               </p>
             </div>
           )}

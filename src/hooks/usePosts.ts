@@ -7,21 +7,32 @@ type Post = Database['public']['Tables']['posts']['Row'] & {
   categories: Database['public']['Tables']['categories']['Row'];
 };
 
-export function usePosts(type?: 'post' | 'consultation' | 'transfer', categoryId?: string) {
+export function usePosts(
+  type?: 'post' | 'consultation' | 'transfer',
+  categoryId?: string
+) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadPosts();
-  }, [type, categoryId]);
+  }, [type, categoryId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadPosts = async () => {
     try {
       setLoading(true);
+      console.log(
+        '📝 Loading posts with type:',
+        type || 'all',
+        'category:',
+        categoryId || 'all'
+      );
+
       let query = supabase
         .from('posts')
-        .select(`
+        .select(
+          `
           *,
           profiles (
             id,
@@ -35,7 +46,8 @@ export function usePosts(type?: 'post' | 'consultation' | 'transfer', categoryId
             icon,
             color
           )
-        `)
+        `
+        )
         .eq('approved', true)
         .order('created_at', { ascending: false });
 
@@ -51,20 +63,36 @@ export function usePosts(type?: 'post' | 'consultation' | 'transfer', categoryId
 
       if (error) throw error;
 
+      console.log('📝 Posts loaded:', data?.length || 0, 'posts');
+      if (data && data.length > 0) {
+        console.log('📝 Sample post data:', {
+          id: data[0].id,
+          title: data[0].title,
+          likes: data[0].likes,
+          replies: data[0].replies,
+          hasProfile: !!data[0].profiles,
+          hasCategory: !!data[0].categories,
+        });
+      }
+
       setPosts(data || []);
     } catch (err) {
+      console.error('❌ Error loading posts:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
   };
 
-  const createPost = async (postData: Database['public']['Tables']['posts']['Insert']) => {
+  const createPost = async (
+    postData: Database['public']['Tables']['posts']['Insert']
+  ) => {
     try {
       const { data, error } = await supabase
         .from('posts')
         .insert(postData)
-        .select(`
+        .select(
+          `
           *,
           profiles (
             id,
@@ -78,7 +106,8 @@ export function usePosts(type?: 'post' | 'consultation' | 'transfer', categoryId
             icon,
             color
           )
-        `)
+        `
+        )
         .single();
 
       if (error) throw error;

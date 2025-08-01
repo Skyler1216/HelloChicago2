@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase, getProfile } from '../lib/supabase';
 import { Database } from '../types/database';
@@ -9,123 +9,155 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [hasAdminUsers, setHasAdminUsers] = useState<boolean | null>(null);
+  const [initialized, setInitialized] = useState(false);
+
+  const initializationRef = useRef(false);
+  const profileLoadingRef = useRef(false);
 
   useEffect(() => {
-    let mounted = true;
+    if (initializationRef.current) return;
+    initializationRef.current = true;
 
-    const loadProfile = async (userId: string) => {
-      try {
-        const profileData = await getProfile(userId);
-        if (mounted) {
-          setProfile(profileData);
-        }
-      } catch (error) {
-        console.error('Error loading profile:', error);
-        if (mounted) {
-          setProfile(null);
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
+    console.log('🔄 useAuth: Starting initialization');
 
-    // Get initial session
     const initializeAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!mounted) return;
-        
-        setUser(session?.user ?? null);
-        
+        // Get initial session
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
+
+        if (error) {
+          console.error('❌ Session error:', error);
+          setLoading(false);
+          setInitialized(true);
+          return;
+        }
+
+        console.log('📋 Initial session:', session?.user?.id || 'No session');
+
         if (session?.user) {
-          await loadProfile(session.user.id);
-        } else {
-          setLoading(false);
+          setUser(session.user);
+          await loadUserProfile(session.user.id);
         }
+
+        setInitialized(true);
+        setLoading(false);
       } catch (error) {
-        console.error('Error initializing auth:', error);
-        if (mounted) {
-          setUser(null);
-          setProfile(null);
-          setLoading(false);
-        }
+        console.error('❌ Auth initialization error:', error);
+        setLoading(false);
+        setInitialized(true);
       }
     };
 
+    // Initialize auth
     initializeAuth();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!mounted) return;
-        
-        console.log('Auth state change:', event, session?.user?.id);
-        
-        // Handle sign out event specifically
-        if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setProfile(null);
-          setLoading(false);
-          return;
-        }
-        
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await loadProfile(session.user.id);
-        } else {
-          setProfile(null);
-          setLoading(false);
-        }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔔 Auth event:', event, session?.user?.id || 'No user');
+
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
+        return;
       }
-    );
+
+      if (event === 'SIGNED_IN' && session?.user) {
+        setUser(session.user);
+        setLoading(true);
+        await loadUserProfile(session.user.id);
+        setLoading(false);
+      }
+    });
+
+    // Force completion after timeout
+    const timeout = setTimeout(() => {
+      if (!initialized) {
+        console.warn('⏰ Auth timeout - forcing completion');
+        setLoading(false);
+        setInitialized(true);
+      }
+    }, 8000);
 
     return () => {
-      mounted = false;
       subscription.unsubscribe();
+      clearTimeout(timeout);
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Check if there are any admin users in the system
-  useEffect(() => {
-    const checkAdminUsers = async () => {
-      try {
-        console.log('Checking for admin users...');
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('role', 'admin')
-          .eq('is_approved', true)
-          .limit(1);
-
-        if (error) {
-          console.error('Error checking admin users:', error);
-          setHasAdminUsers(false);
-          return;
-        }
-        
-        console.log('Admin users found:', data?.length || 0);
-        setHasAdminUsers((data?.length || 0) > 0);
-      } catch (error) {
-        console.error('Error checking admin users:', error);
-        setHasAdminUsers(false);
-      }
-    };
-
-    if (user) {
-      checkAdminUsers();
+  const loadUserProfile = async (userId: string) => {
+    if (profileLoadingRef.current) {
+      console.log('⚠️ Profile loading already in progress, skipping');
+      return;
     }
-  }, [user]);
+
+    profileLoadingRef.current = true;
+
+    try {
+      console.log('👤 Loading profile for user:', userId);
+
+      const profileData = await getProfile(userId);
+
+      if (profileData) {
+        console.log(
+          '✅ Profile loaded:',
+          profileData.name,
+          'approved:',
+          profileData.is_approved
+        );
+        setProfile(profileData);
+      } else {
+        console.log('⚠️ No profile found, creating new one');
+
+        // Create profile if it doesn't exist
+        const { data: createdProfile, error } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            name:
+              user?.user_metadata?.name || user?.email?.split('@')[0] || 'User',
+            email: user?.email || '',
+            is_approved: true, // Auto-approve new users
+            role: 'user',
+          })
+          .select()
+          .single();
+
+        if (!error && createdProfile) {
+          console.log('✅ Profile created:', createdProfile.name);
+          setProfile(createdProfile);
+        } else {
+          console.error('❌ Failed to create profile:', error);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Profile loading error:', error);
+    } finally {
+      profileLoadingRef.current = false;
+    }
+  };
+
+  const isAuthenticated = !!user;
+  const isApproved = profile?.is_approved ?? false;
+
+  console.log('🎯 Auth state:', {
+    hasUser: !!user,
+    hasProfile: !!profile,
+    isApproved,
+    loading,
+    initialized,
+  });
 
   return {
     user,
     profile,
     loading,
-    hasAdminUsers,
-    isAuthenticated: !!user,
-    isApproved: profile?.is_approved === true,
+    isAuthenticated,
+    isApproved,
   };
 }

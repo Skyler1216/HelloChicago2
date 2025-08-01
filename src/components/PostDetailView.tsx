@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Heart, MessageCircle, MapPin, Send, ArrowLeft } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
+// import * as LucideIcons from 'lucide-react';
 import { Database } from '../types/database';
 import { useComments } from '../hooks/useComments';
 import { useLikes } from '../hooks/useLikes';
@@ -18,12 +18,23 @@ interface PostDetailViewProps {
 
 export default function PostDetailView({ post, onBack }: PostDetailViewProps) {
   const { user } = useAuth();
-  const { isLiked, likesCount, loading: likesLoading, toggleLike } = useLikes(post.id, user?.id);
-  const { comments, loading: commentsLoading, addComment } = useComments(post.id);
+  const {
+    isLiked,
+    likesCount,
+    loading: likesLoading,
+    toggleLike,
+  } = useLikes(post.id, user?.id);
+  const {
+    comments,
+    loading: commentsLoading,
+    addComment,
+    totalCount: commentsCount,
+  } = useComments(post.id);
   const [newComment, setNewComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const IconComponent = LucideIcons[post.categories.icon as keyof typeof LucideIcons];
+  // const IconComponent =
+  //   LucideIcons[post.categories.icon as keyof typeof LucideIcons]; // eslint-disable-line @typescript-eslint/no-unused-vars
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +46,7 @@ export default function PostDetailView({ post, onBack }: PostDetailViewProps) {
       setNewComment('');
     } catch (error) {
       console.error('Error adding comment:', error);
+      alert('コメントの投稿に失敗しました');
     } finally {
       setIsSubmitting(false);
     }
@@ -69,7 +81,9 @@ export default function PostDetailView({ post, onBack }: PostDetailViewProps) {
                 </span>
               </div>
               <div>
-                <p className="font-medium text-gray-900">{post.profiles.name}</p>
+                <p className="font-medium text-gray-900">
+                  {post.profiles.name}
+                </p>
                 <p className="text-xs text-gray-500">
                   {new Date(post.created_at).toLocaleDateString('ja-JP')}
                 </p>
@@ -81,18 +95,22 @@ export default function PostDetailView({ post, onBack }: PostDetailViewProps) {
             {post.title}
           </h3>
 
-          <p className="text-gray-700 mb-4 leading-relaxed">
-            {post.content}
-          </p>
+          <p className="text-gray-700 mb-4 leading-relaxed">{post.content}</p>
+
+          {/* Location */}
+          <div className="flex items-center space-x-1 text-gray-500 mb-4">
+            <MapPin className="w-4 h-4" />
+            <span className="text-sm">{post.location_address}</span>
+          </div>
 
           {/* Actions */}
           <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-            <button 
+            <button
               onClick={toggleLike}
               disabled={likesLoading || !user}
               className={`flex items-center space-x-2 transition-colors ${
-                isLiked 
-                  ? 'text-coral-600' 
+                isLiked
+                  ? 'text-coral-600'
                   : 'text-gray-500 hover:text-coral-600'
               } disabled:opacity-50`}
             >
@@ -101,24 +119,31 @@ export default function PostDetailView({ post, onBack }: PostDetailViewProps) {
             </button>
             <div className="flex items-center space-x-2 text-gray-500">
               <MessageCircle className="w-5 h-5" />
-              <span className="text-sm font-medium">{comments.length}件のコメント</span>
+              <span className="text-sm font-medium">
+                {commentsCount}件のコメント
+              </span>
             </div>
           </div>
         </div>
 
         {/* Comment Form */}
         {user && (
-          <form onSubmit={handleSubmitComment} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
+          <form
+            onSubmit={handleSubmitComment}
+            className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6"
+          >
             <div className="flex space-x-3">
               <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
                 <span className="text-xs font-medium text-gray-600">
-                  {user.email?.charAt(0)}
+                  {user.user_metadata?.name?.charAt(0) ||
+                    user.email?.charAt(0) ||
+                    'U'}
                 </span>
               </div>
               <div className="flex-1">
                 <textarea
                   value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
+                  onChange={e => setNewComment(e.target.value)}
                   placeholder="コメントを入力..."
                   className="w-full p-3 border border-gray-200 rounded-lg resize-none focus:ring-2 focus:ring-coral-500 focus:border-transparent"
                   rows={3}
@@ -143,10 +168,16 @@ export default function PostDetailView({ post, onBack }: PostDetailViewProps) {
           {commentsLoading ? (
             <div className="text-center py-4">
               <div className="w-6 h-6 border-2 border-coral-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+              <p className="text-sm text-gray-500 mt-2">
+                コメントを読み込み中...
+              </p>
             </div>
           ) : comments.length > 0 ? (
-            comments.map((comment) => (
-              <div key={comment.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+            comments.map(comment => (
+              <div
+                key={comment.id}
+                className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4"
+              >
                 <div className="flex items-start space-x-3">
                   <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-xs font-medium text-gray-600">
@@ -159,12 +190,47 @@ export default function PostDetailView({ post, onBack }: PostDetailViewProps) {
                         {comment.profiles.name}
                       </span>
                       <span className="text-xs text-gray-500">
-                        {new Date(comment.created_at).toLocaleDateString('ja-JP')}
+                        {new Date(comment.created_at).toLocaleDateString(
+                          'ja-JP'
+                        )}
                       </span>
                     </div>
                     <p className="text-gray-700 text-sm leading-relaxed">
                       {comment.content}
                     </p>
+
+                    {/* Show replies if any */}
+                    {comment.replies && comment.replies.length > 0 && (
+                      <div className="mt-3 pl-4 border-l-2 border-gray-100 space-y-2">
+                        {comment.replies.map(reply => (
+                          <div
+                            key={reply.id}
+                            className="flex items-start space-x-2"
+                          >
+                            <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-xs font-medium text-gray-600">
+                                {reply.profiles.name.charAt(0)}
+                              </span>
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <span className="font-medium text-gray-900 text-xs">
+                                  {reply.profiles.name}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {new Date(
+                                    reply.created_at
+                                  ).toLocaleDateString('ja-JP')}
+                                </span>
+                              </div>
+                              <p className="text-gray-700 text-xs leading-relaxed">
+                                {reply.content}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -173,6 +239,9 @@ export default function PostDetailView({ post, onBack }: PostDetailViewProps) {
             <div className="text-center py-8">
               <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-2" />
               <p className="text-gray-500">まだコメントがありません</p>
+              <p className="text-sm text-gray-400 mt-1">
+                最初のコメントを投稿してみましょう
+              </p>
             </div>
           )}
         </div>
