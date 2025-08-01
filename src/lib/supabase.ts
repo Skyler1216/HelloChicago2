@@ -53,6 +53,20 @@ export const signIn = async (email: string, password: string) => {
 
 export const signOut = async () => {
   try {
+    // Clear all storage first
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Clear any cached auth state
+    if (typeof window !== 'undefined') {
+      // Clear any Supabase cached data
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') || key.startsWith('supabase')) {
+          localStorage.removeItem(key);
+        }
+      });
+    }
+    
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.warn('SignOut warning:', error.message);
@@ -61,9 +75,7 @@ export const signOut = async () => {
     console.warn('SignOut error:', error);
   }
   
-  // Always clear local storage and reload
-  localStorage.clear();
-  sessionStorage.clear();
+  // Force reload to ensure clean state
   window.location.reload();
 };
 

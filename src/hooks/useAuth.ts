@@ -65,6 +65,14 @@ export function useAuth() {
         
         console.log('Auth state change:', event, session?.user?.id);
         
+        // Handle sign out event specifically
+        if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
+        
         setUser(session?.user ?? null);
         if (session?.user) {
           await loadProfile(session.user.id);

@@ -57,11 +57,13 @@ export default function App() {
           <button
             onClick={async () => {
               try {
+                // Clear auth state immediately
+                setUser(null);
+                setProfile(null);
+                
                 await signOut();
               } catch (error) {
                 console.error('Logout error:', error);
-                // Force reload even if signOut fails
-                window.location.reload();
               }
             }}
             className="mt-4 w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-xl font-semibold hover:bg-gray-200 transition-all duration-200"
