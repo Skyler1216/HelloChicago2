@@ -4,6 +4,9 @@ import { Database } from '../types/database';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Declare supabase variable at module level
+let supabase: any;
+
 // Check for missing or placeholder values
 const isPlaceholderUrl = !supabaseUrl || supabaseUrl.includes('your-supabase-url-here') || supabaseUrl.includes('placeholder');
 const isPlaceholderKey = !supabaseAnonKey || supabaseAnonKey.includes('your-supabase-anon-key') || supabaseAnonKey.includes('placeholder');
@@ -29,8 +32,8 @@ if (isPlaceholderUrl || isPlaceholderKey) {
     })
   };
   
-  // Export mock client
-  export const supabase = mockSupabase as any;
+  // Assign mock client
+  supabase = mockSupabase;
 } else {
   // Validate URL format only if it's not a placeholder
   try {
@@ -45,10 +48,12 @@ if (isPlaceholderUrl || isPlaceholderKey) {
     throw error;
   }
   
-  // Create real Supabase client
-  export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+  // Assign real Supabase client
+  supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
 }
 
+// Export supabase client
+export { supabase };
 
 // Auth helpers
 export const signUp = async (email: string, password: string, name: string) => {
