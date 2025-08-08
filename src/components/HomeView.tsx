@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MessageSquare, HelpCircle, Gift } from 'lucide-react';
+import { BookOpen, HelpCircle, Gift } from 'lucide-react';
 import PostCard from './PostCard';
 import PostDetailView from './PostDetailView';
 import { usePosts } from '../hooks/usePosts';
@@ -23,8 +23,8 @@ export default function HomeView() {
   const postTypeTabs = [
     {
       id: 'post' as const,
-      label: '投稿',
-      icon: MessageSquare,
+      label: '体験',
+      icon: BookOpen,
       color: 'text-blue-600',
     },
     {
@@ -105,7 +105,7 @@ export default function HomeView() {
 
       <div className="px-4">
         <h2 className="text-lg font-bold text-gray-900 mb-4">
-          {selectedPostType === 'post' && '最新の投稿'}
+          {selectedPostType === 'post' && '最新の体験'}
           {selectedPostType === 'consultation' && '最新の相談'}
           {selectedPostType === 'transfer' && '最新の譲渡'}
         </h2>
@@ -126,7 +126,7 @@ export default function HomeView() {
           ) : (
             <div className="text-center py-8">
               <p className="text-gray-500">
-                {selectedPostType === 'post' && 'まだ投稿がありません'}
+                {selectedPostType === 'post' && 'まだ体験がありません'}
                 {selectedPostType === 'consultation' && 'まだ相談がありません'}
                 {selectedPostType === 'transfer' &&
                   'まだ譲渡の投稿がありません'}

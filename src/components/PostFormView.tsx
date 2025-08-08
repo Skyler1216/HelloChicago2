@@ -1,12 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Camera,
-  MapPin,
-  Send,
-  MessageSquare,
-  HelpCircle,
-  Gift,
-} from 'lucide-react';
+import { Camera, MapPin, Send, BookOpen, HelpCircle, Gift } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useCategories } from '../hooks/useCategories';
 import { usePosts } from '../hooks/usePosts';
@@ -58,7 +51,7 @@ export default function PostFormView() {
 
       const typeLabel =
         formData.type === 'post'
-          ? '投稿'
+          ? '体験'
           : formData.type === 'consultation'
             ? '相談'
             : '譲渡';
@@ -85,8 +78,8 @@ export default function PostFormView() {
   const postTypes = [
     {
       id: 'post' as const,
-      label: '投稿',
-      icon: MessageSquare,
+      label: '体験',
+      icon: BookOpen,
       description: '体験談やおすすめをシェア',
     },
     {
@@ -204,7 +197,14 @@ export default function PostFormView() {
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  {IconComponent && <IconComponent className="w-4 h-4" />}
+                  {IconComponent &&
+                    typeof IconComponent === 'function' &&
+                    React.createElement(
+                      IconComponent as React.ComponentType<{
+                        className?: string;
+                      }>,
+                      { className: 'w-4 h-4' }
+                    )}
                   <span className="text-sm font-medium">
                     {category.name_ja}
                   </span>
@@ -294,7 +294,7 @@ export default function PostFormView() {
               <Send className="w-5 h-5" />
               <span>
                 {formData.type === 'post'
-                  ? '投稿する'
+                  ? '体験をシェアする'
                   : formData.type === 'consultation'
                     ? '相談する'
                     : '投稿する'}
