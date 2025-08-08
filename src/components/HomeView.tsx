@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { MessageSquare, HelpCircle, Gift } from 'lucide-react';
 import PostCard from './PostCard';
 import PostDetailView from './PostDetailView';
