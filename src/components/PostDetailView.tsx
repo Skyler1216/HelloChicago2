@@ -19,6 +19,8 @@ import { useAuth } from '../hooks/useAuth';
 type Post = Database['public']['Tables']['posts']['Row'] & {
   profiles: Database['public']['Tables']['profiles']['Row'];
   categories: Database['public']['Tables']['categories']['Row'];
+  likes_count?: number;
+  comments_count?: number;
 };
 
 type Comment = Database['public']['Tables']['comments']['Row'] & {
@@ -186,12 +188,28 @@ function CommentItem({
 
 export default function PostDetailView({ post, onBack }: PostDetailViewProps) {
   const { user } = useAuth();
+
+  // 投稿のいいね数を取得（複数のソースから）
+  const getInitialLikesCount = () => {
+    // 1. likes_countフィールド（usePostsで計算された値）
+    if (post.likes_count !== undefined) {
+      return post.likes_count;
+    }
+    // 2. likesフィールド（データベースの値）
+    if (post.likes !== undefined) {
+      return post.likes;
+    }
+    // 3. デフォルト値
+    return 0;
+  };
+
   const {
     isLiked,
     likesCount,
     loading: likesLoading,
     toggleLike,
-  } = useLikes(post.id, user?.id);
+  } = useLikes(post.id, user?.id, getInitialLikesCount());
+
   const {
     comments,
     loading: commentsLoading,
@@ -239,6 +257,12 @@ export default function PostDetailView({ post, onBack }: PostDetailViewProps) {
       throw error;
     }
   };
+
+  // 表示用のいいね数とコメント数を取得
+  const displayLikesCount =
+    likesCount !== undefined ? likesCount : getInitialLikesCount();
+  const displayCommentsCount =
+    post.comments_count || post.replies || commentsCount || 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -303,12 +327,12 @@ export default function PostDetailView({ post, onBack }: PostDetailViewProps) {
               } disabled:opacity-50`}
             >
               <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
-              <span className="text-sm font-medium">{likesCount}</span>
+              <span className="text-sm font-medium">{displayLikesCount}</span>
             </button>
             <div className="flex items-center space-x-2 text-gray-500">
               <MessageCircle className="w-5 h-5" />
               <span className="text-sm font-medium">
-                {commentsCount}件のコメント
+                {displayCommentsCount}件のコメント
               </span>
             </div>
           </div>
