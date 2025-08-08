@@ -74,6 +74,7 @@ export function useLikes(postId: string, userId?: string) {
             );
             // Use the actual count if there's a mismatch
             setLikesCount(actualLikesCount);
+            setIsLiked(hasLiked);
             return;
           }
         }
@@ -89,6 +90,7 @@ export function useLikes(postId: string, userId?: string) {
   const toggleLike = async () => {
     if (!userId) {
       console.log('❌ No user ID provided for like toggle');
+      alert('ログインが必要です');
       return;
     }
 
