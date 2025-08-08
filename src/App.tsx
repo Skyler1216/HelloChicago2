@@ -9,7 +9,10 @@ import MapView from './components/MapView';
 import PostFormView from './components/PostFormView';
 import ProfileView from './components/ProfileView';
 import AdminApprovalView from './components/AdminApprovalView';
+import ErrorBoundary from './components/ErrorBoundary';
 import { useAuth } from './hooks/useAuth';
+import { useToast } from './components/Toast';
+import { validateConfig } from './lib/config';
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
@@ -18,6 +21,14 @@ export default function App() {
   >('home');
   const [showAdminView, setShowAdminView] = useState(false);
   const { user, profile, loading, isAuthenticated, isApproved } = useAuth();
+  const { ToastContainer } = useToast();
+
+  // Validate configuration on app start
+  useEffect(() => {
+    if (!validateConfig()) {
+      console.error('❌ App configuration is invalid');
+    }
+  }, []);
 
   // Splash screen timer
   useEffect(() => {
@@ -129,13 +140,16 @@ export default function App() {
   };
 
   return (
-    <Layout
-      currentView={currentView}
-      onViewChange={setCurrentView}
-      user={user}
-      profile={profile}
-    >
-      {renderCurrentView()}
-    </Layout>
+    <ErrorBoundary>
+      <Layout
+        currentView={currentView}
+        onViewChange={setCurrentView}
+        user={user}
+        profile={profile}
+      >
+        {renderCurrentView()}
+      </Layout>
+      <ToastContainer />
+    </ErrorBoundary>
   );
 }

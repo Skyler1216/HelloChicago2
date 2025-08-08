@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Heart, MessageCircle, MapPin, HelpCircle, Gift } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { Database } from '../types/database';
@@ -16,7 +16,7 @@ interface PostCardProps {
   onClick?: () => void;
 }
 
-export default function PostCard({ post, onClick }: PostCardProps) {
+function PostCard({ post, onClick }: PostCardProps) {
   const { user } = useAuth();
   const {
     isLiked,
@@ -185,3 +185,5 @@ export default function PostCard({ post, onClick }: PostCardProps) {
     </div>
   );
 }
+
+export default memo(PostCard);
