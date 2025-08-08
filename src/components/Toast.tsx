@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
@@ -68,45 +68,4 @@ export default function Toast({
       </div>
     </div>
   );
-}
-
-// Toast Manager Hook
-export function useToast() {
-  const [toasts, setToasts] = useState<
-    Array<{
-      id: string;
-      type: ToastType;
-      message: string;
-      duration?: number;
-    }>
-  >([]);
-
-  const addToast = (type: ToastType, message: string, duration?: number) => {
-    const id = Math.random().toString(36).substr(2, 9);
-    setToasts(prev => [...prev, { id, type, message, duration }]);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts(prev => prev.filter(toast => toast.id !== id));
-  };
-
-  const ToastContainer = () => (
-    <div className="fixed top-4 right-4 z-50 space-y-2">
-      {toasts.map(toast => (
-        <Toast
-          key={toast.id}
-          type={toast.type}
-          message={toast.message}
-          duration={toast.duration}
-          onClose={() => removeToast(toast.id)}
-        />
-      ))}
-    </div>
-  );
-
-  return {
-    addToast,
-    removeToast,
-    ToastContainer,
-  };
 }

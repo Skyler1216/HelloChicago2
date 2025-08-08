@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { Heart, MessageCircle, MapPin, HelpCircle, Gift } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Database } from '../types/database';
 import { useLikes } from '../hooks/useLikes';
 import { useAuth } from '../hooks/useAuth';
@@ -26,8 +26,23 @@ function PostCard({ post, onClick }: PostCardProps) {
   } = useLikes(post.id, user?.id);
   const { totalCount: commentsCount } = useComments(post.id);
 
-  const IconComponent =
-    LucideIcons[post.categories.icon as keyof typeof LucideIcons];
+  // Dynamically get the icon component with proper typing
+  const IconComponent = React.useMemo((): LucideIcon | undefined => {
+    const iconName = post.categories.icon;
+    if (!iconName) return undefined;
+
+    // Create a mapping of known icons
+    const iconMap: Record<string, LucideIcon> = {
+      Heart,
+      MessageCircle,
+      MapPin,
+      HelpCircle,
+      Gift,
+      // Add more icons as needed
+    };
+
+    return iconMap[iconName] || undefined;
+  }, [post.categories.icon]);
 
   const getPostTypeInfo = () => {
     switch (post.type) {
@@ -97,7 +112,8 @@ function PostCard({ post, onClick }: PostCardProps) {
               color: post.categories.color,
             }}
           >
-            {IconComponent && <IconComponent className="w-4 h-4" />}
+            {IconComponent &&
+              React.createElement(IconComponent, { className: 'w-4 h-4' })}
             <span>{post.categories.name_ja}</span>
           </div>
         </div>

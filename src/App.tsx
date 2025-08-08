@@ -11,7 +11,7 @@ import ProfileView from './components/ProfileView';
 import AdminApprovalView from './components/AdminApprovalView';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useAuth } from './hooks/useAuth';
-import { useToast } from './components/Toast';
+import { useToast } from './hooks/useToast';
 import { validateConfig } from './lib/config';
 
 export default function App() {
