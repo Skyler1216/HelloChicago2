@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Camera, MapPin, Send, BookOpen, HelpCircle, Gift } from 'lucide-react';
+import { Camera, MapPin, Send, HelpCircle, Gift } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useCategories } from '../hooks/useCategories';
 import { usePosts } from '../hooks/usePosts';
@@ -79,7 +79,7 @@ export default function PostFormView() {
     {
       id: 'post' as const,
       label: '体験',
-      icon: BookOpen,
+      icon: Camera,
       description: '体験談やおすすめをシェア',
     },
     {

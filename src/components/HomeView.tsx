@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, HelpCircle, Gift } from 'lucide-react';
+import { Camera, HelpCircle, Gift } from 'lucide-react';
 import PostCard from './PostCard';
 import PostDetailView from './PostDetailView';
 import { usePosts } from '../hooks/usePosts';
@@ -24,7 +24,7 @@ export default function HomeView() {
     {
       id: 'post' as const,
       label: '体験',
-      icon: BookOpen,
+      icon: Camera,
       color: 'text-blue-600',
     },
     {
