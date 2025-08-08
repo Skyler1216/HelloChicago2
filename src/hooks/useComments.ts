@@ -137,6 +137,75 @@ export function useComments(postId: string) {
     }
   };
 
+  const updateComment = async (commentId: string, content: string) => {
+    try {
+      if (!content.trim()) {
+        throw new Error('コメント内容を入力してください');
+      }
+
+      const { data, error } = await supabase
+        .from('comments')
+        .update({ content: content.trim() })
+        .eq('id', commentId)
+        .select(
+          `
+          *,
+          profiles (
+            id,
+            name,
+            avatar_url
+          )
+        `
+        )
+        .single();
+
+      if (error) {
+        console.error('❌ Error updating comment:', error);
+        if (error.code === 'PGRST116') {
+          throw new Error('コメントが見つかりません');
+        } else if (error.code === '42501') {
+          throw new Error('コメントの編集権限がありません');
+        } else {
+          throw new Error('コメントの更新に失敗しました');
+        }
+      }
+
+      // Refresh comments to get updated data
+      await loadComments();
+
+      return data;
+    } catch (err) {
+      console.error('❌ Error updating comment:', err);
+      throw err instanceof Error ? err : new Error('Failed to update comment');
+    }
+  };
+
+  const deleteComment = async (commentId: string) => {
+    try {
+      const { error } = await supabase
+        .from('comments')
+        .delete()
+        .eq('id', commentId);
+
+      if (error) {
+        console.error('❌ Error deleting comment:', error);
+        if (error.code === 'PGRST116') {
+          throw new Error('コメントが見つかりません');
+        } else if (error.code === '42501') {
+          throw new Error('コメントの削除権限がありません');
+        } else {
+          throw new Error('コメントの削除に失敗しました');
+        }
+      }
+
+      // Refresh comments to get updated data
+      await loadComments();
+    } catch (err) {
+      console.error('❌ Error deleting comment:', err);
+      throw err instanceof Error ? err : new Error('Failed to delete comment');
+    }
+  };
+
   const getTotalCommentsCount = () => {
     return comments.reduce((total, comment) => {
       return total + 1 + (comment.replies?.length || 0);
@@ -148,6 +217,8 @@ export function useComments(postId: string) {
     loading,
     error,
     addComment,
+    updateComment,
+    deleteComment,
     refetch: loadComments,
     totalCount: getTotalCommentsCount(),
   };
