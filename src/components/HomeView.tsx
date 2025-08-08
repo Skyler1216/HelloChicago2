@@ -3,14 +3,22 @@ import { MessageSquare, HelpCircle, Gift } from 'lucide-react';
 import PostCard from './PostCard';
 import PostDetailView from './PostDetailView';
 import { usePosts } from '../hooks/usePosts';
+import { Database } from '../types/database';
+
+type Post = Database['public']['Tables']['posts']['Row'] & {
+  profiles: Database['public']['Tables']['profiles']['Row'];
+  categories: Database['public']['Tables']['categories']['Row'];
+  likes_count?: number;
+  comments_count?: number;
+};
 
 export default function HomeView() {
   const [selectedPostType, setSelectedPostType] = useState<
     'post' | 'consultation' | 'transfer'
   >('post');
-  const [selectedPost, setSelectedPost] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
-  const { posts, loading: postsLoading } = usePosts(selectedPostType);
+  const { posts, loading: postsLoading, refetch } = usePosts(selectedPostType);
 
   const postTypeTabs = [
     {
@@ -33,11 +41,20 @@ export default function HomeView() {
     },
   ];
 
+  const handlePostUpdate = (updatedPost: Post) => {
+    // 選択された投稿を更新
+    setSelectedPost(updatedPost);
+
+    // 投稿リストも更新するためにrefetchを実行
+    refetch();
+  };
+
   if (selectedPost) {
     return (
       <PostDetailView
         post={selectedPost}
         onBack={() => setSelectedPost(null)}
+        onPostUpdate={handlePostUpdate}
       />
     );
   }

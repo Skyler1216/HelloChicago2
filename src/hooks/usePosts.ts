@@ -160,11 +160,57 @@ export function usePosts(
     }
   };
 
+  const updatePostStatus = async (
+    postId: string,
+    status: 'open' | 'in_progress' | 'closed'
+  ) => {
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .update({ status })
+        .eq('id', postId)
+        .select(
+          `
+          *,
+          profiles (
+            id,
+            name,
+            avatar_url
+          ),
+          categories (
+            id,
+            name,
+            name_ja,
+            icon,
+            color
+          )
+        `
+        )
+        .single();
+
+      if (error) throw error;
+
+      // Update local state
+      setPosts(prev =>
+        prev.map(post =>
+          post.id === postId ? { ...post, status: data.status } : post
+        )
+      );
+
+      return data;
+    } catch (err) {
+      throw err instanceof Error
+        ? err
+        : new Error('Failed to update post status');
+    }
+  };
+
   return {
     posts,
     loading,
     error,
     createPost,
+    updatePostStatus,
     refetch: loadPosts,
   };
 }

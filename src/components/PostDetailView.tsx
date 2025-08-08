@@ -15,6 +15,7 @@ import { Database } from '../types/database';
 import { useComments } from '../hooks/useComments';
 import { useLikes } from '../hooks/useLikes';
 import { useAuth } from '../hooks/useAuth';
+import { usePosts } from '../hooks/usePosts';
 
 type Post = Database['public']['Tables']['posts']['Row'] & {
   profiles: Database['public']['Tables']['profiles']['Row'];
@@ -31,6 +32,7 @@ type Comment = Database['public']['Tables']['comments']['Row'] & {
 interface PostDetailViewProps {
   post: Post;
   onBack: () => void;
+  onPostUpdate?: (updatedPost: Post) => void;
 }
 
 interface CommentItemProps {
@@ -186,18 +188,25 @@ function CommentItem({
   );
 }
 
-export default function PostDetailView({ post, onBack }: PostDetailViewProps) {
+export default function PostDetailView({
+  post,
+  onBack,
+  onPostUpdate,
+}: PostDetailViewProps) {
   const { user } = useAuth();
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [currentPost, setCurrentPost] = useState(post);
+  const { updatePostStatus } = usePosts();
 
   // 投稿のいいね数を取得（複数のソースから）
   const getInitialLikesCount = () => {
     // 1. likes_countフィールド（usePostsで計算された値）
-    if (post.likes_count !== undefined) {
-      return post.likes_count;
+    if (currentPost.likes_count !== undefined) {
+      return currentPost.likes_count;
     }
     // 2. likesフィールド（データベースの値）
-    if (post.likes !== undefined) {
-      return post.likes;
+    if (currentPost.likes !== undefined) {
+      return currentPost.likes;
     }
     // 3. デフォルト値
     return 0;
@@ -208,7 +217,7 @@ export default function PostDetailView({ post, onBack }: PostDetailViewProps) {
     likesCount,
     loading: likesLoading,
     toggleLike,
-  } = useLikes(post.id, user?.id, getInitialLikesCount());
+  } = useLikes(currentPost.id, user?.id, getInitialLikesCount());
 
   const {
     comments,
@@ -217,7 +226,7 @@ export default function PostDetailView({ post, onBack }: PostDetailViewProps) {
     updateComment,
     deleteComment,
     totalCount: commentsCount,
-  } = useComments(post.id);
+  } = useComments(currentPost.id);
   const [newComment, setNewComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -258,11 +267,64 @@ export default function PostDetailView({ post, onBack }: PostDetailViewProps) {
     }
   };
 
+  const handleUpdateStatus = async (
+    newStatus: 'open' | 'in_progress' | 'closed'
+  ) => {
+    if (!user || user.id !== currentPost.author_id) {
+      alert('投稿者以外はステータスを変更できません');
+      return;
+    }
+
+    setIsUpdatingStatus(true);
+    try {
+      // usePostsフックのupdatePostStatus関数を使用
+      await updatePostStatus(currentPost.id, newStatus);
+
+      // ローカルステートも更新
+      const updatedPost = {
+        ...currentPost,
+        status: newStatus,
+      };
+      setCurrentPost(updatedPost);
+
+      // 親コンポーネントに更新を通知
+      if (onPostUpdate) {
+        onPostUpdate(updatedPost);
+      }
+    } catch (error) {
+      console.error('Error updating post status:', error);
+      alert('ステータスの更新に失敗しました');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   // 表示用のいいね数とコメント数を取得
   const displayLikesCount =
     likesCount !== undefined ? likesCount : getInitialLikesCount();
   const displayCommentsCount =
-    post.comments_count || post.replies || commentsCount || 0;
+    currentPost.comments_count || currentPost.replies || commentsCount || 0;
+
+  // 投稿者が自分かどうかをチェック
+  const isOwnPost = user?.id === currentPost.author_id;
+  const isConsultationOrTransfer =
+    currentPost.type === 'consultation' || currentPost.type === 'transfer';
+
+  // ステータス表示用の関数
+  const getStatusDisplay = (status: string | null) => {
+    switch (status) {
+      case 'open':
+        return { text: '受付中', color: 'bg-green-100 text-green-800' };
+      case 'in_progress':
+        return { text: '対応中', color: 'bg-yellow-100 text-yellow-800' };
+      case 'closed':
+        return { text: '受付停止', color: 'bg-gray-100 text-gray-800' };
+      default:
+        return { text: '受付中', color: 'bg-green-100 text-green-800' };
+    }
+  };
+
+  const currentStatus = getStatusDisplay(currentPost.status);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -276,7 +338,9 @@ export default function PostDetailView({ post, onBack }: PostDetailViewProps) {
             >
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </button>
-            <h1 className="text-lg font-semibold text-gray-900">投稿詳細</h1>
+            <h1 className="text-lg font-semibold text-gray-900">
+              ホームに戻る
+            </h1>
           </div>
         </div>
       </div>
@@ -308,6 +372,40 @@ export default function PostDetailView({ post, onBack }: PostDetailViewProps) {
           </h3>
 
           <p className="text-gray-700 mb-4 leading-relaxed">{post.content}</p>
+
+          {/* Status Badge for consultations and transfers */}
+          {isConsultationOrTransfer && currentPost.status && (
+            <div className="mb-4">
+              <span
+                className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${currentStatus.color}`}
+              >
+                {currentStatus.text}
+              </span>
+              {isOwnPost && (
+                <div className="mt-2">
+                  <select
+                    value={currentPost.status || 'open'}
+                    onChange={e =>
+                      handleUpdateStatus(
+                        e.target.value as 'open' | 'in_progress' | 'closed'
+                      )
+                    }
+                    disabled={isUpdatingStatus}
+                    className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-coral-500 focus:border-transparent disabled:opacity-50"
+                  >
+                    <option value="open">受付中</option>
+                    <option value="in_progress">対応中</option>
+                    <option value="closed">受付停止</option>
+                  </select>
+                  {isUpdatingStatus && (
+                    <span className="ml-2 text-sm text-gray-500">
+                      更新中...
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Location */}
           <div className="flex items-center space-x-1 text-gray-500 mb-4">

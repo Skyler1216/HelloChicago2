@@ -139,7 +139,7 @@ function PostCard({ post, onClick }: PostCardProps) {
             >
               {post.status === 'open' && '受付中'}
               {post.status === 'in_progress' && '対応中'}
-              {post.status === 'closed' && '解決済み'}
+              {post.status === 'closed' && '受付停止'}
             </span>
           </div>
         )}
