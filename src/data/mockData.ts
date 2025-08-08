@@ -48,17 +48,17 @@ export const categories: Category[] = [
 export const mockPosts: Post[] = [
   {
     id: '1',
-    title: 'Northwestern Memorial Hospitalで出産体験',
+    title: 'ミレニアムパークで子どもとピクニック',
     content:
-      'シカゴの Northwestern Memorial Hospital で出産しました。日本語通訳サービスもあり、スタッフもとても親切でした。設備も整っていて安心して出産できました。駐車場は有料ですが、入院中は割引があります。',
+      'シカゴのミレニアムパークで子どもとピクニックをしました。芝生が広くて子どもが走り回るのに最適です。噴水の近くでお弁当を食べて、とても楽しい時間を過ごしました。駐車場は有料ですが、公園内は無料で利用できます。',
     summary:
-      'Northwestern Memorial Hospitalでの出産体験。日本語通訳あり、設備充実、スタッフ親切。駐車場有料だが入院中割引あり。',
+      'ミレニアムパークでのピクニック体験。芝生広く、子どもに最適、噴水近くでお弁当。駐車場有料だが公園内無料。',
     type: 'post',
-    category: categories[0],
+    category: categories[5],
     location: {
-      lat: 41.8955,
-      lng: -87.6217,
-      address: '251 E Huron St, Chicago, IL 60611',
+      lat: 41.8825,
+      lng: -87.6225,
+      address: '201 E Randolph St, Chicago, IL 60602',
     },
     images: [
       'https://images.pexels.com/photos/236380/pexels-photo-236380.jpeg',
@@ -126,16 +126,16 @@ export const mockPosts: Post[] = [
   },
   {
     id: '4',
-    title: '土曜夜に品川区で婚姻届を出したい',
+    title: '子ども向けのオススメの病院',
     content:
-      '品川区で土曜日でも24時間婚姻届を出せるのは本庁のみでしょうか？インターネットで調べてもよく分からず、ご存じの方おられたら教えてください。',
+      'シカゴで子どもが風邪を引いた時に、日本語対応可能で子どもに優しい病院を探しています。小児科専門医で、待合室も子どもが遊べるような環境の病院があれば教えてください。',
     type: 'consultation',
     status: 'in_progress',
     category: categories[0],
     location: {
       lat: 41.8781,
       lng: -87.6298,
-      address: 'Chicago City Hall, 121 N LaSalle St, Chicago, IL 60602',
+      address: 'Chicago, IL',
     },
     images: [],
     author: {
@@ -149,7 +149,7 @@ export const mockPosts: Post[] = [
   },
   {
     id: '5',
-    title: 'ベビーゲートいただけませんか？',
+    title: 'ベビーゲートお譲りします',
     content:
       '引っ越しに伴い階段があるお家のため、ベビーゲートが必要になりました。ベビーゲートをもう卒業されたお宅がありましたら、譲っていただけませんでしょうか。',
     type: 'transfer',
@@ -175,12 +175,12 @@ export const mockPosts: Post[] = [
 export const popularSpots: PopularSpot[] = [
   {
     id: 'spot1',
-    name: 'Northwestern Memorial Hospital',
-    category: categories[0],
+    name: 'Millennium Park',
+    category: categories[5],
     location: {
-      lat: 41.8955,
-      lng: -87.6217,
-      address: '251 E Huron St, Chicago, IL 60611',
+      lat: 41.8825,
+      lng: -87.6225,
+      address: '201 E Randolph St, Chicago, IL 60602',
     },
     postCount: 5,
     averageRating: 4.8,

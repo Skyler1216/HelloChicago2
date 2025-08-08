@@ -7,8 +7,8 @@ export default function PopularSpots() {
   const spots = [
     {
       id: 'spot1',
-      name: 'Northwestern Memorial Hospital',
-      category: { icon: 'Heart', name_ja: '病院', color: '#FF6B6B' },
+      name: 'Millennium Park',
+      category: { icon: 'Trees', name_ja: '公園', color: '#A8E6CF' },
       postCount: 5,
       averageRating: 4.8,
     },
@@ -62,7 +62,14 @@ export default function PopularSpots() {
                           color: spot.category.color,
                         }}
                       >
-                        {IconComponent && <IconComponent className="w-4 h-4" />}
+                        {IconComponent &&
+                          typeof IconComponent === 'function' &&
+                          React.createElement(
+                            IconComponent as React.ComponentType<{
+                              className?: string;
+                            }>,
+                            { className: 'w-4 h-4' }
+                          )}
                         <span>{spot.category.name_ja}</span>
                       </div>
                     </div>

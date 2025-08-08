@@ -201,15 +201,15 @@ HelloChicagoアプリケーションのAPI設計書です。Supabaseを使用し
 [
   {
     "id": "uuid",
-    "title": "Northwestern Memorial Hospitalで出産体験",
-    "content": "とても良い病院でした...",
-    "summary": "出産体験談",
+    "title": "ミレニアムパークで子どもとピクニック",
+    "content": "とても楽しいピクニックでした...",
+    "summary": "ピクニック体験談",
     "type": "post",
     "status": null,
-    "category_id": "hospital",
-    "location_lat": 41.8781,
-    "location_lng": -87.6298,
-    "location_address": "251 E Huron St, Chicago, IL 60611",
+    "category_id": "park",
+    "location_lat": 41.8825,
+    "location_lng": -87.6225,
+    "location_address": "201 E Randolph St, Chicago, IL 60602",
     "images": ["https://example.com/image1.jpg"],
     "author_id": "uuid",
     "likes": 5,
@@ -223,11 +223,11 @@ HelloChicagoアプリケーションのAPI設計書です。Supabaseを使用し
       "avatar_url": "https://example.com/avatar.jpg"
     },
     "categories": {
-      "id": "hospital",
-      "name": "Hospital",
-      "name_ja": "病院",
-      "icon": "Heart",
-      "color": "#FF6B6B"
+      "id": "park",
+      "name": "Park",
+      "name_ja": "公園",
+      "icon": "Trees",
+      "color": "#A8E6CF"
     }
   }
 ]
@@ -242,15 +242,15 @@ HelloChicagoアプリケーションのAPI設計書です。Supabaseを使用し
 ```json
 {
   "id": "uuid",
-  "title": "Northwestern Memorial Hospitalで出産体験",
-  "content": "とても良い病院でした...",
-  "summary": "出産体験談",
+  "title": "ミレニアムパークで子どもとピクニック",
+  "content": "とても楽しいピクニックでした...",
+  "summary": "ピクニック体験談",
   "type": "post",
   "status": null,
-  "category_id": "hospital",
-  "location_lat": 41.8781,
-  "location_lng": -87.6298,
-  "location_address": "251 E Huron St, Chicago, IL 60611",
+  "category_id": "park",
+  "location_lat": 41.8825,
+  "location_lng": -87.6225,
+  "location_address": "201 E Randolph St, Chicago, IL 60602",
   "images": ["https://example.com/image1.jpg"],
   "author_id": "uuid",
   "likes": 5,
@@ -264,11 +264,11 @@ HelloChicagoアプリケーションのAPI設計書です。Supabaseを使用し
     "avatar_url": "https://example.com/avatar.jpg"
   },
   "categories": {
-    "id": "hospital",
-    "name": "Hospital",
-    "name_ja": "病院",
-    "icon": "Heart",
-    "color": "#FF6B6B"
+    "id": "park",
+    "name": "Park",
+    "name_ja": "公園",
+    "icon": "Trees",
+    "color": "#A8E6CF"
   }
 }
 ```
@@ -281,13 +281,13 @@ HelloChicagoアプリケーションのAPI設計書です。Supabaseを使用し
 
 ```json
 {
-  "title": "Northwestern Memorial Hospitalで出産体験",
-  "content": "とても良い病院でした...",
+  "title": "ミレニアムパークで子どもとピクニック",
+  "content": "とても楽しいピクニックでした...",
   "type": "post",
-  "category_id": "hospital",
-  "location_lat": 41.8781,
-  "location_lng": -87.6298,
-  "location_address": "251 E Huron St, Chicago, IL 60611",
+  "category_id": "park",
+  "location_lat": 41.8825,
+  "location_lng": -87.6225,
+  "location_address": "201 E Randolph St, Chicago, IL 60602",
   "images": ["https://example.com/image1.jpg"],
   "status": null
 }
@@ -298,13 +298,13 @@ HelloChicagoアプリケーションのAPI設計書です。Supabaseを使用し
 ```json
 {
   "id": "uuid",
-  "title": "Northwestern Memorial Hospitalで出産体験",
-  "content": "とても良い病院でした...",
+  "title": "ミレニアムパークで子どもとピクニック",
+  "content": "とても楽しいピクニックでした...",
   "type": "post",
-  "category_id": "hospital",
-  "location_lat": 41.8781,
-  "location_lng": -87.6298,
-  "location_address": "251 E Huron St, Chicago, IL 60611",
+  "category_id": "park",
+  "location_lat": 41.8825,
+  "location_lng": -87.6225,
+  "location_address": "201 E Randolph St, Chicago, IL 60602",
   "images": ["https://example.com/image1.jpg"],
   "author_id": "uuid",
   "likes": 0,

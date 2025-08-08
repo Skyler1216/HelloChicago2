@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Camera, HelpCircle, Gift } from 'lucide-react';
 import PostFormModal from './PostFormModal';
 

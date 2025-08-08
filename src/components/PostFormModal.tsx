@@ -143,10 +143,10 @@ export default function PostFormModal({
                 }
                 placeholder={
                   formData.type === 'post'
-                    ? '例：Northwestern Memorial Hospitalで出産体験'
+                    ? '例：ミレニアムパークで子どもとピクニック'
                     : formData.type === 'consultation'
-                      ? '例：土曜夜に品川区で婚姻届を出したい'
-                      : '例：ベビーゲートいただけませんか？'
+                      ? '例：子ども向けのオススメの病院'
+                      : '例：ベビーゲートお譲りします'
                 }
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-coral-500 focus:border-transparent transition-all"
                 required
