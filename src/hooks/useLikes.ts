@@ -49,25 +49,27 @@ export function useLikes(postId: string, userId?: string) {
     try {
       if (isLiked) {
         // Unlike
-        await supabase
+        const { error } = await supabase
           .from('likes')
           .delete()
           .eq('post_id', postId)
           .eq('user_id', userId);
+        if (error) throw error;
 
-        setIsLiked(false);
-        setLikesCount(prev => prev - 1);
+        // Refresh from server to ensure consistency
+        await loadLikeStatus();
       } else {
         // Like
-        await supabase
+        const { error } = await supabase
           .from('likes')
           .insert({
             post_id: postId,
             user_id: userId
           });
+        if (error) throw error;
 
-        setIsLiked(true);
-        setLikesCount(prev => prev + 1);
+        // Refresh from server to ensure consistency
+        await loadLikeStatus();
       }
     } catch (error) {
       console.error('Error toggling like:', error);
