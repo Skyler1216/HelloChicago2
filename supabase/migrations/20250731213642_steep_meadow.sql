@@ -16,6 +16,15 @@
     - Add trigger to update post likes count
 */
 
+-- Ensure posts table has likes column
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'posts' AND column_name = 'likes') THEN
+        ALTER TABLE posts ADD COLUMN likes integer DEFAULT 0;
+    END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS likes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
@@ -49,13 +58,15 @@ CREATE OR REPLACE FUNCTION update_post_likes_count()
 RETURNS TRIGGER AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
+    -- Update posts table with new like count
     UPDATE posts 
-    SET likes = likes + 1 
+    SET likes = COALESCE(likes, 0) + 1 
     WHERE id = NEW.post_id;
     RETURN NEW;
   ELSIF TG_OP = 'DELETE' THEN
+    -- Update posts table with new like count
     UPDATE posts 
-    SET likes = likes - 1 
+    SET likes = GREATEST(COALESCE(likes, 0) - 1, 0)
     WHERE id = OLD.post_id;
     RETURN OLD;
   END IF;
@@ -63,8 +74,27 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger to automatically update likes count
+-- Drop existing trigger if it exists
+DROP TRIGGER IF EXISTS update_post_likes_trigger ON likes;
+
+-- Create trigger to automatically update likes count
 CREATE TRIGGER update_post_likes_trigger
   AFTER INSERT OR DELETE ON likes
   FOR EACH ROW
   EXECUTE FUNCTION update_post_likes_count();
+
+-- Function to sync all post likes counts
+CREATE OR REPLACE FUNCTION sync_all_post_likes()
+RETURNS void AS $$
+BEGIN
+  UPDATE posts 
+  SET likes = (
+    SELECT COUNT(*) 
+    FROM likes 
+    WHERE likes.post_id = posts.id
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+-- Sync existing likes counts
+SELECT sync_all_post_likes();

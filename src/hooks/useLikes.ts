@@ -14,6 +14,8 @@ export function useLikes(postId: string, userId?: string) {
 
   const loadLikeStatus = async () => {
     try {
+      console.log('🔄 Loading like status for post:', postId, 'user:', userId);
+
       // Get likes count and user like status in parallel
       const [postResult, userLikeResult] = await Promise.all([
         // Get post likes count
@@ -46,6 +48,37 @@ export function useLikes(postId: string, userId?: string) {
       const currentLikesCount = post?.likes || 0;
       const hasLiked = !!userLike;
 
+      console.log('📊 Loaded like status:', {
+        postId,
+        userId,
+        currentLikesCount,
+        hasLiked,
+        userLike,
+      });
+
+      // Debug: Check if likes count matches the actual likes in the likes table
+      if (userId) {
+        const { data: actualLikes, error: actualLikesError } = await supabase
+          .from('likes')
+          .select('id')
+          .eq('post_id', postId);
+
+        if (!actualLikesError && actualLikes) {
+          const actualLikesCount = actualLikes.length;
+          if (actualLikesCount !== currentLikesCount) {
+            console.warn(
+              '⚠️ Likes count mismatch - posts.likes:',
+              currentLikesCount,
+              'actual likes count:',
+              actualLikesCount
+            );
+            // Use the actual count if there's a mismatch
+            setLikesCount(actualLikesCount);
+            return;
+          }
+        }
+      }
+
       setLikesCount(currentLikesCount);
       setIsLiked(hasLiked);
     } catch (error) {
@@ -55,10 +88,12 @@ export function useLikes(postId: string, userId?: string) {
 
   const toggleLike = async () => {
     if (!userId) {
+      console.log('❌ No user ID provided for like toggle');
       return;
     }
 
     if (loading) {
+      console.log('❌ Like toggle already in progress');
       return;
     }
 
@@ -74,6 +109,8 @@ export function useLikes(postId: string, userId?: string) {
         setIsLiked(false);
         setLikesCount(prev => Math.max(0, prev - 1));
 
+        console.log('🔄 Unliking post:', postId, 'for user:', userId);
+
         // Remove from likes table
         const { error } = await supabase
           .from('likes')
@@ -85,10 +122,14 @@ export function useLikes(postId: string, userId?: string) {
           console.error('❌ Error unliking post:', error);
           throw error;
         }
+
+        console.log('✅ Successfully unliked post');
       } else {
         // Like: Optimistic update first
         setIsLiked(true);
         setLikesCount(prev => prev + 1);
+
+        console.log('🔄 Liking post:', postId, 'for user:', userId);
 
         // Add to likes table
         const { error } = await supabase.from('likes').insert({
@@ -100,22 +141,15 @@ export function useLikes(postId: string, userId?: string) {
           console.error('❌ Error liking post:', error);
           throw error;
         }
+
+        console.log('✅ Successfully liked post');
       }
 
       // Wait a moment for database triggers to complete
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-      // Verify the final state from database
-      const { data: finalPost, error: verifyError } = await supabase
-        .from('posts')
-        .select('likes')
-        .eq('id', postId)
-        .single();
-
-      if (!verifyError && finalPost) {
-        const finalLikesCount = finalPost.likes || 0;
-        setLikesCount(finalLikesCount);
-      }
+      // Reload the like status to ensure consistency
+      await loadLikeStatus();
     } catch (error) {
       console.error('❌ Error toggling like:', error);
 
