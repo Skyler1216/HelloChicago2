@@ -1,10 +1,21 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
-export function useLikes(postId: string, userId?: string) {
+export function useLikes(
+  postId: string,
+  userId?: string,
+  initialLikesCount?: number
+) {
   const [isLiked, setIsLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(0);
+  const [likesCount, setLikesCount] = useState(initialLikesCount || 0);
   const [loading, setLoading] = useState(false);
+
+  // 初期値が変更された場合に更新
+  useEffect(() => {
+    if (initialLikesCount !== undefined) {
+      setLikesCount(initialLikesCount);
+    }
+  }, [initialLikesCount]);
 
   useEffect(() => {
     if (postId) {
@@ -16,72 +27,23 @@ export function useLikes(postId: string, userId?: string) {
     try {
       console.log('🔄 Loading like status for post:', postId, 'user:', userId);
 
-      // Get likes count and user like status in parallel
-      const [postResult, userLikeResult] = await Promise.all([
-        // Get post likes count
-        supabase.from('posts').select('likes').eq('id', postId).single(),
-
-        // Check if current user has liked this post (only if userId exists)
-        userId
-          ? supabase
-              .from('likes')
-              .select('id')
-              .eq('post_id', postId)
-              .eq('user_id', userId)
-              .maybeSingle()
-          : Promise.resolve({ data: null, error: null }),
-      ]);
-
-      const { data: post, error: postError } = postResult;
-      const { data: userLike, error: likeError } = userLikeResult;
-
-      if (postError) {
-        console.error('❌ Error loading post likes:', postError);
-        return;
-      }
-
-      if (likeError) {
-        console.error('❌ Error checking user like:', likeError);
-        return;
-      }
-
-      const currentLikesCount = post?.likes || 0;
-      const hasLiked = !!userLike;
-
-      console.log('📊 Loaded like status:', {
-        postId,
-        userId,
-        currentLikesCount,
-        hasLiked,
-        userLike,
-      });
-
-      // Debug: Check if likes count matches the actual likes in the likes table
+      // ユーザーのいいね状態のみを確認（いいね数は初期値を使用）
       if (userId) {
-        const { data: actualLikes, error: actualLikesError } = await supabase
+        const { data: userLike, error: likeError } = await supabase
           .from('likes')
           .select('id')
-          .eq('post_id', postId);
+          .eq('post_id', postId)
+          .eq('user_id', userId)
+          .maybeSingle();
 
-        if (!actualLikesError && actualLikes) {
-          const actualLikesCount = actualLikes.length;
-          if (actualLikesCount !== currentLikesCount) {
-            console.warn(
-              '⚠️ Likes count mismatch - posts.likes:',
-              currentLikesCount,
-              'actual likes count:',
-              actualLikesCount
-            );
-            // Use the actual count if there's a mismatch
-            setLikesCount(actualLikesCount);
-            setIsLiked(hasLiked);
-            return;
-          }
+        if (likeError) {
+          console.error('❌ Error checking user like:', likeError);
+          return;
         }
-      }
 
-      setLikesCount(currentLikesCount);
-      setIsLiked(hasLiked);
+        const hasLiked = !!userLike;
+        setIsLiked(hasLiked);
+      }
     } catch (error) {
       console.error('❌ Error in loadLikeStatus:', error);
     }

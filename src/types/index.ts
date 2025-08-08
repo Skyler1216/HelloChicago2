@@ -21,6 +21,8 @@ export interface Post {
   likes: number;
   replies?: number;
   approved: boolean;
+  likes_count?: number;
+  comments_count?: number;
 }
 
 export interface Category {

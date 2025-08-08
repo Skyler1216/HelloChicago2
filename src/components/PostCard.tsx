@@ -4,11 +4,12 @@ import type { LucideIcon } from 'lucide-react';
 import { Database } from '../types/database';
 import { useLikes } from '../hooks/useLikes';
 import { useAuth } from '../hooks/useAuth';
-import { useComments } from '../hooks/useComments';
 
 type Post = Database['public']['Tables']['posts']['Row'] & {
   profiles: Database['public']['Tables']['profiles']['Row'];
   categories: Database['public']['Tables']['categories']['Row'];
+  likes_count?: number;
+  comments_count?: number;
 };
 
 interface PostCardProps {
@@ -23,8 +24,12 @@ function PostCard({ post, onClick }: PostCardProps) {
     likesCount,
     loading: likesLoading,
     toggleLike,
-  } = useLikes(post.id, user?.id);
-  const { totalCount: commentsCount } = useComments(post.id);
+  } = useLikes(post.id, user?.id, post.likes_count);
+
+  // 投稿データから直接カウントを取得（フォールバック用）
+  const displayLikesCount =
+    likesCount !== undefined ? likesCount : post.likes_count || 0;
+  const displayCommentsCount = post.comments_count || 0;
 
   // Dynamically get the icon component with proper typing
   const IconComponent = React.useMemo((): LucideIcon | undefined => {
@@ -183,7 +188,7 @@ function PostCard({ post, onClick }: PostCardProps) {
           } disabled:opacity-50`}
         >
           <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
-          <span className="text-sm font-medium">{likesCount}</span>
+          <span className="text-sm font-medium">{displayLikesCount}</span>
         </button>
         <button
           onClick={e => {
@@ -194,7 +199,9 @@ function PostCard({ post, onClick }: PostCardProps) {
         >
           <MessageCircle className="w-5 h-5" />
           <span className="text-sm font-medium">
-            {commentsCount > 0 ? `${commentsCount}件のコメント` : 'コメント'}
+            {displayCommentsCount > 0
+              ? `${displayCommentsCount}件のコメント`
+              : 'コメント'}
           </span>
         </button>
       </div>
