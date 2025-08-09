@@ -368,23 +368,36 @@ COPY (
 - 長時間クエリ
 - ストレージ使用量
 
-## 将来の拡張性
+## 実装済み拡張機能
 
-### 予定されている機能
+### Phase 2 完了機能
 
-1. **コメント機能**
+1. **プロフィール詳細機能** ✅
+   - `profile_details` テーブル実装済み
+   - プライバシー設定統合
+
+2. **通知システム** ✅
+   - `notifications` テーブル実装済み
+   - `notification_settings` テーブル実装済み
+   - リアルタイム通知対応
+
+3. **いいね機能** ✅
+   - `likes` テーブル実装済み
+   - 自動通知トリガー統合
+
+### Phase 3 実装中機能
+
+4. **ソーシャル機能** 🚧
+   - `follows` テーブル設計中
+   - フォロー・フォロワー関係管理
+
+### 今後の拡張予定
+
+5. **コメント機能** 📋
    - `comments` テーブルの追加
    - 投稿への返信機能
 
-2. **いいね機能**
-   - `likes` テーブルの追加
-   - ユーザー別いいね管理
-
-3. **通知機能**
-   - `notifications` テーブルの追加
-   - リアルタイム通知
-
-4. **検索機能**
+6. **検索機能** 📋
    - 全文検索インデックス
    - 位置情報検索の強化
 
@@ -394,8 +407,80 @@ COPY (
 - 将来: 1000ユーザーまで対応可能
 - パーティショニング戦略の検討
 
+## 追加テーブル仕様
+
+### 4. profile_details テーブル ✅
+
+詳細プロフィール情報の管理
+
+```sql
+CREATE TABLE profile_details (
+  profile_id uuid PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+  bio text,
+  location_area text,
+  interests text[],
+  languages text[],
+  arrival_date date,
+  family_structure text,
+  privacy_settings jsonb DEFAULT '{"profile_visible": true, "posts_visible": true, "activity_visible": false, "contact_allowed": true}',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+```
+
+### 5. notification_settings テーブル ✅
+
+ユーザー別通知設定の管理
+
+```sql
+CREATE TABLE notification_settings (
+  user_id uuid PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+  push_likes boolean DEFAULT true,
+  push_comments boolean DEFAULT true,
+  push_follows boolean DEFAULT true,
+  push_mentions boolean DEFAULT true,
+  email_likes boolean DEFAULT false,
+  email_comments boolean DEFAULT true,
+  email_follows boolean DEFAULT false,
+  email_mentions boolean DEFAULT true,
+  weekly_digest boolean DEFAULT false,
+  important_updates boolean DEFAULT true,
+  system_notifications boolean DEFAULT true,
+  quiet_hours_enabled boolean DEFAULT false,
+  quiet_hours_start time DEFAULT '22:00:00',
+  quiet_hours_end time DEFAULT '08:00:00',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+```
+
+### 6. notifications テーブル ✅
+
+通知履歴とリアルタイム通知の管理
+
+```sql
+CREATE TABLE notifications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  recipient_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  sender_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  type text NOT NULL CHECK (type IN ('like', 'comment', 'follow', 'mention', 'system', 'weekly_digest')),
+  title text NOT NULL,
+  message text NOT NULL,
+  metadata jsonb DEFAULT '{}',
+  related_post_id uuid REFERENCES posts(id) ON DELETE CASCADE,
+  related_comment_id uuid REFERENCES comments(id) ON DELETE CASCADE,
+  is_read boolean DEFAULT false,
+  is_pushed boolean DEFAULT false,
+  is_emailed boolean DEFAULT false,
+  created_at timestamptz DEFAULT now(),
+  read_at timestamptz,
+  pushed_at timestamptz,
+  emailed_at timestamptz
+);
+```
+
 ---
 
 **最終更新**: 2025年1月
-**バージョン**: 1.0
+**バージョン**: 2.0
 **作成者**: HelloChicago開発チーム

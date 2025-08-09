@@ -657,11 +657,52 @@ Strict-Transport-Security: max-age=31536000; includeSubDomains
 - 応答時間 > 2秒
 - 認証失敗率 > 10%
 
-## 将来の拡張
+## 実装済み拡張機能
 
-### 予定されているエンドポイント
+### Phase 2 完了エンドポイント ✅
 
-#### コメント機能
+#### 通知機能 ✅
+
+```
+GET /notifications
+PUT /notifications/{id}/read
+PUT /notifications/mark-all-read
+DELETE /notifications/{id}
+GET /notification-settings
+PUT /notification-settings
+```
+
+#### プロフィール詳細機能 ✅
+
+```
+GET /profile-details/{id}
+POST /profile-details
+PUT /profile-details/{id}
+DELETE /profile-details/{id}
+```
+
+#### 画像アップロード機能 ✅
+
+```
+POST /storage/avatars
+DELETE /storage/avatars/{filename}
+```
+
+### Phase 3 実装中エンドポイント 🚧
+
+#### ソーシャル機能 🚧
+
+```
+POST /follows
+DELETE /follows/{id}
+GET /users/{id}/followers
+GET /users/{id}/following
+GET /users/discover
+```
+
+### 将来の拡張予定
+
+#### コメント機能 📋
 
 ```
 GET /posts/{id}/comments
@@ -670,23 +711,7 @@ PUT /comments/{id}
 DELETE /comments/{id}
 ```
 
-#### いいね機能
-
-```
-POST /posts/{id}/like
-DELETE /posts/{id}/like
-GET /posts/{id}/likes
-```
-
-#### 通知機能
-
-```
-GET /notifications
-PUT /notifications/{id}/read
-POST /notifications/subscribe
-```
-
-#### 検索機能
+#### 検索機能 📋
 
 ```
 GET /search?q={query}&type={type}&category={category}
@@ -702,5 +727,5 @@ GET /search/nearby?lat={lat}&lng={lng}&radius={radius}
 ---
 
 **最終更新**: 2025年1月
-**バージョン**: 1.0
+**バージョン**: 2.0
 **作成者**: HelloChicago開発チーム

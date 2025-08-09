@@ -47,11 +47,18 @@ HelloChicagoアプリケーションのテスト戦略書です。品質保証�
   - `PostFormView`
   - `Layout`
   - `PostCard`
+  - `ProfileView` ✅
+  - `SettingsView` ✅
+  - `NotificationCenter` ✅
 
 - **カスタムフック**
   - `useAuth`
   - `usePosts`
   - `useCategories`
+  - `useUserStats` ✅
+  - `useNotifications` ✅
+  - `useProfileDetails` ✅
+  - `useImageUpload` ✅
 
 - **ユーティリティ関数**
   - `supabase.ts`
@@ -134,6 +141,16 @@ describe('PostCard', () => {
   - 投稿表示 → データ取得
   - 投稿更新 → データ更新
 
+- **プロフィールフロー** ✅
+  - プロフィール編集 → データ保存
+  - 詳細情報登録 → profile_details保存
+  - 画像アップロード → Storage保存
+
+- **通知フロー** ✅
+  - 通知生成 → データベース保存
+  - リアルタイム通知 → リアルタイム配信
+  - 設定変更 → notification_settings更新
+
 - **地図機能**
   - 位置情報取得 → マップ表示
   - 投稿フィルタリング → マーカー表示
@@ -193,6 +210,9 @@ describe('PostFormView Integration', () => {
 2. **投稿作成・表示フロー**
 3. **地図機能・フィルタリング**
 4. **管理者機能**
+5. **プロフィール機能フロー** ✅
+6. **通知システムフロー** ✅
+7. **設定機能フロー** ✅
 
 #### テストツール
 
@@ -530,5 +550,5 @@ jobs:
 ---
 
 **最終更新**: 2025年1月
-**バージョン**: 1.0
+**バージョン**: 2.0
 **作成者**: HelloChicago開発チーム
