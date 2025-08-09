@@ -688,18 +688,6 @@ POST /storage/avatars
 DELETE /storage/avatars/{filename}
 ```
 
-### Phase 3 実装中エンドポイント 🚧
-
-#### ソーシャル機能 🚧
-
-```
-POST /follows
-DELETE /follows/{id}
-GET /users/{id}/followers
-GET /users/{id}/following
-GET /users/discover
-```
-
 ### 将来の拡張予定
 
 #### コメント機能 📋
@@ -727,5 +715,5 @@ GET /search/nearby?lat={lat}&lng={lng}&radius={radius}
 ---
 
 **最終更新**: 2025年1月
-**バージョン**: 2.0
+**バージョン**: 2.1
 **作成者**: HelloChicago開発チーム
