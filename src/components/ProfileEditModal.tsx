@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { X, Camera, Save } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, Camera, Save, Upload, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Database } from '../types/database';
 import { useToast } from '../hooks/useToast';
+import { useImageUpload } from '../hooks/useImageUpload';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
@@ -25,6 +26,13 @@ export default function ProfileEditModal({
   });
   const [loading, setLoading] = useState(false);
   const { addToast } = useToast();
+  const {
+    uploadImage,
+    uploading,
+    uploadProgress,
+    error: uploadError,
+  } = useImageUpload();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
@@ -64,6 +72,35 @@ export default function ProfileEditModal({
     }));
   };
 
+  const handleImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const uploadedUrl = await uploadImage(file, profile.id);
+      if (uploadedUrl) {
+        setFormData(prev => ({
+          ...prev,
+          avatar_url: uploadedUrl,
+        }));
+        addToast('success', '画像がアップロードされました');
+      }
+    } catch (error) {
+      console.error('Image upload failed:', error);
+    }
+
+    // ファイル入力をリセット
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleCameraClick = () => {
+    fileInputRef.current?.click();
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -82,7 +119,7 @@ export default function ProfileEditModal({
           {/* Avatar Section */}
           <div className="text-center">
             <div className="relative inline-block">
-              <div className="w-24 h-24 bg-gradient-to-r from-coral-500 to-coral-400 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-24 h-24 bg-gradient-to-r from-coral-500 to-coral-400 rounded-full flex items-center justify-center mx-auto mb-4 relative overflow-hidden">
                 {formData.avatar_url ? (
                   <img
                     src={formData.avatar_url}
@@ -94,17 +131,59 @@ export default function ProfileEditModal({
                     {formData.name?.charAt(0) || 'U'}
                   </span>
                 )}
+
+                {/* アップロード中のオーバーレイ */}
+                {uploading && (
+                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-full">
+                    <div className="text-center">
+                      <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mb-1"></div>
+                      <div className="text-xs text-white">
+                        {uploadProgress}%
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
+
               <button
                 type="button"
-                className="absolute bottom-0 right-0 w-8 h-8 bg-coral-500 rounded-full flex items-center justify-center text-white hover:bg-coral-600 transition-colors"
+                onClick={handleCameraClick}
+                disabled={uploading}
+                className="absolute bottom-0 right-0 w-8 h-8 bg-coral-500 rounded-full flex items-center justify-center text-white hover:bg-coral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Camera className="w-4 h-4" />
+                {uploading ? (
+                  <Upload className="w-4 h-4" />
+                ) : (
+                  <Camera className="w-4 h-4" />
+                )}
               </button>
             </div>
-            <p className="text-sm text-gray-500">
-              プロフィール画像を変更するには上記のカメラアイコンをクリック
-            </p>
+
+            {/* ファイル入力（非表示） */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+
+            <div className="space-y-2">
+              <p className="text-sm text-gray-500">
+                カメラアイコンをクリックして画像をアップロード
+              </p>
+              <p className="text-xs text-gray-400">
+                JPEG、PNG、WebP形式・2MB以下推奨
+              </p>
+
+              {/* アップロードエラー表示 */}
+              {uploadError && (
+                <div className="flex items-center space-x-2 text-red-600 text-sm">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>{uploadError}</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Name Field */}

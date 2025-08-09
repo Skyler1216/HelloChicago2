@@ -167,6 +167,59 @@ export interface Database {
           created_at?: string;
         };
       };
+      profile_details: {
+        Row: {
+          profile_id: string;
+          bio: string | null;
+          location_area: string | null;
+          interests: string[] | null;
+          languages: string[] | null;
+          arrival_date: string | null;
+          family_structure: string | null;
+          privacy_settings: {
+            profile_visible: boolean;
+            posts_visible: boolean;
+            activity_visible: boolean;
+            contact_allowed: boolean;
+          };
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          profile_id: string;
+          bio?: string | null;
+          location_area?: string | null;
+          interests?: string[] | null;
+          languages?: string[] | null;
+          arrival_date?: string | null;
+          family_structure?: string | null;
+          privacy_settings?: {
+            profile_visible?: boolean;
+            posts_visible?: boolean;
+            activity_visible?: boolean;
+            contact_allowed?: boolean;
+          };
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          profile_id?: string;
+          bio?: string | null;
+          location_area?: string | null;
+          interests?: string[] | null;
+          languages?: string[] | null;
+          arrival_date?: string | null;
+          family_structure?: string | null;
+          privacy_settings?: {
+            profile_visible?: boolean;
+            posts_visible?: boolean;
+            activity_visible?: boolean;
+            contact_allowed?: boolean;
+          };
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
   };
 }

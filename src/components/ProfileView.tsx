@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Settings,
   Bell,
@@ -9,6 +9,8 @@ import {
   Edit3,
   Calendar,
   TrendingUp,
+  ArrowLeft,
+  User,
 } from 'lucide-react';
 import { signOut } from '../lib/supabase';
 import { Database } from '../types/database';
@@ -16,6 +18,9 @@ import { useUserStats } from '../hooks/useUserStats';
 import ProfileEditModal from './ProfileEditModal';
 import UserPostsView from './UserPostsView';
 import FavoritesView from './FavoritesView';
+import SettingsView from './settings/SettingsView';
+import ProfileDetailView from './profile/ProfileDetailView';
+import ProfileDetailEditor from './profile/ProfileDetailEditor';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
@@ -32,7 +37,7 @@ export default function ProfileView({
 }: ProfileViewProps) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentView, setCurrentView] = useState<
-    'profile' | 'posts' | 'favorites'
+    'profile' | 'posts' | 'favorites' | 'settings' | 'details' | 'edit-details'
   >('profile');
   const [currentProfile, setCurrentProfile] = useState(profile);
 
@@ -82,7 +87,7 @@ export default function ProfileView({
     },
     {
       label: 'お気に入り',
-      value: statsLoading ? '-' : '0', // お気に入り数は後で実装
+      value: statsLoading ? '-' : userStats.favoritesCount.toString(),
       icon: TrendingUp,
       color: 'text-teal-600',
       onClick: () => setCurrentView('favorites'),
@@ -94,7 +99,7 @@ export default function ProfileView({
       icon: Settings,
       label: '設定',
       description: 'アカウント設定を変更',
-      onClick: undefined,
+      onClick: () => setCurrentView('settings'),
     },
     {
       icon: Bell,
@@ -151,6 +156,59 @@ export default function ProfileView({
       <FavoritesView
         userId={activeProfile.id}
         onBack={() => setCurrentView('profile')}
+      />
+    );
+  }
+
+  if (currentView === 'settings' && activeProfile) {
+    return (
+      <SettingsView
+        profile={activeProfile}
+        onBack={() => setCurrentView('profile')}
+        onProfileUpdate={updatedProfile => {
+          setCurrentProfile(updatedProfile);
+        }}
+      />
+    );
+  }
+
+  if (currentView === 'details' && activeProfile) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b border-gray-100 sticky top-0 z-10">
+          <div className="max-w-md mx-auto px-4 py-4">
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setCurrentView('profile')}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </button>
+              <h1 className="text-lg font-bold text-gray-900">
+                詳細プロフィール
+              </h1>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-md mx-auto px-4 py-6">
+          <ProfileDetailView
+            profile={activeProfile}
+            isOwnProfile={true}
+            onEdit={() => setCurrentView('edit-details')}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (currentView === 'edit-details' && activeProfile) {
+    return (
+      <ProfileDetailEditor
+        profile={activeProfile}
+        onBack={() => setCurrentView('details')}
+        onSave={() => {
+          // 保存完了後は詳細表示に戻る
+        }}
       />
     );
   }
@@ -236,21 +294,37 @@ export default function ProfileView({
       {/* Quick Actions */}
       <div className="bg-white rounded-2xl p-4 mb-6 shadow-sm border border-gray-100">
         <h3 className="font-semibold text-gray-900 mb-3">クイックアクション</h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => setCurrentView('posts')}
+              className="flex flex-col items-center p-4 bg-coral-50 rounded-xl hover:bg-coral-100 transition-colors"
+            >
+              <MessageSquare className="w-6 h-6 text-coral-600 mb-2" />
+              <span className="text-sm font-medium text-coral-700">
+                投稿履歴
+              </span>
+            </button>
+            <button
+              onClick={() => setCurrentView('favorites')}
+              className="flex flex-col items-center p-4 bg-teal-50 rounded-xl hover:bg-teal-100 transition-colors"
+            >
+              <Heart className="w-6 h-6 text-teal-600 mb-2" />
+              <span className="text-sm font-medium text-teal-700">
+                お気に入り
+              </span>
+            </button>
+          </div>
           <button
-            onClick={() => setCurrentView('posts')}
-            className="flex flex-col items-center p-4 bg-coral-50 rounded-xl hover:bg-coral-100 transition-colors"
+            onClick={() => setCurrentView('details')}
+            className="w-full flex flex-col items-center p-4 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors"
           >
-            <MessageSquare className="w-6 h-6 text-coral-600 mb-2" />
-            <span className="text-sm font-medium text-coral-700">投稿履歴</span>
-          </button>
-          <button
-            onClick={() => setCurrentView('favorites')}
-            className="flex flex-col items-center p-4 bg-teal-50 rounded-xl hover:bg-teal-100 transition-colors"
-          >
-            <Heart className="w-6 h-6 text-teal-600 mb-2" />
-            <span className="text-sm font-medium text-teal-700">
-              お気に入り
+            <User className="w-6 h-6 text-blue-600 mb-2" />
+            <span className="text-sm font-medium text-blue-700">
+              詳細プロフィール
+            </span>
+            <span className="text-xs text-blue-600 mt-1">
+              自己紹介・趣味・居住エリアなど
             </span>
           </button>
         </div>
