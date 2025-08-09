@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { formatSupabaseError, logError } from '../utils/errorHandler';
 
 interface UserStats {
   postCount: number;
@@ -112,8 +113,8 @@ export function useUserStats(userId: string | undefined) {
         favoritesCount: favoritesCount,
       });
     } catch (err) {
-      console.error('❌ Error loading user stats:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load stats');
+      logError(err, 'useUserStats.loadUserStats');
+      setError(formatSupabaseError(err));
     } finally {
       setLoading(false);
     }

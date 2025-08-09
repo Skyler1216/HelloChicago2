@@ -374,7 +374,6 @@ COPY (
 
 1. **プロフィール詳細機能** ✅
    - `profile_details` テーブル実装済み
-   - プライバシー設定統合
 
 2. **通知システム** ✅
    - `notifications` テーブル実装済み
@@ -420,7 +419,7 @@ CREATE TABLE profile_details (
   languages text[],
   arrival_date date,
   family_structure text,
-  privacy_settings jsonb DEFAULT '{"profile_visible": true, "posts_visible": true, "activity_visible": false, "contact_allowed": true}',
+
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );

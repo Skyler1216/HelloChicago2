@@ -25,9 +25,9 @@
 #### **Phase 2 完了済み機能** ✅
 
 - ✅ **詳細プロフィール情報**: 自己紹介、居住エリア、趣味、言語、到着日、家族構成
-- ✅ **設定機能完全実装**: アカウント設定、プライバシー設定、通知設定
+- ✅ **設定機能完全実装**: アカウント設定、通知設定
 - ✅ **包括的通知システム**: リアルタイム通知、通知設定、おやすみモード
-- ✅ **プライバシー制御**: プロフィール公開範囲、投稿表示制御
+
 - ✅ **設定統合画面**: 各種設定への統一的なアクセス
 
 ### 1.2 プロフィール機能開発完了
@@ -39,7 +39,7 @@
 - ✅ **基本プロフィール機能**: 表示・編集・統計
 - ✅ **詳細プロフィール情報**: 自己紹介・個人情報管理
 - ✅ **画像アップロード**: 高品質な画像管理
-- ✅ **設定機能**: アカウント・プライバシー・通知設定
+- ✅ **設定機能**: アカウント・通知設定
 - ✅ **通知システム**: 包括的な通知管理
 
 #### 📋 **将来的な拡張候補（必要に応じて）**
@@ -85,7 +85,7 @@ return data?.length || 0;
 #### 2.3 設定画面の完全実装 ✅
 
 - ✅ **アカウント設定**: パスワード変更、メール変更、プロフィール管理
-- ✅ **プライバシー設定**: プロフィール公開範囲、投稿表示制御
+
 - ✅ **通知設定**: プッシュ通知、メール通知、おやすみモード
 - ✅ **データ管理**: 各種設定の保存・読み込み
 
@@ -104,7 +104,6 @@ interface ProfileDetails {
   languages?: string[]; // 話せる言語
   arrival_date?: date; // シカゴ到着日
   family_structure?: string; // 家族構成
-  privacy_settings?: object; // プライバシー設定
 }
 ```
 
@@ -149,9 +148,9 @@ CREATE TABLE notifications (
 **Phase 1・2**での実装により、プロフィールページに必要な全機能が完成しました：
 
 - ✅ **基本機能**: プロフィール表示・編集
-- ✅ **詳細情報**: 個人情報・プライバシー管理
+- ✅ **詳細情報**: 個人情報管理
 - ✅ **画像機能**: アップロード・圧縮・Storage統合
-- ✅ **設定統合**: アカウント・通知・プライバシー設定
+- ✅ **設定統合**: アカウント・通知設定
 - ✅ **通知システム**: リアルタイム通知・設定管理
 
 #### 2.8 技術的成果
@@ -223,7 +222,6 @@ CREATE TABLE notification_settings (
 src/components/settings/
 ├── SettingsView.tsx           # メイン設定画面
 ├── AccountSettings.tsx        # アカウント設定
-├── PrivacySettings.tsx        # プライバシー設定
 ├── NotificationSettings.tsx   # 通知設定
 └── DataManagement.tsx         # データ管理
 ```
@@ -245,7 +243,6 @@ src/components/profile/
 // 設定関連
 export function useUserSettings(userId: string);
 export function useNotificationSettings(userId: string);
-export function usePrivacySettings(userId: string);
 
 // プロフィール詳細
 export function useProfileDetails(userId: string);
@@ -299,7 +296,6 @@ export function useActivityStats(userId: string);
 1. 👤 プロフィール
    - 基本情報編集
    - 詳細情報設定
-   - プライバシー設定
 
 2. 🔔 通知
    - プッシュ通知
@@ -378,10 +374,9 @@ export function useUserProfile(userId: string) {
 
 ## 6. セキュリティ考慮事項
 
-### 6.1 プライバシー保護
+### 6.1 データ保護
 
 - **データ最小化**: 必要最小限の情報のみ収集
-- **アクセス制御**: プロフィール公開範囲の細かい制御
 - **データ削除**: GDPR準拠の削除機能
 
 ### 6.2 画像アップロードセキュリティ
@@ -428,7 +423,7 @@ const scanImageFile = async (file: File): Promise<boolean> => {
 ### 8.1 Phase 1（完了済み）✅ - 2025年1月
 
 - ✅ **Week 1**: お気に入り数実装、画像アップロード基本機能
-- ✅ **Week 2**: 設定画面基本実装、プライバシー設定
+- ✅ **Week 2**: 設定画面基本実装、通知設定
 
 ### 8.2 Phase 2（完了済み）✅ - 2025年1月
 
@@ -490,7 +485,7 @@ const scanImageFile = async (file: File): Promise<boolean> => {
 
 - ✅ **完全な機能実装**: 基本〜高度な機能まで全て実装
 - ✅ **高品質なUX**: 直感的で使いやすいインターフェース
-- ✅ **堅牢なセキュリティ**: プライバシー保護・データ安全性
+- ✅ **堅牢なセキュリティ**: データ安全性・セキュリティ保護
 - ✅ **優れたパフォーマンス**: 高速・効率的な動作
 
 ### 技術的評価
@@ -500,4 +495,263 @@ const scanImageFile = async (file: File): Promise<boolean> => {
 - **セキュリティ**: RLS・認証・認可の完全実装
 - **ドキュメント**: 詳細な技術仕様書・API文書
 
+## 📊 コードレビュー分析結果
+
+### 分析実施日: 2025年1月
+
+#### 🔍 分析対象ファイル
+
+- `src/components/ProfileView.tsx` (402行)
+- `src/components/ProfileEditModal.tsx` (280行)
+- `src/components/profile/ProfileDetailView.tsx` (240行)
+- `src/components/profile/ProfileDetailEditor.tsx` (474行)
+- `src/hooks/useProfileDetails.ts` (121行)
+- `src/hooks/useUserStats.ts` (128行)
+- `src/hooks/useImageUpload.ts` (142行)
+- `src/components/settings/SettingsView.tsx` (259行)
+- `src/components/settings/AccountSettings.tsx` (368行)
+
+#### ✅ 良好な点
+
+**1. アーキテクチャ設計**
+
+- コンポーネントの適切な分離・責任分担
+- カスタムフックによるビジネスロジックの抽出
+- TypeScript型安全性の徹底
+
+**2. ユーザビリティ**
+
+- 直感的なナビゲーション設計
+- レスポンシブデザインの実装
+- 適切なローディング・エラーハンドリング
+
+**3. データ管理**
+
+- Supabaseとの効率的な連携
+- 楽観的UI更新の実装
+- キャッシュ戦略の適用
+
+## 🚨 発見された課題と改善提案
+
+### 優先度：高（緊急対応推奨）
+
+#### 1. TypeScript型定義の不整合
+
+**問題箇所**: `ProfileView.tsx:28`
+
+```typescript
+// 現在の問題
+interface ProfileViewProps {
+  user: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  profile: Profile | null;
+  onAdminClick?: () => void;
+}
+```
+
+**改善提案**:
+
+```typescript
+interface ProfileViewProps {
+  user: User | null; // Supabase User型を使用
+  profile: Profile | null;
+  onAdminClick?: () => void;
+}
+```
+
+#### 2. エラーハンドリングの統一性不足
+
+**問題箇所**: `useUserStats.ts:114-116`
+
+```typescript
+// 現在のエラーハンドリング
+setError(err instanceof Error ? err.message : 'Failed to load stats');
+```
+
+**改善提案**: 共通エラーハンドリング関数の導入
+
+```typescript
+// utils/errorHandler.ts
+export const formatError = (error: unknown, defaultMessage: string): string => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  return defaultMessage;
+};
+```
+
+#### 3. 通知機能の未実装
+
+**問題箇所**: `ProfileView.tsx:108`
+
+```typescript
+{
+  icon: Bell,
+  label: '通知',
+  description: '通知設定を管理',
+  onClick: undefined, // ❌ 未実装
+},
+```
+
+**改善提案**: NotificationSettings への遷移を実装
+
+### 優先度：中（短期改善推奨）
+
+#### 4. パフォーマンス最適化の余地
+
+**問題箇所**: `useUserStats.ts:68-84`
+
+- 複数のPromise.allを使用しているが、さらなる最適化が可能
+
+**改善提案**: 統合クエリ関数の実装
+
+```sql
+CREATE OR REPLACE FUNCTION get_user_complete_stats(user_id uuid)
+RETURNS jsonb AS $$
+-- 全統計を一度に取得する関数
+```
+
+#### 5. 設定機能の未完成
+
+**問題箇所**: `SettingsView.tsx:107-163`
+
+- 表示設定とデータ管理機能が「準備中」状態
+
+**改善提案**:
+
+- テーマ切り替え機能の実装
+- データエクスポート機能の実装
+
+#### 6. バリデーションの強化
+
+**問題箇所**: `ProfileDetailEditor.tsx:236-244`
+
+```typescript
+// 自己紹介のバリデーション
+maxLength={500} // HTML属性のみ
+```
+
+**改善提案**: より厳密なバリデーション
+
+```typescript
+const validateBio = (bio: string): string[] => {
+  const errors = [];
+  if (bio.length > 500) errors.push('自己紹介は500文字以内で入力してください');
+  if (bio.includes('<script>')) errors.push('HTMLタグは使用できません');
+  return errors;
+};
+```
+
+### 優先度：低（将来的改善）
+
+#### 7. コード重複の削減
+
+**問題箇所**: 複数ファイルでの共通UI パターン
+
+- ヘッダー部分のコンポーネント化
+- フォーム要素の統一化
+
+#### 8. 国際化対応の準備
+
+- ハードコードされた日本語文字列
+- 将来的なi18n導入の準備
+
+#### 9. アクセシビリティの向上
+
+- ARIA属性の追加
+- キーボードナビゲーションの改善
+
+## 📋 推奨改善スケジュール
+
+### フェーズ1: 緊急修正（1週間）
+
+- [ ] TypeScript型定義の修正
+- [ ] エラーハンドリングの統一
+- [ ] 通知機能のリンク実装
+
+### フェーズ2: 機能完成（2週間）
+
+- [ ] 設定機能の完成
+- [ ] パフォーマンス最適化
+- [ ] バリデーション強化
+
+### フェーズ3: 品質向上（継続的）
+
+- [ ] コード重複削減
+- [ ] アクセシビリティ改善
+- [ ] テストカバレッジ拡充
+
+## 🔧 具体的な修正コード例
+
+### 1. ProfileView.tsx の型修正
+
+```typescript
+// Before
+interface ProfileViewProps {
+  user: any;
+  // ...
+}
+
+// After
+import { User } from '@supabase/supabase-js';
+
+interface ProfileViewProps {
+  user: User | null;
+  // ...
+}
+```
+
+### 2. 共通エラーハンドリング
+
+```typescript
+// utils/errorHandler.ts
+export class AppError extends Error {
+  constructor(
+    message: string,
+    public code?: string,
+    public statusCode?: number
+  ) {
+    super(message);
+    this.name = 'AppError';
+  }
+}
+
+export const handleError = (error: unknown): AppError => {
+  if (error instanceof AppError) return error;
+  if (error instanceof Error) return new AppError(error.message);
+  return new AppError('予期しないエラーが発生しました');
+};
+```
+
+### 3. 統合統計クエリ
+
+```sql
+-- SQL関数での効率化
+CREATE OR REPLACE FUNCTION get_user_profile_stats(user_id uuid)
+RETURNS TABLE (
+  post_count bigint,
+  likes_received bigint,
+  favorites_count bigint,
+  comments_received bigint,
+  approved_posts bigint,
+  popular_posts bigint
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    COUNT(DISTINCT p.id)::bigint as post_count,
+    COUNT(DISTINCT l.id)::bigint as likes_received,
+    COUNT(DISTINCT fl.id)::bigint as favorites_count,
+    COUNT(DISTINCT c.id)::bigint as comments_received,
+    COUNT(DISTINCT CASE WHEN p.approved THEN p.id END)::bigint as approved_posts,
+    COUNT(DISTINCT CASE WHEN p.likes >= 10 THEN p.id END)::bigint as popular_posts
+  FROM profiles pr
+  LEFT JOIN posts p ON p.author_id = pr.id
+  LEFT JOIN likes l ON l.post_id = p.id
+  LEFT JOIN likes fl ON fl.user_id = pr.id
+  LEFT JOIN comments c ON c.post_id = p.id AND c.approved = true
+  WHERE pr.id = user_id;
+END;
+$$ LANGUAGE plpgsql;
+```
+
 **プロジェクト完了**: 2025年1月
+**最終コードレビュー**: 2025年1月

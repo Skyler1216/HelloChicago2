@@ -3,14 +3,12 @@ import {
   ArrowLeft,
   User,
   Bell,
-  Shield,
   Palette,
   Database,
   ChevronRight,
 } from 'lucide-react';
 import { Database as DatabaseType } from '../../types/database';
 import AccountSettings from './AccountSettings';
-import PrivacySettings from './PrivacySettings';
 import NotificationSettings from './NotificationSettings';
 
 type Profile = DatabaseType['public']['Tables']['profiles']['Row'];
@@ -24,7 +22,6 @@ interface SettingsViewProps {
 type SettingsSection =
   | 'main'
   | 'account'
-  | 'privacy'
   | 'notifications'
   | 'display'
   | 'data';
@@ -44,14 +41,6 @@ export default function SettingsView({
       icon: User,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
-    },
-    {
-      id: 'privacy' as const,
-      title: 'プライバシー',
-      description: '公開範囲、データの取り扱い',
-      icon: Shield,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
     },
     {
       id: 'notifications' as const,
@@ -87,13 +76,6 @@ export default function SettingsView({
             profile={profile}
             onBack={() => setCurrentSection('main')}
             onProfileUpdate={onProfileUpdate}
-          />
-        );
-      case 'privacy':
-        return (
-          <PrivacySettings
-            profile={profile}
-            onBack={() => setCurrentSection('main')}
           />
         );
       case 'notifications':

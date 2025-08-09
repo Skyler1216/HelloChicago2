@@ -10,6 +10,7 @@ import {
   Users,
   Plus,
   X,
+  AlertCircle,
 } from 'lucide-react';
 import { Database } from '../../types/database';
 import {
@@ -20,6 +21,7 @@ import {
   FAMILY_STRUCTURES,
 } from '../../hooks/useProfileDetails';
 import { useToast } from '../../hooks/useToast';
+import { ProfileValidation } from '../../utils/validation';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
@@ -44,6 +46,11 @@ export default function ProfileDetailEditor({
 
   const { addToast } = useToast();
   const [saving, setSaving] = useState(false);
+
+  // バリデーション状態
+  const [validationErrors, setValidationErrors] = useState<
+    Record<string, string[]>
+  >({});
 
   // フォームデータ
   const [formData, setFormData] = useState({
@@ -72,8 +79,33 @@ export default function ProfileDetailEditor({
     }
   }, [profileDetails]);
 
+  // バリデーション実行
+  const validateForm = (): boolean => {
+    const errors: Record<string, string[]> = {};
+    let isValid = true;
+
+    // 自己紹介のバリデーション
+    if (formData.bio.trim()) {
+      const bioValidation = ProfileValidation.bio(formData.bio);
+      if (!bioValidation.isValid) {
+        errors.bio = bioValidation.errors;
+        isValid = false;
+      }
+    }
+
+    setValidationErrors(errors);
+    return isValid;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // バリデーション実行
+    if (!validateForm()) {
+      addToast('error', '入力内容を確認してください');
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -150,16 +182,46 @@ export default function ProfileDetailEditor({
   };
 
   const addCustomInterest = () => {
-    if (customInterest.trim()) {
-      addInterest(customInterest);
-      setCustomInterest('');
+    const trimmed = customInterest.trim();
+    if (trimmed) {
+      const validation = ProfileValidation.interest(trimmed);
+      if (validation.isValid) {
+        addInterest(trimmed);
+        setCustomInterest('');
+        // 個別のエラーをクリア
+        setValidationErrors(prev => {
+          const updated = { ...prev };
+          delete updated.customInterest;
+          return updated;
+        });
+      } else {
+        setValidationErrors(prev => ({
+          ...prev,
+          customInterest: validation.errors,
+        }));
+      }
     }
   };
 
   const addCustomLanguage = () => {
-    if (customLanguage.trim()) {
-      addLanguage(customLanguage);
-      setCustomLanguage('');
+    const trimmed = customLanguage.trim();
+    if (trimmed) {
+      const validation = ProfileValidation.language(trimmed);
+      if (validation.isValid) {
+        addLanguage(trimmed);
+        setCustomLanguage('');
+        // 個別のエラーをクリア
+        setValidationErrors(prev => {
+          const updated = { ...prev };
+          delete updated.customLanguage;
+          return updated;
+        });
+      } else {
+        setValidationErrors(prev => ({
+          ...prev,
+          customLanguage: validation.errors,
+        }));
+      }
     }
   };
 
@@ -235,16 +297,41 @@ export default function ProfileDetailEditor({
           </div>
           <textarea
             value={formData.bio}
-            onChange={e =>
-              setFormData(prev => ({ ...prev, bio: e.target.value }))
-            }
-            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-coral-500 focus:border-transparent resize-none"
+            onChange={e => {
+              setFormData(prev => ({ ...prev, bio: e.target.value }));
+              // リアルタイムバリデーション
+              if (validationErrors.bio) {
+                const validation = ProfileValidation.bio(e.target.value);
+                if (validation.isValid) {
+                  setValidationErrors(prev => {
+                    const updated = { ...prev };
+                    delete updated.bio;
+                    return updated;
+                  });
+                }
+              }
+            }}
+            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-coral-500 focus:border-transparent resize-none ${
+              validationErrors.bio
+                ? 'border-red-300 bg-red-50'
+                : 'border-gray-200'
+            }`}
             rows={4}
             placeholder="自己紹介を入力してください..."
             maxLength={500}
           />
-          <div className="text-right text-xs text-gray-500 mt-2">
-            {formData.bio.length}/500文字
+          <div className="flex justify-between items-center mt-2">
+            <div>
+              {validationErrors.bio && (
+                <div className="flex items-center space-x-1 text-red-600 text-sm">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>{validationErrors.bio[0]}</span>
+                </div>
+              )}
+            </div>
+            <div className="text-xs text-gray-500">
+              {formData.bio.length}/500文字
+            </div>
           </div>
         </div>
 
@@ -325,27 +412,50 @@ export default function ProfileDetailEditor({
             <p className="text-sm font-medium text-gray-700 mb-2">
               その他の趣味を追加:
             </p>
-            <div className="flex space-x-2">
-              <input
-                type="text"
-                value={customInterest}
-                onChange={e => setCustomInterest(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent"
-                placeholder="趣味を入力..."
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addCustomInterest();
-                  }
-                }}
-              />
-              <button
-                type="button"
-                onClick={addCustomInterest}
-                className="px-4 py-2 bg-coral-500 text-white rounded-lg hover:bg-coral-600 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
+            <div className="space-y-2">
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  value={customInterest}
+                  onChange={e => {
+                    setCustomInterest(e.target.value);
+                    // エラーをクリア
+                    if (validationErrors.customInterest) {
+                      setValidationErrors(prev => {
+                        const updated = { ...prev };
+                        delete updated.customInterest;
+                        return updated;
+                      });
+                    }
+                  }}
+                  className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent ${
+                    validationErrors.customInterest
+                      ? 'border-red-300 bg-red-50'
+                      : 'border-gray-200'
+                  }`}
+                  placeholder="趣味を入力..."
+                  maxLength={50}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addCustomInterest();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={addCustomInterest}
+                  className="px-4 py-2 bg-coral-500 text-white rounded-lg hover:bg-coral-600 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              {validationErrors.customInterest && (
+                <div className="flex items-center space-x-1 text-red-600 text-sm">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>{validationErrors.customInterest[0]}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -401,27 +511,50 @@ export default function ProfileDetailEditor({
             <p className="text-sm font-medium text-gray-700 mb-2">
               その他の言語を追加:
             </p>
-            <div className="flex space-x-2">
-              <input
-                type="text"
-                value={customLanguage}
-                onChange={e => setCustomLanguage(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent"
-                placeholder="言語を入力..."
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addCustomLanguage();
-                  }
-                }}
-              />
-              <button
-                type="button"
-                onClick={addCustomLanguage}
-                className="px-4 py-2 bg-coral-500 text-white rounded-lg hover:bg-coral-600 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
+            <div className="space-y-2">
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  value={customLanguage}
+                  onChange={e => {
+                    setCustomLanguage(e.target.value);
+                    // エラーをクリア
+                    if (validationErrors.customLanguage) {
+                      setValidationErrors(prev => {
+                        const updated = { ...prev };
+                        delete updated.customLanguage;
+                        return updated;
+                      });
+                    }
+                  }}
+                  className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent ${
+                    validationErrors.customLanguage
+                      ? 'border-red-300 bg-red-50'
+                      : 'border-gray-200'
+                  }`}
+                  placeholder="言語を入力..."
+                  maxLength={30}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addCustomLanguage();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={addCustomLanguage}
+                  className="px-4 py-2 bg-coral-500 text-white rounded-lg hover:bg-coral-600 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              {validationErrors.customLanguage && (
+                <div className="flex items-center space-x-1 text-red-600 text-sm">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>{validationErrors.customLanguage[0]}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

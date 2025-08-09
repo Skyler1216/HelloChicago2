@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Database } from '../types/database';
+import { formatSupabaseError, logError } from '../utils/errorHandler';
 
 type ProfileDetails = Database['public']['Tables']['profile_details']['Row'];
 type ProfileDetailsInsert =
@@ -46,10 +47,8 @@ export function useProfileDetails(
 
         setProfileDetails(data);
       } catch (err) {
-        console.error('❌ Error loading profile details:', err);
-        setError(
-          err instanceof Error ? err.message : 'Failed to load profile details'
-        );
+        logError(err, 'useProfileDetails.loadData');
+        setError(formatSupabaseError(err));
       } finally {
         setLoading(false);
       }
@@ -75,10 +74,8 @@ export function useProfileDetails(
       setProfileDetails(data);
       return true;
     } catch (err) {
-      console.error('❌ Error creating profile details:', err);
-      setError(
-        err instanceof Error ? err.message : 'Failed to create profile details'
-      );
+      logError(err, 'useProfileDetails.createProfileDetails');
+      setError(formatSupabaseError(err));
       return false;
     }
   };
@@ -103,10 +100,8 @@ export function useProfileDetails(
       setProfileDetails(data);
       return true;
     } catch (err) {
-      console.error('❌ Error updating profile details:', err);
-      setError(
-        err instanceof Error ? err.message : 'Failed to update profile details'
-      );
+      logError(err, 'useProfileDetails.updateProfileDetails');
+      setError(formatSupabaseError(err));
       return false;
     }
   };
