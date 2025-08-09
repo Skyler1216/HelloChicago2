@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Bell,
@@ -7,8 +7,11 @@ import {
   Heart,
   MessageSquare,
   UserPlus,
+  Save,
 } from 'lucide-react';
 import { Database } from '../../types/database';
+import { useNotificationSettings } from '../../hooks/useNotifications';
+import { useToast } from '../../hooks/useToast';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
@@ -17,63 +20,120 @@ interface NotificationSettingsProps {
   onBack: () => void;
 }
 
-interface NotificationSetting {
-  id: string;
-  title: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-  push: boolean;
-  email: boolean;
-}
-
 export default function NotificationSettings({
+  profile,
   onBack,
 }: NotificationSettingsProps) {
-  const [notifications, setNotifications] = useState<NotificationSetting[]>([
+  const { settings, loading, error, updateSettings } = useNotificationSettings(
+    profile.id
+  );
+
+  const { addToast } = useToast();
+  const [saving, setSaving] = useState(false);
+
+  // ローカル設定状態
+  const [localSettings, setLocalSettings] = useState({
+    push_likes: true,
+    push_comments: true,
+    push_follows: true,
+    email_likes: false,
+    email_comments: true,
+    email_follows: false,
+    weekly_digest: false,
+    important_updates: true,
+    system_notifications: true,
+    quiet_hours_enabled: false,
+    quiet_hours_start: '22:00',
+    quiet_hours_end: '08:00',
+  });
+
+  // サーバー設定をローカル状態に同期
+  useEffect(() => {
+    if (settings) {
+      setLocalSettings({
+        push_likes: settings.push_likes,
+        push_comments: settings.push_comments,
+        push_follows: settings.push_follows,
+        email_likes: settings.email_likes,
+        email_comments: settings.email_comments,
+        email_follows: settings.email_follows,
+        weekly_digest: settings.weekly_digest,
+        important_updates: settings.important_updates,
+        system_notifications: settings.system_notifications,
+        quiet_hours_enabled: settings.quiet_hours_enabled,
+        quiet_hours_start: settings.quiet_hours_start.substring(0, 5), // HH:MM形式
+        quiet_hours_end: settings.quiet_hours_end.substring(0, 5),
+      });
+    }
+  }, [settings]);
+
+  const notifications = [
     {
       id: 'likes',
       title: 'いいね',
       description: 'あなたの投稿にいいねが付いたとき',
       icon: Heart,
-      push: true,
-      email: false,
+      push: localSettings.push_likes,
+      email: localSettings.email_likes,
     },
     {
       id: 'comments',
       title: 'コメント',
       description: 'あなたの投稿にコメントが付いたとき',
       icon: MessageSquare,
-      push: true,
-      email: true,
+      push: localSettings.push_comments,
+      email: localSettings.email_comments,
     },
     {
       id: 'follows',
       title: 'フォロー',
       description: '他のユーザーにフォローされたとき',
       icon: UserPlus,
-      push: true,
-      email: false,
+      push: localSettings.push_follows,
+      email: localSettings.email_follows,
     },
-  ]);
-
-  const [generalSettings, setGeneralSettings] = useState({
-    weeklyDigest: false,
-    importantUpdates: true,
-    systemNotifications: true,
-  });
+  ];
 
   const updateNotificationSetting = (
     id: string,
     type: 'push' | 'email',
     value: boolean
   ) => {
-    setNotifications(prev =>
-      prev.map(notification =>
-        notification.id === id
-          ? { ...notification, [type]: value }
-          : notification
-      )
-    );
+    const key = `${type}_${id}` as keyof typeof localSettings;
+    setLocalSettings(prev => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const success = await updateSettings({
+        push_likes: localSettings.push_likes,
+        push_comments: localSettings.push_comments,
+        push_follows: localSettings.push_follows,
+        email_likes: localSettings.email_likes,
+        email_comments: localSettings.email_comments,
+        email_follows: localSettings.email_follows,
+        weekly_digest: localSettings.weekly_digest,
+        important_updates: localSettings.important_updates,
+        system_notifications: localSettings.system_notifications,
+        quiet_hours_enabled: localSettings.quiet_hours_enabled,
+        quiet_hours_start: `${localSettings.quiet_hours_start}:00`,
+        quiet_hours_end: `${localSettings.quiet_hours_end}:00`,
+      });
+
+      if (success) {
+        addToast('success', '通知設定が保存されました');
+      } else {
+        addToast('error', '設定の保存に失敗しました');
+      }
+    } catch {
+      addToast('error', '設定の保存中にエラーが発生しました');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const ToggleSwitch = ({
@@ -107,6 +167,17 @@ export default function NotificationSettings({
       </button>
     );
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-coral-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">設定を読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -206,9 +277,9 @@ export default function NotificationSettings({
                 </p>
               </div>
               <ToggleSwitch
-                enabled={generalSettings.weeklyDigest}
+                enabled={localSettings.weekly_digest}
                 onChange={value =>
-                  setGeneralSettings(prev => ({ ...prev, weeklyDigest: value }))
+                  setLocalSettings(prev => ({ ...prev, weekly_digest: value }))
                 }
               />
             </div>
@@ -221,11 +292,11 @@ export default function NotificationSettings({
                 </p>
               </div>
               <ToggleSwitch
-                enabled={generalSettings.importantUpdates}
+                enabled={localSettings.important_updates}
                 onChange={value =>
-                  setGeneralSettings(prev => ({
+                  setLocalSettings(prev => ({
                     ...prev,
-                    importantUpdates: value,
+                    important_updates: value,
                   }))
                 }
               />
@@ -239,11 +310,11 @@ export default function NotificationSettings({
                 </p>
               </div>
               <ToggleSwitch
-                enabled={generalSettings.systemNotifications}
+                enabled={localSettings.system_notifications}
                 onChange={value =>
-                  setGeneralSettings(prev => ({
+                  setLocalSettings(prev => ({
                     ...prev,
-                    systemNotifications: value,
+                    system_notifications: value,
                   }))
                 }
               />
@@ -279,28 +350,78 @@ export default function NotificationSettings({
               <div>
                 <h3 className="font-medium text-gray-900">夜間の通知を停止</h3>
                 <p className="text-sm text-gray-600">
-                  22:00〜8:00の間は通知を受信しません
+                  指定時間の間は通知を受信しません
                 </p>
               </div>
-              <ToggleSwitch enabled={false} onChange={() => {}} />
+              <ToggleSwitch
+                enabled={localSettings.quiet_hours_enabled}
+                onChange={value =>
+                  setLocalSettings(prev => ({
+                    ...prev,
+                    quiet_hours_enabled: value,
+                  }))
+                }
+              />
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-sm text-gray-600">
-                おやすみモード機能は今後実装予定です
-              </p>
-            </div>
+            {localSettings.quiet_hours_enabled && (
+              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      開始時間
+                    </label>
+                    <input
+                      type="time"
+                      value={localSettings.quiet_hours_start}
+                      onChange={e =>
+                        setLocalSettings(prev => ({
+                          ...prev,
+                          quiet_hours_start: e.target.value,
+                        }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      終了時間
+                    </label>
+                    <input
+                      type="time"
+                      value={localSettings.quiet_hours_end}
+                      onChange={e =>
+                        setLocalSettings(prev => ({
+                          ...prev,
+                          quiet_hours_end: e.target.value,
+                        }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Save Button */}
         <div className="pt-4">
-          <button className="w-full py-4 bg-gradient-to-r from-coral-500 to-coral-400 text-white rounded-xl font-semibold hover:from-coral-600 hover:to-coral-500 transition-all duration-200">
-            設定を保存
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full py-4 bg-gradient-to-r from-coral-500 to-coral-400 text-white rounded-xl font-semibold hover:from-coral-600 hover:to-coral-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+          >
+            {saving ? (
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Save className="w-5 h-5" />
+            )}
+            <span>{saving ? '保存中...' : '設定を保存'}</span>
           </button>
-          <p className="text-center text-sm text-gray-500 mt-3">
-            ※ 通知機能は今後実装予定です
-          </p>
+          {error && (
+            <p className="text-center text-sm text-red-600 mt-3">{error}</p>
+          )}
         </div>
       </div>
     </div>

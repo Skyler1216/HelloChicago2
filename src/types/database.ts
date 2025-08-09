@@ -220,6 +220,139 @@ export interface Database {
           updated_at?: string;
         };
       };
+      notification_settings: {
+        Row: {
+          user_id: string;
+          push_likes: boolean;
+          push_comments: boolean;
+          push_follows: boolean;
+          push_mentions: boolean;
+          email_likes: boolean;
+          email_comments: boolean;
+          email_follows: boolean;
+          email_mentions: boolean;
+          weekly_digest: boolean;
+          important_updates: boolean;
+          system_notifications: boolean;
+          quiet_hours_enabled: boolean;
+          quiet_hours_start: string;
+          quiet_hours_end: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          push_likes?: boolean;
+          push_comments?: boolean;
+          push_follows?: boolean;
+          push_mentions?: boolean;
+          email_likes?: boolean;
+          email_comments?: boolean;
+          email_follows?: boolean;
+          email_mentions?: boolean;
+          weekly_digest?: boolean;
+          important_updates?: boolean;
+          system_notifications?: boolean;
+          quiet_hours_enabled?: boolean;
+          quiet_hours_start?: string;
+          quiet_hours_end?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          push_likes?: boolean;
+          push_comments?: boolean;
+          push_follows?: boolean;
+          push_mentions?: boolean;
+          email_likes?: boolean;
+          email_comments?: boolean;
+          email_follows?: boolean;
+          email_mentions?: boolean;
+          weekly_digest?: boolean;
+          important_updates?: boolean;
+          system_notifications?: boolean;
+          quiet_hours_enabled?: boolean;
+          quiet_hours_start?: string;
+          quiet_hours_end?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      notifications: {
+        Row: {
+          id: string;
+          recipient_id: string;
+          sender_id: string | null;
+          type:
+            | 'like'
+            | 'comment'
+            | 'follow'
+            | 'mention'
+            | 'system'
+            | 'weekly_digest';
+          title: string;
+          message: string;
+          metadata: Record<string, unknown>;
+          related_post_id: string | null;
+          related_comment_id: string | null;
+          is_read: boolean;
+          is_pushed: boolean;
+          is_emailed: boolean;
+          created_at: string;
+          read_at: string | null;
+          pushed_at: string | null;
+          emailed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          recipient_id: string;
+          sender_id?: string | null;
+          type:
+            | 'like'
+            | 'comment'
+            | 'follow'
+            | 'mention'
+            | 'system'
+            | 'weekly_digest';
+          title: string;
+          message: string;
+          metadata?: Record<string, unknown>;
+          related_post_id?: string | null;
+          related_comment_id?: string | null;
+          is_read?: boolean;
+          is_pushed?: boolean;
+          is_emailed?: boolean;
+          created_at?: string;
+          read_at?: string | null;
+          pushed_at?: string | null;
+          emailed_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          recipient_id?: string;
+          sender_id?: string | null;
+          type?:
+            | 'like'
+            | 'comment'
+            | 'follow'
+            | 'mention'
+            | 'system'
+            | 'weekly_digest';
+          title?: string;
+          message?: string;
+          metadata?: Record<string, unknown>;
+          related_post_id?: string | null;
+          related_comment_id?: string | null;
+          is_read?: boolean;
+          is_pushed?: boolean;
+          is_emailed?: boolean;
+          created_at?: string;
+          read_at?: string | null;
+          pushed_at?: string | null;
+          emailed_at?: string | null;
+        };
+      };
     };
   };
 }
