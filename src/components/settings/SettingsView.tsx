@@ -1,12 +1,5 @@
-import React, { useState } from 'react';
-import {
-  ArrowLeft,
-  User,
-  Bell,
-  Palette,
-  Database,
-  ChevronRight,
-} from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, User, Bell, ChevronRight } from 'lucide-react';
 import { Database as DatabaseType } from '../../types/database';
 import AccountSettings from './AccountSettings';
 import NotificationSettings from './NotificationSettings';
@@ -19,12 +12,7 @@ interface SettingsViewProps {
   onProfileUpdate: (updatedProfile: Profile) => void;
 }
 
-type SettingsSection =
-  | 'main'
-  | 'account'
-  | 'notifications'
-  | 'display'
-  | 'data';
+type SettingsSection = 'main' | 'account' | 'notifications';
 
 export default function SettingsView({
   profile,
@@ -50,22 +38,6 @@ export default function SettingsView({
       color: 'text-yellow-600',
       bgColor: 'bg-yellow-50',
     },
-    {
-      id: 'display' as const,
-      title: '表示設定',
-      description: 'テーマ、言語、表示オプション',
-      icon: Palette,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-    },
-    {
-      id: 'data' as const,
-      title: 'データ管理',
-      description: 'エクスポート、削除、バックアップ',
-      icon: Database,
-      color: 'text-gray-600',
-      bgColor: 'bg-gray-50',
-    },
   ];
 
   const renderSettingsSection = () => {
@@ -85,64 +57,7 @@ export default function SettingsView({
             onBack={() => setCurrentSection('main')}
           />
         );
-      case 'display':
-        return (
-          <div className="min-h-screen bg-gray-50">
-            <div className="bg-white border-b border-gray-100 sticky top-0 z-10">
-              <div className="max-w-md mx-auto px-4 py-4">
-                <div className="flex items-center space-x-3">
-                  <button
-                    onClick={() => setCurrentSection('main')}
-                    className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
-                  >
-                    <ArrowLeft className="w-5 h-5 text-gray-600" />
-                  </button>
-                  <h1 className="text-lg font-bold text-gray-900">表示設定</h1>
-                </div>
-              </div>
-            </div>
-            <div className="max-w-md mx-auto px-4 py-6">
-              <div className="text-center py-8">
-                <Palette className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  準備中
-                </h3>
-                <p className="text-gray-500">表示設定機能は今後実装予定です</p>
-              </div>
-            </div>
-          </div>
-        );
-      case 'data':
-        return (
-          <div className="min-h-screen bg-gray-50">
-            <div className="bg-white border-b border-gray-100 sticky top-0 z-10">
-              <div className="max-w-md mx-auto px-4 py-4">
-                <div className="flex items-center space-x-3">
-                  <button
-                    onClick={() => setCurrentSection('main')}
-                    className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
-                  >
-                    <ArrowLeft className="w-5 h-5 text-gray-600" />
-                  </button>
-                  <h1 className="text-lg font-bold text-gray-900">
-                    データ管理
-                  </h1>
-                </div>
-              </div>
-            </div>
-            <div className="max-w-md mx-auto px-4 py-6">
-              <div className="text-center py-8">
-                <Database className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  準備中
-                </h3>
-                <p className="text-gray-500">
-                  データ管理機能は今後実装予定です
-                </p>
-              </div>
-            </div>
-          </div>
-        );
+
       default:
         return null;
     }
