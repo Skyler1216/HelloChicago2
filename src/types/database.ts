@@ -232,9 +232,6 @@ export interface Database {
           weekly_digest: boolean;
           important_updates: boolean;
           system_notifications: boolean;
-          quiet_hours_enabled: boolean;
-          quiet_hours_start: string;
-          quiet_hours_end: string;
           created_at: string;
           updated_at: string;
         };
@@ -249,9 +246,6 @@ export interface Database {
           weekly_digest?: boolean;
           important_updates?: boolean;
           system_notifications?: boolean;
-          quiet_hours_enabled?: boolean;
-          quiet_hours_start?: string;
-          quiet_hours_end?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -266,9 +260,6 @@ export interface Database {
           weekly_digest?: boolean;
           important_updates?: boolean;
           system_notifications?: boolean;
-          quiet_hours_enabled?: boolean;
-          quiet_hours_start?: string;
-          quiet_hours_end?: string;
           created_at?: string;
           updated_at?: string;
         };

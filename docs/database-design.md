@@ -440,9 +440,7 @@ CREATE TABLE notification_settings (
   weekly_digest boolean DEFAULT false,
   important_updates boolean DEFAULT true,
   system_notifications boolean DEFAULT true,
-  quiet_hours_enabled boolean DEFAULT false,
-  quiet_hours_start time DEFAULT '22:00:00',
-  quiet_hours_end time DEFAULT '08:00:00',
+
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );

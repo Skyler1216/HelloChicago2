@@ -39,9 +39,6 @@ export default function NotificationSettings({
     weekly_digest: false,
     important_updates: true,
     system_notifications: true,
-    quiet_hours_enabled: false,
-    quiet_hours_start: '22:00',
-    quiet_hours_end: '08:00',
   });
 
   // サーバー設定をローカル状態に同期
@@ -55,9 +52,6 @@ export default function NotificationSettings({
         weekly_digest: settings.weekly_digest,
         important_updates: settings.important_updates,
         system_notifications: settings.system_notifications,
-        quiet_hours_enabled: settings.quiet_hours_enabled,
-        quiet_hours_start: settings.quiet_hours_start.substring(0, 5), // HH:MM形式
-        quiet_hours_end: settings.quiet_hours_end.substring(0, 5),
       });
     }
   }, [settings]);
@@ -104,9 +98,6 @@ export default function NotificationSettings({
         weekly_digest: localSettings.weekly_digest,
         important_updates: localSettings.important_updates,
         system_notifications: localSettings.system_notifications,
-        quiet_hours_enabled: localSettings.quiet_hours_enabled,
-        quiet_hours_start: `${localSettings.quiet_hours_start}:00`,
-        quiet_hours_end: `${localSettings.quiet_hours_end}:00`,
       });
 
       if (success) {
@@ -322,71 +313,6 @@ export default function NotificationSettings({
                 通知を許可
               </button>
             </div>
-          </div>
-        </div>
-
-        {/* Quiet Hours */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            おやすみモード
-          </h2>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-gray-900">夜間の通知を停止</h3>
-                <p className="text-sm text-gray-600">
-                  指定時間の間は通知を受信しません
-                </p>
-              </div>
-              <ToggleSwitch
-                enabled={localSettings.quiet_hours_enabled}
-                onChange={value =>
-                  setLocalSettings(prev => ({
-                    ...prev,
-                    quiet_hours_enabled: value,
-                  }))
-                }
-              />
-            </div>
-
-            {localSettings.quiet_hours_enabled && (
-              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      開始時間
-                    </label>
-                    <input
-                      type="time"
-                      value={localSettings.quiet_hours_start}
-                      onChange={e =>
-                        setLocalSettings(prev => ({
-                          ...prev,
-                          quiet_hours_start: e.target.value,
-                        }))
-                      }
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      終了時間
-                    </label>
-                    <input
-                      type="time"
-                      value={localSettings.quiet_hours_end}
-                      onChange={e =>
-                        setLocalSettings(prev => ({
-                          ...prev,
-                          quiet_hours_end: e.target.value,
-                        }))
-                      }
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
