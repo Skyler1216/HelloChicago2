@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import {
   Settings,
-  Bell,
   HelpCircle,
   Heart,
   MessageSquare,
   Shield,
-  Edit3,
   Calendar,
   ArrowLeft,
   User,
@@ -20,8 +18,6 @@ import ProfileEditModal from './ProfileEditModal';
 import UserPostsView from './UserPostsView';
 import FavoritesView from './FavoritesView';
 import SettingsView from './settings/SettingsView';
-import ProfileDetailView from './profile/ProfileDetailView';
-import ProfileDetailEditor from './profile/ProfileDetailEditor';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
@@ -38,13 +34,7 @@ export default function ProfileView({
 }: ProfileViewProps) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentView, setCurrentView] = useState<
-    | 'profile'
-    | 'posts'
-    | 'favorites'
-    | 'settings'
-    | 'details'
-    | 'edit-details'
-    | 'notifications'
+    'profile' | 'posts' | 'favorites' | 'settings' | 'details' | 'edit-details'
   >('profile');
   const [currentProfile, setCurrentProfile] = useState(profile);
 
@@ -53,31 +43,6 @@ export default function ProfileView({
   // 現在のプロフィールデータを使用
   const activeProfile = currentProfile || profile;
 
-  // ユーザーバッジを計算
-  const getUserBadge = () => {
-    if (!userStats)
-      return { label: '新メンバー', icon: '👋', color: 'text-gray-600' };
-
-    if (userStats.postCount >= 10 && userStats.likesReceived >= 50) {
-      return { label: 'エキスパート', icon: '🌟', color: 'text-yellow-600' };
-    } else if (userStats.postCount >= 5 && userStats.likesReceived >= 20) {
-      return {
-        label: 'アクティブメンバー',
-        icon: '⭐',
-        color: 'text-blue-600',
-      };
-    } else if (userStats.postCount >= 1) {
-      return {
-        label: 'コントリビューター',
-        icon: '✨',
-        color: 'text-green-600',
-      };
-    }
-    return { label: '新メンバー', icon: '👋', color: 'text-gray-600' };
-  };
-
-  const userBadge = getUserBadge();
-
   const baseMenuItems = [
     {
       icon: Settings,
@@ -85,12 +50,7 @@ export default function ProfileView({
       description: 'アカウント設定を変更',
       onClick: () => setCurrentView('settings'),
     },
-    {
-      icon: Bell,
-      label: '通知',
-      description: '通知設定を管理',
-      onClick: () => setCurrentView('notifications'),
-    },
+
     {
       icon: HelpCircle,
       label: 'ヘルプ',
@@ -156,60 +116,6 @@ export default function ProfileView({
     );
   }
 
-  if (currentView === 'notifications' && activeProfile) {
-    // 一時的に設定画面の通知セクションにリダイレクト
-    return (
-      <SettingsView
-        profile={activeProfile}
-        onBack={() => setCurrentView('profile')}
-        onProfileUpdate={updatedProfile => {
-          setCurrentProfile(updatedProfile);
-        }}
-      />
-    );
-  }
-
-  if (currentView === 'details' && activeProfile) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="bg-white border-b border-gray-100 sticky top-0 z-10">
-          <div className="max-w-md mx-auto px-4 py-4">
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={() => setCurrentView('profile')}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
-              </button>
-              <h1 className="text-lg font-bold text-gray-900">
-                詳細プロフィール
-              </h1>
-            </div>
-          </div>
-        </div>
-        <div className="max-w-md mx-auto px-4 py-6">
-          <ProfileDetailView
-            profile={activeProfile}
-            isOwnProfile={true}
-            onEdit={() => setCurrentView('edit-details')}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  if (currentView === 'edit-details' && activeProfile) {
-    return (
-      <ProfileDetailEditor
-        profile={activeProfile}
-        onBack={() => setCurrentView('details')}
-        onSave={() => {
-          // 保存完了後は詳細表示に戻る
-        }}
-      />
-    );
-  }
-
   // メインプロフィールビュー
   return (
     <div className="px-4 py-6">
@@ -244,13 +150,6 @@ export default function ProfileView({
               <h2 className="text-2xl font-bold text-gray-900">
                 {activeProfile?.name || 'ユーザー'}
               </h2>
-              <button
-                onClick={() => setShowEditModal(true)}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/60 transition-all duration-200 backdrop-blur-sm"
-                title="プロフィールを編集"
-              >
-                <Edit3 className="w-4 h-4 text-gray-600" />
-              </button>
             </div>
             <p className="text-gray-600 text-sm mb-2">
               シカゴ在住{' '}
@@ -259,21 +158,13 @@ export default function ProfileView({
                 : 1}
               年目
             </p>
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center space-x-1 bg-white/50 backdrop-blur-sm px-2 py-1 rounded-full">
-                <span className="text-sm">{userBadge.icon}</span>
-                <span className={`text-sm font-medium ${userBadge.color}`}>
-                  {userBadge.label}
-                </span>
-              </div>
-              <div className="flex items-center space-x-1 text-gray-500">
-                <Calendar className="w-3 h-3" />
-                <span className="text-xs">
-                  {activeProfile?.created_at
-                    ? `${new Date(activeProfile.created_at).toLocaleDateString('ja-JP')}から参加`
-                    : '参加日不明'}
-                </span>
-              </div>
+            <div className="flex items-center space-x-1 text-gray-500">
+              <Calendar className="w-3 h-3" />
+              <span className="text-xs">
+                {activeProfile?.created_at
+                  ? `${new Date(activeProfile.created_at).toLocaleDateString('ja-JP')}から参加`
+                  : '参加日不明'}
+              </span>
             </div>
           </div>
         </div>
@@ -317,7 +208,7 @@ export default function ProfileView({
             </button>
           </div>
           <button
-            onClick={() => setCurrentView('details')}
+            onClick={() => setShowEditModal(true)}
             className="group w-full flex items-center p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl hover:from-blue-100 hover:to-purple-100 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
           >
             <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300 shadow-sm">
@@ -325,10 +216,10 @@ export default function ProfileView({
             </div>
             <div className="flex-1 text-left">
               <span className="text-sm font-medium text-gray-800 block">
-                詳細プロフィール
+                プロフィール編集
               </span>
               <span className="text-xs text-gray-600 mt-1 block">
-                自己紹介・趣味・居住エリアなど
+                基本情報・自己紹介・趣味・居住エリアなど
               </span>
             </div>
             <div className="w-6 h-6 bg-white/50 rounded-full flex items-center justify-center group-hover:bg-white/80 transition-colors duration-300">
