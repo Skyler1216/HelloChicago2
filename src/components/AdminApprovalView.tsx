@@ -44,15 +44,37 @@ export default function AdminApprovalView() {
   const approveUser = async (userId: string) => {
     try {
       setProcessing(userId);
-      const { error } = await supabase
+
+      // Update user approval status
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ is_approved: true })
         .eq('id', userId);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // Send notification to approved user
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          recipient_id: userId,
+          type: 'system',
+          title: 'アカウント承認完了',
+          message:
+            'おめでとうございます！アカウントが承認されました。今すぐHelloChicagoをご利用いただけます。',
+          metadata: { action: 'account_approved' },
+          is_read: false,
+          is_pushed: false,
+          is_emailed: false,
+        });
+
+      if (notificationError) {
+        console.warn('Failed to send notification:', notificationError);
+        // Don't fail the approval if notification fails
+      }
 
       setPendingUsers(prev => prev.filter(user => user.id !== userId));
-      alert('ユーザーを承認しました！');
+      alert('ユーザーを承認しました！承認完了の通知も送信されました。');
     } catch (error) {
       console.error('Error approving user:', error);
       alert('承認に失敗しました');

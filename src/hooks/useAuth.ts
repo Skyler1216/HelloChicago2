@@ -108,7 +108,7 @@ export function useAuth() {
             id: userId,
             name: 'User', // Default name, can be updated later
             email: '', // Will be updated when user is available
-            is_approved: true, // Auto-approve new users
+            is_approved: false, // Require admin approval for new users
             role: 'user',
           })
           .select()

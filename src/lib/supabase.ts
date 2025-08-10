@@ -26,7 +26,7 @@ export const signUp = async (email: string, password: string, name: string) => {
       id: data.user.id,
       name,
       email,
-      is_approved: true, // Auto-approve new users
+      is_approved: false, // Require admin approval for new users
       role: 'user',
     });
 

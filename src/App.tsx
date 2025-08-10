@@ -62,31 +62,53 @@ export default function App() {
             <span className="text-white font-bold text-lg">⏳</span>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            承認待ちです
+            アカウント承認待ちです
           </h2>
           <p className="text-gray-600 mb-6">
-            アカウントの承認をお待ちください。
+            新規登録ありがとうございます！
             <br />
-            運営チームが確認後、ご利用いただけるようになります。
+            セキュリティのため、管理者による承認が必要です。
           </p>
           <p className="text-sm text-gray-500 mb-6">
-            通常、1-2営業日以内に承認いたします。
+            承認後、すぐにご利用いただけます。
+            <br />
+            通常、24時間以内に承認いたします。
           </p>
 
-          <button
-            onClick={async () => {
-              try {
-                await signOut();
-                window.location.reload();
-              } catch (error) {
-                console.error('Logout error:', error);
-                window.location.reload();
-              }
-            }}
-            className="w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-xl font-semibold hover:bg-gray-200 transition-all duration-200"
-          >
-            別のアカウントでログイン
-          </button>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-blue-800">
+              💡 承認が完了すると、以下の機能がご利用いただけます：
+            </p>
+            <ul className="text-xs text-blue-700 mt-2 space-y-1 text-left">
+              <li>• 体験談やおすすめの投稿</li>
+              <li>• 地図での情報検索</li>
+              <li>• 他のユーザーとの交流</li>
+            </ul>
+          </div>
+
+          <div className="space-y-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full bg-coral-500 text-white py-3 px-6 rounded-xl font-semibold hover:bg-coral-600 transition-all duration-200"
+            >
+              🔄 承認状態を確認
+            </button>
+
+            <button
+              onClick={async () => {
+                try {
+                  await signOut();
+                  window.location.reload();
+                } catch (error) {
+                  console.error('Logout error:', error);
+                  window.location.reload();
+                }
+              }}
+              className="w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-xl font-semibold hover:bg-gray-200 transition-all duration-200"
+            >
+              別のアカウントでログイン
+            </button>
+          </div>
         </div>
       </div>
     );
