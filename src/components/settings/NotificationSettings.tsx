@@ -6,7 +6,6 @@ import {
   Smartphone,
   Heart,
   MessageSquare,
-  UserPlus,
   Save,
 } from 'lucide-react';
 import { Database } from '../../types/database';
@@ -35,10 +34,8 @@ export default function NotificationSettings({
   const [localSettings, setLocalSettings] = useState({
     push_likes: true,
     push_comments: true,
-    push_follows: true,
     email_likes: false,
     email_comments: true,
-    email_follows: false,
     weekly_digest: false,
     important_updates: true,
     system_notifications: true,
@@ -53,10 +50,8 @@ export default function NotificationSettings({
       setLocalSettings({
         push_likes: settings.push_likes,
         push_comments: settings.push_comments,
-        push_follows: settings.push_follows,
         email_likes: settings.email_likes,
         email_comments: settings.email_comments,
-        email_follows: settings.email_follows,
         weekly_digest: settings.weekly_digest,
         important_updates: settings.important_updates,
         system_notifications: settings.system_notifications,
@@ -84,14 +79,6 @@ export default function NotificationSettings({
       push: localSettings.push_comments,
       email: localSettings.email_comments,
     },
-    {
-      id: 'follows',
-      title: 'フォロー',
-      description: '他のユーザーにフォローされたとき',
-      icon: UserPlus,
-      push: localSettings.push_follows,
-      email: localSettings.email_follows,
-    },
   ];
 
   const updateNotificationSetting = (
@@ -112,10 +99,8 @@ export default function NotificationSettings({
       const success = await updateSettings({
         push_likes: localSettings.push_likes,
         push_comments: localSettings.push_comments,
-        push_follows: localSettings.push_follows,
         email_likes: localSettings.email_likes,
         email_comments: localSettings.email_comments,
-        email_follows: localSettings.email_follows,
         weekly_digest: localSettings.weekly_digest,
         important_updates: localSettings.important_updates,
         system_notifications: localSettings.system_notifications,

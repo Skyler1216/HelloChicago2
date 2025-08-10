@@ -19,14 +19,13 @@
   3. Types
     - like: When someone likes your post
     - comment: When someone comments on your post
-    - follow: When someone follows you
     - reply: When someone replies to your comment
 */
 
 CREATE TABLE IF NOT EXISTS notifications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  type text NOT NULL CHECK (type IN ('like', 'comment', 'follow', 'reply')),
+  type text NOT NULL CHECK (type IN ('like', 'comment', 'reply')),
   title text NOT NULL,
   message text NOT NULL,
   data jsonb DEFAULT '{}',

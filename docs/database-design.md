@@ -395,8 +395,7 @@ COPY (
    - 位置情報検索の強化
 
 6. **ソーシャル機能** 📋
-   - `follows` テーブル（将来的に必要な場合）
-   - フォロー・フォロワー関係管理
+   - 将来的な機能拡張の検討
 
 ### スケーラビリティ
 
@@ -434,11 +433,9 @@ CREATE TABLE notification_settings (
   user_id uuid PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
   push_likes boolean DEFAULT true,
   push_comments boolean DEFAULT true,
-  push_follows boolean DEFAULT true,
   push_mentions boolean DEFAULT true,
   email_likes boolean DEFAULT false,
   email_comments boolean DEFAULT true,
-  email_follows boolean DEFAULT false,
   email_mentions boolean DEFAULT true,
   weekly_digest boolean DEFAULT false,
   important_updates boolean DEFAULT true,
@@ -460,7 +457,7 @@ CREATE TABLE notifications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   recipient_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   sender_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
-  type text NOT NULL CHECK (type IN ('like', 'comment', 'follow', 'mention', 'system', 'weekly_digest')),
+  type text NOT NULL CHECK (type IN ('like', 'comment', 'mention', 'system', 'weekly_digest')),
   title text NOT NULL,
   message text NOT NULL,
   metadata jsonb DEFAULT '{}',

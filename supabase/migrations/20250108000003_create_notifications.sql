@@ -4,12 +4,10 @@ CREATE TABLE notification_settings (
   -- プッシュ通知設定
   push_likes boolean DEFAULT true,
   push_comments boolean DEFAULT true,
-  push_follows boolean DEFAULT true,
   push_mentions boolean DEFAULT true,
   -- メール通知設定
   email_likes boolean DEFAULT false,
   email_comments boolean DEFAULT true,
-  email_follows boolean DEFAULT false,
   email_mentions boolean DEFAULT true,
   -- 一般設定
   weekly_digest boolean DEFAULT false,
@@ -28,7 +26,7 @@ CREATE TABLE notifications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   recipient_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   sender_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
-  type text NOT NULL CHECK (type IN ('like', 'comment', 'follow', 'mention', 'system', 'weekly_digest')),
+  type text NOT NULL CHECK (type IN ('like', 'comment', 'mention', 'system', 'weekly_digest')),
   title text NOT NULL,
   message text NOT NULL,
   -- 関連データ（JSON形式）

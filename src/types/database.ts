@@ -225,11 +225,9 @@ export interface Database {
           user_id: string;
           push_likes: boolean;
           push_comments: boolean;
-          push_follows: boolean;
           push_mentions: boolean;
           email_likes: boolean;
           email_comments: boolean;
-          email_follows: boolean;
           email_mentions: boolean;
           weekly_digest: boolean;
           important_updates: boolean;
@@ -244,11 +242,9 @@ export interface Database {
           user_id: string;
           push_likes?: boolean;
           push_comments?: boolean;
-          push_follows?: boolean;
           push_mentions?: boolean;
           email_likes?: boolean;
           email_comments?: boolean;
-          email_follows?: boolean;
           email_mentions?: boolean;
           weekly_digest?: boolean;
           important_updates?: boolean;
@@ -263,11 +259,9 @@ export interface Database {
           user_id?: string;
           push_likes?: boolean;
           push_comments?: boolean;
-          push_follows?: boolean;
           push_mentions?: boolean;
           email_likes?: boolean;
           email_comments?: boolean;
-          email_follows?: boolean;
           email_mentions?: boolean;
           weekly_digest?: boolean;
           important_updates?: boolean;
@@ -284,13 +278,7 @@ export interface Database {
           id: string;
           recipient_id: string;
           sender_id: string | null;
-          type:
-            | 'like'
-            | 'comment'
-            | 'follow'
-            | 'mention'
-            | 'system'
-            | 'weekly_digest';
+          type: 'like' | 'comment' | 'mention' | 'system' | 'weekly_digest';
           title: string;
           message: string;
           metadata: Record<string, unknown>;
@@ -308,13 +296,7 @@ export interface Database {
           id?: string;
           recipient_id: string;
           sender_id?: string | null;
-          type:
-            | 'like'
-            | 'comment'
-            | 'follow'
-            | 'mention'
-            | 'system'
-            | 'weekly_digest';
+          type: 'like' | 'comment' | 'mention' | 'system' | 'weekly_digest';
           title: string;
           message: string;
           metadata?: Record<string, unknown>;
@@ -332,13 +314,7 @@ export interface Database {
           id?: string;
           recipient_id?: string;
           sender_id?: string | null;
-          type?:
-            | 'like'
-            | 'comment'
-            | 'follow'
-            | 'mention'
-            | 'system'
-            | 'weekly_digest';
+          type?: 'like' | 'comment' | 'mention' | 'system' | 'weekly_digest';
           title?: string;
           message?: string;
           metadata?: Record<string, unknown>;

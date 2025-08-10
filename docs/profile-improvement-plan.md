@@ -123,7 +123,6 @@ CREATE TABLE notification_settings (
   user_id uuid PRIMARY KEY,
   push_likes boolean DEFAULT true,
   push_comments boolean DEFAULT true,
-  push_follows boolean DEFAULT true,
   email_likes boolean DEFAULT false,
   -- その他設定...
 );
@@ -206,7 +205,6 @@ CREATE TABLE notification_settings (
   user_id uuid PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
   push_likes boolean DEFAULT true,
   push_comments boolean DEFAULT true,
-  push_follows boolean DEFAULT true,
   email_weekly_summary boolean DEFAULT false,
   email_important_updates boolean DEFAULT true,
   created_at timestamptz DEFAULT now(),
@@ -247,11 +245,6 @@ export function useNotificationSettings(userId: string);
 // プロフィール詳細
 export function useProfileDetails(userId: string);
 export function useImageUpload();
-
-// ソーシャル機能
-export function useFollows(userId: string);
-export function useFollowers(userId: string);
-export function useFollowing(userId: string);
 
 // アチーブメント
 export function useAchievements(userId: string);

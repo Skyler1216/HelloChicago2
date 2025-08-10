@@ -57,7 +57,6 @@ export default function NotificationCenter({
     { value: 'all' as const, label: 'すべて', icon: Bell },
     { value: 'like' as const, label: 'いいね', icon: '❤️' },
     { value: 'comment' as const, label: 'コメント', icon: '💬' },
-    { value: 'follow' as const, label: 'フォロー', icon: '👥' },
     { value: 'system' as const, label: 'システム', icon: '🔔' },
   ];
 

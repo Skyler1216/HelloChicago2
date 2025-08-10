@@ -380,13 +380,7 @@ export const getNotificationStyle = (type: Notification['type']) => {
         bgColor: 'bg-blue-50',
         borderColor: 'border-blue-200',
       };
-    case 'follow':
-      return {
-        icon: '👥',
-        color: 'text-green-500',
-        bgColor: 'bg-green-50',
-        borderColor: 'border-green-200',
-      };
+
     case 'mention':
       return {
         icon: '📢',
