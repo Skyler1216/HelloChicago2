@@ -241,6 +241,18 @@ export default function PostDetailView({
     try {
       await addComment(newComment.trim(), user.id);
       setNewComment('');
+
+      // 投稿データのコメント件数も更新
+      const updatedPost = {
+        ...currentPost,
+        replies: (currentPost.replies || 0) + 1,
+      };
+      setCurrentPost(updatedPost);
+
+      // 親コンポーネントに更新を通知
+      if (onPostUpdate) {
+        onPostUpdate(updatedPost);
+      }
     } catch (error) {
       console.error('Error adding comment:', error);
       alert('コメントの投稿に失敗しました');
@@ -261,6 +273,18 @@ export default function PostDetailView({
   const handleDeleteComment = async (commentId: string) => {
     try {
       await deleteComment(commentId);
+
+      // 投稿データのコメント件数も更新
+      const updatedPost = {
+        ...currentPost,
+        replies: Math.max((currentPost.replies || 0) - 1, 0),
+      };
+      setCurrentPost(updatedPost);
+
+      // 親コンポーネントに更新を通知
+      if (onPostUpdate) {
+        onPostUpdate(updatedPost);
+      }
     } catch (error) {
       console.error('Error deleting comment:', error);
       throw error;
@@ -302,8 +326,7 @@ export default function PostDetailView({
   // 表示用のいいね数とコメント数を取得
   const displayLikesCount =
     likesCount !== undefined ? likesCount : getInitialLikesCount();
-  const displayCommentsCount =
-    currentPost.comments_count || currentPost.replies || commentsCount || 0;
+  const displayCommentsCount = commentsCount || 0;
 
   // 投稿者が自分かどうかをチェック
   const isOwnPost = user?.id === currentPost.author_id;

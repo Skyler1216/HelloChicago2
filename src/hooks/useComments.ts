@@ -11,6 +11,7 @@ export function useComments(postId: string) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     if (postId) {
@@ -84,6 +85,7 @@ export function useComments(postId: string) {
       }, 0);
 
       setComments(commentsWithReplies);
+      setTotalCount(totalComments);
 
       // Update post replies count in database
       await supabase
@@ -127,8 +129,38 @@ export function useComments(postId: string) {
 
       if (error) throw error;
 
-      // Refresh comments to get updated data
-      await loadComments();
+      // 新しいコメントをローカルステートに追加
+      const newComment = {
+        ...data,
+        replies: [],
+      };
+
+      if (parentId) {
+        // 返信の場合、親コメントのrepliesに追加
+        setComments(prev =>
+          prev.map(comment =>
+            comment.id === parentId
+              ? {
+                  ...comment,
+                  replies: [...(comment.replies || []), newComment],
+                }
+              : comment
+          )
+        );
+      } else {
+        // トップレベルコメントの場合、直接追加
+        setComments(prev => [...prev, newComment]);
+      }
+
+      // 総コメント数を即座に更新
+      const newTotalCount = totalCount + 1;
+      setTotalCount(newTotalCount);
+
+      // データベースの投稿のrepliesカウントも更新
+      await supabase
+        .from('posts')
+        .update({ replies: newTotalCount })
+        .eq('id', postId);
 
       return data;
     } catch (err) {
@@ -170,8 +202,14 @@ export function useComments(postId: string) {
         }
       }
 
-      // Refresh comments to get updated data
-      await loadComments();
+      // ローカルステートを即座に更新
+      setComments(prev =>
+        prev.map(comment =>
+          comment.id === commentId
+            ? { ...comment, content: content.trim() }
+            : comment
+        )
+      );
 
       return data;
     } catch (err) {
@@ -198,18 +236,27 @@ export function useComments(postId: string) {
         }
       }
 
-      // Refresh comments to get updated data
-      await loadComments();
+      // ローカルステートからコメントを削除
+      setComments(prev => {
+        const newComments = prev.filter(comment => comment.id !== commentId);
+        // 返信も含めて総数を再計算
+        const newTotalCount = newComments.reduce((total, comment) => {
+          return total + 1 + (comment.replies?.length || 0);
+        }, 0);
+        setTotalCount(newTotalCount);
+        return newComments;
+      });
+
+      // データベースの投稿のrepliesカウントも更新
+      const newTotalCount = totalCount - 1;
+      await supabase
+        .from('posts')
+        .update({ replies: newTotalCount })
+        .eq('id', postId);
     } catch (err) {
       console.error('❌ Error deleting comment:', err);
       throw err instanceof Error ? err : new Error('Failed to delete comment');
     }
-  };
-
-  const getTotalCommentsCount = () => {
-    return comments.reduce((total, comment) => {
-      return total + 1 + (comment.replies?.length || 0);
-    }, 0);
   };
 
   return {
@@ -220,6 +267,6 @@ export function useComments(postId: string) {
     updateComment,
     deleteComment,
     refetch: loadComments,
-    totalCount: getTotalCommentsCount(),
+    totalCount,
   };
 }
