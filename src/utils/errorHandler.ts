@@ -63,7 +63,7 @@ export const formatError = (error: unknown, defaultMessage: string): string => {
 /**
  * Supabaseエラーを適切なメッセージに変換
  */
-export const formatSupabaseError = (error: any): string => {
+export const formatSupabaseError = (error: unknown): string => {
   if (!error) return '不明なエラーが発生しました';
 
   const message = error.message || error.error_description || error.msg;
@@ -112,7 +112,7 @@ export const logError = (error: unknown, context?: string) => {
 /**
  * async関数のエラーハンドリングラッパー
  */
-export const withErrorHandling = <T extends any[], R>(
+export const withErrorHandling = <T extends unknown[], R>(
   fn: (...args: T) => Promise<R>,
   context?: string
 ) => {

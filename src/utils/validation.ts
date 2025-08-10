@@ -243,9 +243,9 @@ export interface FormValidationResult {
 /**
  * オブジェクトの複数フィールドをバリデーション
  */
-export function validateForm<T extends Record<string, any>>(
+export function validateForm<T extends Record<string, unknown>>(
   data: T,
-  validators: Partial<Record<keyof T, (value: any) => ValidationResult>>
+  validators: Partial<Record<keyof T, (value: unknown) => ValidationResult>>
 ): FormValidationResult {
   const errors: Record<string, string[]> = {};
   let isValid = true;

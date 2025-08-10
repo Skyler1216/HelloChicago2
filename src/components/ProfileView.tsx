@@ -14,6 +14,7 @@ import { User as SupabaseUser } from '@supabase/supabase-js';
 import { signOut } from '../lib/supabase';
 import { Database } from '../types/database';
 import { useUserStats } from '../hooks/useUserStats';
+import { useCommunityInfo } from '../hooks/useCommunityInfo';
 import ProfileEditModal from './ProfileEditModal';
 import UserPostsView from './UserPostsView';
 import FavoritesView from './FavoritesView';
@@ -39,6 +40,11 @@ export default function ProfileView({
   const [currentProfile, setCurrentProfile] = useState(profile);
 
   const { stats: userStats } = useUserStats(profile?.id);
+  const {
+    communityInfo,
+    loading: communityLoading,
+    error: communityError,
+  } = useCommunityInfo();
 
   // 現在のプロフィールデータを使用
   const activeProfile = currentProfile || profile;
@@ -320,35 +326,59 @@ export default function ProfileView({
             <h3 className="font-semibold text-gray-900">コミュニティ情報</h3>
           </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between bg-white/50 backdrop-blur-sm rounded-lg p-3">
-              <span className="text-sm text-gray-600">アクティブメンバー</span>
-              <div className="flex items-center space-x-2">
-                <div className="flex -space-x-1">
-                  {[1, 2, 3].map(i => (
-                    <div
-                      key={i}
-                      className="w-6 h-6 bg-gradient-to-br from-coral-400 to-teal-400 rounded-full border-2 border-white"
-                    ></div>
-                  ))}
+          {communityLoading ? (
+            <div className="space-y-3">
+              <div className="animate-pulse space-y-3">
+                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="h-16 bg-gray-200 rounded"></div>
+                  <div className="h-16 bg-gray-200 rounded"></div>
                 </div>
-                <span className="text-sm font-semibold text-gray-900">
-                  18名
-                </span>
               </div>
             </div>
-
-            <p className="text-xs text-gray-600 leading-relaxed">
-              <span className="inline-flex items-center space-x-1 mb-1">
-                <Shield className="w-3 h-3 text-green-600" />
-                <span className="font-medium">
-                  安全で信頼できるコミュニティ
+          ) : communityError ? (
+            <div className="text-center py-4">
+              <div className="text-red-500 mb-2">
+                <Shield className="w-8 h-8 mx-auto" />
+              </div>
+              <p className="text-red-600 text-sm font-medium">
+                コミュニティ情報の読み込みに失敗しました
+              </p>
+              <p className="text-gray-500 text-xs mt-1">
+                しばらく時間をおいて再度お試しください
+              </p>
+            </div>
+          ) : communityInfo ? (
+            <div className="space-y-3">
+              {/* 総メンバー数 */}
+              <div className="flex items-center justify-between bg-white/50 backdrop-blur-sm rounded-lg p-3 transition-all duration-300 hover:bg-white/70 hover:shadow-sm">
+                <span className="text-sm text-gray-600">総メンバー数</span>
+                <span className="text-lg font-bold text-coral-600">
+                  {communityInfo.totalMembers.toLocaleString()}名
                 </span>
-              </span>
-              <br />
-              新しいメンバーは招待制で厳選されています。
-            </p>
-          </div>
+              </div>
+
+              <p className="text-xs text-gray-600 leading-relaxed">
+                <span className="inline-flex items-center space-x-1 mb-1">
+                  <Shield className="w-3 h-3 text-green-600" />
+                  <span className="font-medium">
+                    安全で信頼できるコミュニティ
+                  </span>
+                </span>
+                <br />
+                新しいメンバーは招待制で厳選されています。
+              </p>
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <p className="text-gray-500 text-sm">
+                コミュニティ情報がありません
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
