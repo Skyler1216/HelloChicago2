@@ -25,8 +25,7 @@
 #### **Phase 2 完了済み機能** ✅
 
 - ✅ **詳細プロフィール情報**: 自己紹介、居住エリア、趣味、言語、到着日、家族構成
-- ✅ **設定機能完全実装**: アカウント設定、通知設定
-- ✅ **包括的通知システム**: リアルタイム通知、通知設定
+- ✅ **設定機能完全実装**: アカウント設定
 
 - ✅ **設定統合画面**: 各種設定への統一的なアクセス
 
@@ -39,8 +38,7 @@
 - ✅ **基本プロフィール機能**: 表示・統合編集・統計
 - ✅ **詳細プロフィール情報**: 自己紹介・個人情報管理
 - ✅ **画像アップロード**: 高品質な画像管理
-- ✅ **設定機能**: アカウント・通知設定
-- ✅ **通知システム**: 包括的な通知管理
+- ✅ **設定機能**: アカウント設定
 
 #### 📋 **将来的な拡張候補（必要に応じて）**
 
@@ -86,7 +84,6 @@ return data?.length || 0;
 
 - ✅ **アカウント設定**: パスワード変更、メール変更、プロフィール管理
 
-- ✅ **通知設定**: プッシュ通知、メール通知
 - ✅ **データ管理**: 各種設定の保存・読み込み
 
 ### Phase 2: 機能拡張（完了済み） ✅
@@ -107,24 +104,10 @@ interface ProfileDetails {
 }
 ```
 
-#### 2.5 通知システム ✅
-
-- ✅ **包括的通知設定**: いいね、コメント、フォロー通知の詳細制御
-- ✅ **メール通知システム**: 週次サマリー、重要な更新、システム通知
-- ✅ **リアルタイム通知**: 即座の通知受信・表示
-- ✅ **通知履歴管理**: 受信通知の閲覧・既読管理・削除機能
-
 #### 2.6 ソーシャル機能基盤（Phase 3へ移行）
 
 ```sql
--- 通知システム完了実装
-CREATE TABLE notification_settings (
-  user_id uuid PRIMARY KEY,
-  push_likes boolean DEFAULT true,
-  push_comments boolean DEFAULT true,
-  email_likes boolean DEFAULT false,
-  -- その他設定...
-);
+
 
 CREATE TABLE notifications (
   id uuid PRIMARY KEY,
@@ -133,7 +116,7 @@ CREATE TABLE notifications (
   type text NOT NULL,
   title text NOT NULL,
   message text NOT NULL,
-  -- 自動通知トリガー実装済み
+
 );
 ```
 
@@ -148,12 +131,11 @@ CREATE TABLE notifications (
 - ✅ **基本機能**: プロフィール表示・統合編集
 - ✅ **詳細情報**: 個人情報管理
 - ✅ **画像機能**: アップロード・圧縮・Storage統合
-- ✅ **設定統合**: アカウント・通知設定
-- ✅ **通知システム**: リアルタイム通知・設定管理
+- ✅ **設定統合**: アカウント設定
 
 #### 2.8 技術的成果
 
-- ✅ **データベース設計**: profile_details, notifications, notification_settingsテーブル
+- ✅ **データベース設計**: profile_details, notificationsテーブル
 - ✅ **型安全性**: 完全なTypeScript対応
 - ✅ **セキュリティ**: RLS・認証・認可の実装
 - ✅ **UI/UX**: モバイルファースト・直感的なデザイン
@@ -199,16 +181,7 @@ CREATE TABLE user_achievements (
   UNIQUE(user_id, achievement_id)
 );
 
--- 通知設定
-CREATE TABLE notification_settings (
-  user_id uuid PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
-  push_likes boolean DEFAULT true,
-  push_comments boolean DEFAULT true,
-  email_weekly_summary boolean DEFAULT false,
-  email_important_updates boolean DEFAULT true,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
+
 ```
 
 ### 3.2 新しいコンポーネント設計
@@ -219,7 +192,7 @@ CREATE TABLE notification_settings (
 src/components/settings/
 ├── SettingsView.tsx           # メイン設定画面
 ├── AccountSettings.tsx        # アカウント設定
-├── NotificationSettings.tsx   # 通知設定
+
 └── DataManagement.tsx         # データ管理
 ```
 
@@ -239,7 +212,6 @@ src/components/profile/
 ```typescript
 // 設定関連
 export function useUserSettings(userId: string);
-export function useNotificationSettings(userId: string);
 
 // プロフィール詳細
 export function useProfileDetails(userId: string);
@@ -289,10 +261,7 @@ export function useActivityStats(userId: string);
    - 基本情報編集
    - 詳細情報設定
 
-2. 🔔 通知
-   - プッシュ通知
-   - メール通知
-   - 通知履歴
+
 
 3. 🎨 表示設定
    - ~~テーマ選択~~ (削除済み)
@@ -416,12 +385,12 @@ const scanImageFile = async (file: File): Promise<boolean> => {
 ### 8.1 Phase 1（完了済み）✅ - 2025年1月
 
 - ✅ **Week 1**: お気に入り数実装、画像アップロード基本機能
-- ✅ **Week 2**: 設定画面基本実装、通知設定
+- ✅ **Week 2**: 設定画面基本実装
 
 ### 8.2 Phase 2（完了済み）✅ - 2025年1月
 
 - ✅ **Week 1-2**: プロフィール詳細情報機能
-- ✅ **Week 3-4**: 通知システム完全実装、設定統合
+- ✅ **Week 3-4**: 設定統合
 
 ### 8.3 プロフィール機能開発完了 ✅ - 2025年1月
 
@@ -458,7 +427,7 @@ const scanImageFile = async (file: File): Promise<boolean> => {
 ### 10.2 中期目標（Phase 2完了時）
 
 - ✅ プロフィール詳細入力率が70%以上
-- ✅ 通知機能利用率が60%以上
+
 - ✅ ユーザー満足度が4.5/5以上
 
 ### 10.3 最終目標（開発完了時）
@@ -518,7 +487,6 @@ const scanImageFile = async (file: File): Promise<boolean> => {
 
 **3. ナビゲーション最適化**
 
-- 通知の重複ナビゲーション問題を解決
 - 設定画面への直接アクセスに統一
 - より直感的なメニュー構成
 
@@ -568,21 +536,6 @@ export const formatError = (error: unknown, defaultMessage: string): string => {
   return defaultMessage;
 };
 ```
-
-#### 3. 通知機能の未実装
-
-**問題箇所**: `ProfileView.tsx:108`
-
-```typescript
-{
-  icon: Bell,
-  label: '通知',
-  description: '通知設定を管理',
-  onClick: undefined, // ❌ 未実装
-},
-```
-
-**改善提案**: NotificationSettings への遷移を実装
 
 ### 優先度：中（短期改善推奨）
 
@@ -657,7 +610,6 @@ const validateBio = (bio: string): string[] => {
 
 - [ ] TypeScript型定義の修正
 - [ ] エラーハンドリングの統一
-- [ ] 通知機能のリンク実装
 
 ### フェーズ2: 機能完成（2週間）
 
@@ -761,7 +713,7 @@ $$ LANGUAGE plpgsql;
 ### **残された機能**
 
 - ✅ **総メンバー数**: コミュニティの規模を示す基本情報
-- ✅ **設定機能**: アカウント設定、通知設定のみ
+- ✅ **設定機能**: アカウント設定のみ
 - ✅ **データ管理**: 基本的なデータ管理機能（準備中状態）
 
 ### **変更理由**
