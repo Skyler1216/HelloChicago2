@@ -46,11 +46,6 @@ export function useProfileManager(userId: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 初期データの読み込み
-  useEffect(() => {
-    loadProfileData();
-  }, [userId]);
-
   // プロフィールデータの読み込み
   const loadProfileData = useCallback(async () => {
     setLoading(true);
@@ -87,6 +82,36 @@ export function useProfileManager(userId: string) {
       setLoading(false);
     }
   }, [userId, addToast]);
+
+  // 保存履歴の追加
+  const addToSaveHistory = useCallback(
+    (
+      type: 'profile' | 'details' | 'both',
+      changes: Record<string, unknown>,
+      success: boolean,
+      error?: string
+    ) => {
+      const historyItem: SaveHistory = {
+        id: Date.now().toString(),
+        timestamp: new Date(),
+        type,
+        changes,
+        success,
+        error,
+      };
+
+      setState(prev => ({
+        ...prev,
+        saveHistory: [historyItem, ...prev.saveHistory.slice(0, 9)], // 最新10件を保持
+      }));
+    },
+    []
+  );
+
+  // 初期データの読み込み
+  useEffect(() => {
+    loadProfileData();
+  }, [userId, loadProfileData]);
 
   // プロフィール基本情報の更新
   const updateProfile = useCallback(
@@ -132,7 +157,7 @@ export function useProfileManager(userId: string) {
         return { success: false, error: errorMessage };
       }
     },
-    [userId, state.profile, addToast]
+    [userId, state.profile, addToSaveHistory]
   );
 
   // プロフィール詳細情報の更新
@@ -184,7 +209,7 @@ export function useProfileManager(userId: string) {
         return { success: false, error: errorMessage };
       }
     },
-    [userId, state.profileDetails, addToast]
+    [userId, state.profileDetails, addToSaveHistory]
   );
 
   // 一括保存
@@ -214,32 +239,7 @@ export function useProfileManager(userId: string) {
 
       return allSuccess;
     },
-    [updateProfile, updateProfileDetails, addToast]
-  );
-
-  // 保存履歴の追加
-  const addToSaveHistory = useCallback(
-    (
-      type: 'profile' | 'details' | 'both',
-      changes: Record<string, unknown>,
-      success: boolean,
-      error?: string
-    ) => {
-      const historyItem: SaveHistory = {
-        id: Date.now().toString(),
-        timestamp: new Date(),
-        type,
-        changes,
-        success,
-        error,
-      };
-
-      setState(prev => ({
-        ...prev,
-        saveHistory: [historyItem, ...prev.saveHistory.slice(0, 9)], // 最新10件を保持
-      }));
-    },
-    []
+    [updateProfile, updateProfileDetails, addToast, addToSaveHistory]
   );
 
   // 変更のリセット
