@@ -11,6 +11,8 @@ export {
   InlineSaveProgress,
 } from './SaveProgressIndicator';
 export { default as ProfileEditView } from './ProfileEditView';
+export { default as ImageUploadSection } from './ImageUploadSection';
+export { default as SaveHistoryView } from './SaveHistoryView';
 
 // 型定義のエクスポート
 export type { SaveStatus } from './SaveProgressIndicator';
