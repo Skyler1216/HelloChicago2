@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { X, Camera, Save, Upload, AlertCircle } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { X, Camera, Save, Upload, AlertCircle, User } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Database } from '../types/database';
 import { useToast } from '../hooks/useToast';
@@ -33,6 +33,25 @@ export default function ProfileEditModal({
     error: uploadError,
   } = useImageUpload();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // モーダルが開いている時に背景スクロールを禁止
+  useEffect(() => {
+    if (isOpen) {
+      // モーダルが開いた時にbodyのスクロールを禁止
+      document.body.style.overflow = 'hidden';
+      document.body.style.paddingRight = '0px'; // スクロールバーが消えることによるレイアウトシフトを防ぐ
+    } else {
+      // モーダルが閉じた時にbodyのスクロールを復活
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    }
+
+    // クリーンアップ関数
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -101,6 +120,13 @@ export default function ProfileEditModal({
     fileInputRef.current?.click();
   };
 
+  const handleRemoveImage = () => {
+    setFormData(prev => ({
+      ...prev,
+      avatar_url: '',
+    }));
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -145,11 +171,12 @@ export default function ProfileEditModal({
                 )}
               </div>
 
+              {/* カメラアイコンボタン */}
               <button
                 type="button"
                 onClick={handleCameraClick}
                 disabled={uploading}
-                className="absolute bottom-0 right-0 w-8 h-8 bg-coral-500 rounded-full flex items-center justify-center text-white hover:bg-coral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="absolute bottom-0 right-0 w-8 h-8 bg-coral-500 rounded-full flex items-center justify-center text-white hover:bg-coral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
               >
                 {uploading ? (
                   <Upload className="w-4 h-4" />
@@ -157,6 +184,17 @@ export default function ProfileEditModal({
                   <Camera className="w-4 h-4" />
                 )}
               </button>
+
+              {/* 画像削除ボタン（画像がある場合のみ表示） */}
+              {formData.avatar_url && !uploading && (
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  className="absolute top-0 right-0 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-colors shadow-lg"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </div>
 
             {/* ファイル入力（非表示） */}
@@ -169,7 +207,7 @@ export default function ProfileEditModal({
             />
 
             <div className="space-y-2">
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-600 font-medium">
                 カメラアイコンをクリックして画像をアップロード
               </p>
               <p className="text-xs text-gray-400">
@@ -178,7 +216,7 @@ export default function ProfileEditModal({
 
               {/* アップロードエラー表示 */}
               {uploadError && (
-                <div className="flex items-center space-x-2 text-red-600 text-sm">
+                <div className="flex items-center justify-center space-x-2 text-red-600 text-sm bg-red-50 p-2 rounded-lg">
                   <AlertCircle className="w-4 h-4" />
                   <span>{uploadError}</span>
                 </div>
@@ -194,55 +232,50 @@ export default function ProfileEditModal({
             >
               名前
             </label>
-            <input
-              type="text"
-              id="name"
-              value={formData.name}
-              onChange={e => handleChange('name', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-coral-500 focus:border-transparent transition-all"
-              placeholder="お名前を入力してください"
-              required
-            />
-          </div>
-
-          {/* Avatar URL Field */}
-          <div>
-            <label
-              htmlFor="avatar_url"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              プロフィール画像URL（オプション）
-            </label>
-            <input
-              type="url"
-              id="avatar_url"
-              value={formData.avatar_url}
-              onChange={e => handleChange('avatar_url', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-coral-500 focus:border-transparent transition-all"
-              placeholder="https://example.com/avatar.jpg"
-            />
-            <p className="text-sm text-gray-500 mt-1">
-              画像のURLを入力してください（HTTPS推奨）
-            </p>
+            <div className="relative">
+              <input
+                type="text"
+                id="name"
+                value={formData.name}
+                onChange={e => handleChange('name', e.target.value)}
+                className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-coral-500 focus:border-transparent transition-all"
+                placeholder="お名前を入力してください"
+                required
+              />
+              <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            </div>
           </div>
 
           {/* Profile Info */}
-          <div className="bg-gray-50 rounded-xl p-4">
-            <h3 className="font-medium text-gray-900 mb-2">アカウント情報</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">メールアドレス:</span>
-                <span className="text-gray-900">{profile.email}</span>
+          <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
+            <h3 className="font-medium text-gray-900 mb-3 flex items-center">
+              <User className="w-4 h-4 mr-2 text-coral-500" />
+              アカウント情報
+            </h3>
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                <span className="text-gray-600 font-medium">
+                  メールアドレス
+                </span>
+                <span className="text-gray-900 font-mono text-xs">
+                  {profile.email}
+                </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">登録日:</span>
+              <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                <span className="text-gray-600 font-medium">登録日</span>
                 <span className="text-gray-900">
                   {new Date(profile.created_at).toLocaleDateString('ja-JP')}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">ロール:</span>
-                <span className="text-gray-900">
+              <div className="flex justify-between items-center py-2">
+                <span className="text-gray-600 font-medium">ロール</span>
+                <span
+                  className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    profile.role === 'admin'
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-blue-100 text-blue-700'
+                  }`}
+                >
                   {profile.role === 'admin' ? '管理者' : 'ユーザー'}
                 </span>
               </div>
@@ -254,14 +287,14 @@ export default function ProfileEditModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-3 px-6 border border-gray-200 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition-all duration-200"
+              className="flex-1 py-3 px-6 border border-gray-200 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition-all duration-200 hover:border-gray-300"
             >
               キャンセル
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-3 px-6 bg-gradient-to-r from-coral-500 to-coral-400 text-white rounded-xl font-semibold hover:from-coral-600 hover:to-coral-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              className="flex-1 py-3 px-6 bg-gradient-to-r from-coral-500 to-coral-400 text-white rounded-xl font-semibold hover:from-coral-600 hover:to-coral-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
