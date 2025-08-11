@@ -276,7 +276,7 @@ export default function ProfileEditModal({
                       : 'bg-blue-100 text-blue-700'
                   }`}
                 >
-                  {profile.role === 'admin' ? '管理者' : 'ユーザー'}
+                  {profile.role === 'admin' ? '管理者' : '一般ユーザー'}
                 </span>
               </div>
             </div>
