@@ -13,6 +13,8 @@ export {
 export { default as ProfileEditView } from './ProfileEditView';
 export { default as ImageUploadSection } from './ImageUploadSection';
 export { default as SaveHistoryView } from './SaveHistoryView';
+export { default as LazyImage } from './LazyImage';
+export { default as PerformanceMonitor } from './PerformanceMonitor';
 
 // 型定義のエクスポート
 export type { SaveStatus } from './SaveProgressIndicator';
