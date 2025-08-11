@@ -3,6 +3,7 @@ import { Database } from '../../../types/database';
 import { useProfileDetails } from '../../../hooks/useProfileDetails';
 import { useImageUpload } from '../../../hooks/useImageUpload';
 import { useToast } from '../../../hooks/useToast';
+import { useAuth } from '../../../hooks/useAuth';
 import { ProfileValidation } from '../../../utils/validation';
 import ProfileEditLayout from './ProfileEditLayout';
 import BasicInfoSection from './BasicInfoSection';
@@ -30,6 +31,7 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
 
     const { addToast } = useToast();
     const { uploadImage, uploading, uploadProgress } = useImageUpload();
+    const { updateProfile: updateAuthProfile } = useAuth();
 
     // 保存状態
     const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
@@ -208,10 +210,29 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
     // 画像アップロード処理
     const handleAvatarChange = async (file: File) => {
       try {
-        const uploadedUrl = await uploadImage(file, profile.id);
-        if (uploadedUrl) {
-          setFormData(prev => ({ ...prev, avatarUrl: uploadedUrl }));
+        const uploadedUrl = await uploadImage(file, profile.id, async url => {
+          console.log('🔄 Image upload successful, updating profile...', {
+            url,
+          });
+
+          // アップロード成功後のコールバック
+          setFormData(prev => ({ ...prev, avatarUrl: url }));
+
+          // プロフィール基本情報を即座に更新（useAuthを使用）
+          const success = await updateAuthProfile({ avatar_url: url });
+          if (!success) {
+            console.error('❌ Profile update failed');
+          } else {
+            console.log('✅ Profile updated successfully, notifying parent...');
+            // 成功したら親コンポーネントに通知（即座反映のため）
+            onSave?.();
+          }
+
           addToast('success', '画像がアップロードされました');
+        });
+
+        if (!uploadedUrl) {
+          addToast('error', '画像のアップロードに失敗しました');
         }
       } catch (error) {
         console.error('Image upload failed:', error);

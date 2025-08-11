@@ -15,6 +15,7 @@ import { signOut } from '../lib/supabase';
 import { Database } from '../types/database';
 import { useUserStats } from '../hooks/useUserStats';
 import { useCommunityInfo } from '../hooks/useCommunityInfo';
+import { useAuth } from '../hooks/useAuth';
 import ProfileEditModal from './ProfileEditModal';
 import UserPostsView from './UserPostsView';
 import FavoritesView from './FavoritesView';
@@ -37,17 +38,25 @@ export default function ProfileView({
   const [currentView, setCurrentView] = useState<
     'profile' | 'posts' | 'favorites' | 'settings' | 'details' | 'edit-details'
   >('profile');
-  const [currentProfile, setCurrentProfile] = useState(profile);
 
-  const { stats: userStats } = useUserStats(profile?.id);
+  // useAuthの状態を使用
+  const { profile: authProfile, reloadProfile } = useAuth();
+
+  // 現在のプロフィールデータを使用（useAuthの状態を優先）
+  const activeProfile = authProfile || profile;
+
+  // プロフィール更新後の強制再読み込み
+  const handleProfileUpdate = async () => {
+    console.log('🔄 Profile update detected, reloading auth state...');
+    await reloadProfile();
+  };
+
+  const { stats: userStats } = useUserStats(activeProfile?.id);
   const {
     communityInfo,
     loading: communityLoading,
     error: communityError,
   } = useCommunityInfo();
-
-  // 現在のプロフィールデータを使用
-  const activeProfile = currentProfile || profile;
 
   const baseMenuItems = [
     {
@@ -116,7 +125,10 @@ export default function ProfileView({
         profile={activeProfile}
         onBack={() => setCurrentView('profile')}
         onProfileUpdate={updatedProfile => {
-          setCurrentProfile(updatedProfile);
+          // プロフィール更新後の処理
+          console.log('Profile updated from settings:', updatedProfile);
+          // 強制再読み込みで状態を同期
+          handleProfileUpdate();
         }}
       />
     );
@@ -389,7 +401,10 @@ export default function ProfileView({
           onClose={() => setShowEditModal(false)}
           profile={activeProfile}
           onUpdate={updatedProfile => {
-            setCurrentProfile(updatedProfile);
+            // プロフィール更新後の処理
+            console.log('Profile updated:', updatedProfile);
+            // 強制再読み込みで状態を同期
+            handleProfileUpdate();
           }}
         />
       )}

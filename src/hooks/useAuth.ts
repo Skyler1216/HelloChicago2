@@ -158,11 +158,46 @@ export function useAuth() {
   const isAuthenticated = !!user;
   const isApproved = profile?.is_approved ?? false;
 
+  // プロフィール更新機能
+  const updateProfile = async (updates: Partial<Profile>) => {
+    if (!profile) return false;
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', profile.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // 状態を更新
+      setProfile(data);
+      return true;
+    } catch (error) {
+      console.error('❌ Profile update error:', error);
+      return false;
+    }
+  };
+
+  // プロフィールの再読み込み
+  const reloadProfile = async () => {
+    if (user) {
+      await loadUserProfile(user.id);
+    }
+  };
+
   return {
     user,
     profile,
     loading,
     isAuthenticated,
     isApproved,
+    updateProfile,
+    reloadProfile,
   };
 }

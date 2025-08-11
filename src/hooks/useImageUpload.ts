@@ -4,7 +4,11 @@ import { supabase } from '../lib/supabase';
 interface UseImageUploadReturn {
   uploading: boolean;
   uploadProgress: number;
-  uploadImage: (file: File, userId: string) => Promise<string | null>;
+  uploadImage: (
+    file: File,
+    userId: string,
+    onSuccess?: (url: string) => void
+  ) => Promise<string | null>;
   error: string | null;
 }
 
@@ -73,7 +77,8 @@ export function useImageUpload(): UseImageUploadReturn {
 
   const uploadImage = async (
     file: File,
-    userId: string
+    userId: string,
+    onSuccess?: (url: string) => void
   ): Promise<string | null> => {
     try {
       setUploading(true);
@@ -97,30 +102,30 @@ export function useImageUpload(): UseImageUploadReturn {
       setUploadProgress(40);
 
       // Supabase Storageにアップロード
-      const { data, error: uploadError } = await supabase.storage
+      const { error } = await supabase.storage
         .from('avatars')
         .upload(fileName, compressedFile, {
           cacheControl: '3600',
-          upsert: true,
+          upsert: false,
         });
 
-      if (uploadError) {
-        throw uploadError;
+      if (error) {
+        throw new Error(`アップロードエラー: ${error.message}`);
       }
 
-      setUploadProgress(80);
-
-      // 公開URLを取得
-      const { data: urlData } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(data.path);
+      // アップロードされたファイルのURLを取得
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('avatars').getPublicUrl(fileName);
 
       setUploadProgress(100);
 
-      // 少し遅延を入れてプログレスバーを見せる
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // 成功コールバックを実行
+      if (onSuccess) {
+        onSuccess(publicUrl);
+      }
 
-      return urlData.publicUrl;
+      return publicUrl;
     } catch (err) {
       console.error('❌ Image upload error:', err);
       setError(
