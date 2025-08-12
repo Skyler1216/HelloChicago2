@@ -41,10 +41,6 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
     const [formData, setFormData] = useState({
       name: profile.name || '',
       avatarUrl: profile.avatar_url || '',
-      bio: '',
-      locationArea: '',
-      interests: [] as string[],
-      languages: [] as string[],
       arrivalDate: '',
       familyStructure: '',
     });
@@ -54,10 +50,6 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
       if (profileDetails) {
         setFormData(prev => ({
           ...prev,
-          bio: profileDetails.bio || '',
-          locationArea: profileDetails.location_area || '',
-          interests: profileDetails.interests || [],
-          languages: profileDetails.languages || [],
           arrivalDate: profileDetails.arrival_date || '',
           familyStructure: profileDetails.family_structure || '',
         }));
@@ -71,12 +63,6 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
       return (
         formData.name !== (profile.name || '') ||
         formData.avatarUrl !== (profile.avatar_url || '') ||
-        formData.bio !== (profileDetails.bio || '') ||
-        formData.locationArea !== (profileDetails.location_area || '') ||
-        JSON.stringify(formData.interests) !==
-          JSON.stringify(profileDetails.interests || []) ||
-        JSON.stringify(formData.languages) !==
-          JSON.stringify(profileDetails.languages || []) ||
         formData.arrivalDate !== (profileDetails.arrival_date || '') ||
         formData.familyStructure !== (profileDetails.family_structure || '')
       );
@@ -97,26 +83,6 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
         errors.name = '名前は必須です';
         isValid = false;
       }
-
-      // 自己紹介のバリデーション
-      if (formData.bio.trim()) {
-        const bioValidation = ProfileValidation.bio(formData.bio);
-        if (!bioValidation.isValid) {
-          errors.bio = bioValidation.errors[0];
-          isValid = false;
-        }
-      }
-
-      // 居住エリアのバリデーション（必要に応じて実装）
-      // if (formData.locationArea.trim()) {
-      //   const locationValidation = ProfileValidation.locationArea(
-      //     formData.locationArea
-      //   );
-      //   if (!locationValidation.isValid) {
-      //     errors.locationArea = locationValidation.errors[0];
-      //     isValid = false;
-      //   }
-      // }
 
       // 到着日のバリデーション（必要に応じて実装）
       // if (formData.arrivalDate) {
@@ -154,10 +120,6 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
 
         // プロフィール詳細情報の更新
         const detailsUpdates = {
-          bio: formData.bio,
-          location_area: formData.locationArea,
-          interests: formData.interests,
-          languages: formData.languages,
           arrival_date: formData.arrivalDate,
           family_structure: formData.familyStructure,
         };
@@ -313,22 +275,8 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
 
             {/* 詳細情報セクション */}
             <DetailInfoSection
-              bio={formData.bio}
-              locationArea={formData.locationArea}
-              interests={formData.interests}
-              languages={formData.languages}
               arrivalDate={formData.arrivalDate}
               familyStructure={formData.familyStructure}
-              onBioChange={bio => updateFormData('bio', bio)}
-              onLocationAreaChange={area =>
-                updateFormData('locationArea', area)
-              }
-              onInterestsChange={interests =>
-                updateFormData('interests', interests)
-              }
-              onLanguagesChange={languages =>
-                updateFormData('languages', languages)
-              }
               onArrivalDateChange={date => updateFormData('arrivalDate', date)}
               onFamilyStructureChange={structure =>
                 updateFormData('familyStructure', structure)

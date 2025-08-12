@@ -1,14 +1,5 @@
 import React from 'react';
-import {
-  User,
-  MapPin,
-  Heart,
-  MessageCircle,
-  Calendar,
-  Users,
-  Edit3,
-  Clock,
-} from 'lucide-react';
+import { User, Calendar, Users, Edit3, Clock } from 'lucide-react';
 import { Database } from '../../types/database';
 import { useProfileDetails } from '../../hooks/useProfileDetails';
 
@@ -160,36 +151,10 @@ export default function ProfileDetailView({
           </div>
         )}
 
-      {/* 自己紹介 */}
-      {profileDetails.bio && (
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center space-x-3 mb-4">
-            <User className="w-5 h-5 text-coral-600" />
-            <h3 className="font-semibold text-gray-900">自己紹介</h3>
-          </div>
-          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-            {profileDetails.bio}
-          </p>
-        </div>
-      )}
-
       {/* 基本情報 */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
         <h3 className="font-semibold text-gray-900 mb-4">基本情報</h3>
         <div className="space-y-4">
-          {/* 居住エリア */}
-          {profileDetails.location_area && (
-            <div className="flex items-center space-x-3">
-              <MapPin className="w-5 h-5 text-gray-400 flex-shrink-0" />
-              <div>
-                <span className="text-sm text-gray-600">居住エリア:</span>
-                <span className="ml-2 text-gray-900 font-medium">
-                  {profileDetails.location_area}
-                </span>
-              </div>
-            </div>
-          )}
-
           {/* アメリカ到着日 */}
           {profileDetails.arrival_date && (
             <div className="flex items-center space-x-3">
@@ -220,46 +185,6 @@ export default function ProfileDetailView({
           )}
         </div>
       </div>
-
-      {/* 趣味・関心事 */}
-      {profileDetails.interests && profileDetails.interests.length > 0 && (
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center space-x-3 mb-4">
-            <Heart className="w-5 h-5 text-coral-600" />
-            <h3 className="font-semibold text-gray-900">趣味・関心事</h3>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {profileDetails.interests.map(interest => (
-              <span
-                key={interest}
-                className="bg-coral-100 text-coral-800 text-sm font-medium px-3 py-1 rounded-full"
-              >
-                {interest}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 話せる言語 */}
-      {profileDetails.languages && profileDetails.languages.length > 0 && (
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center space-x-3 mb-4">
-            <MessageCircle className="w-5 h-5 text-coral-600" />
-            <h3 className="font-semibold text-gray-900">話せる言語</h3>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {profileDetails.languages.map(language => (
-              <span
-                key={language}
-                className="bg-teal-100 text-teal-800 text-sm font-medium px-3 py-1 rounded-full"
-              >
-                {language}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* 最終更新日 */}
       <div className="text-center text-xs text-gray-500">

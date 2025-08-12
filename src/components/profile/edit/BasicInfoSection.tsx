@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, Camera, Upload, X } from 'lucide-react';
+import { User, Upload, X } from 'lucide-react';
 import { InlineValidationMessage } from './ValidationMessage';
 
 interface BasicInfoSectionProps {
@@ -35,39 +35,8 @@ const BasicInfoSection = React.memo<BasicInfoSectionProps>(
       }
     };
 
-    const handleCameraClick = () => {
+    const handleUploadClick = () => {
       fileInputRef.current?.click();
-    };
-
-    const handleDragOver = (e: React.DragEvent) => {
-      e.preventDefault();
-      e.currentTarget.classList.add(
-        'ring-2',
-        'ring-coral-500',
-        'ring-opacity-50'
-      );
-    };
-
-    const handleDragLeave = (e: React.DragEvent) => {
-      e.currentTarget.classList.remove(
-        'ring-2',
-        'ring-coral-500',
-        'ring-opacity-50'
-      );
-    };
-
-    const handleDrop = (e: React.DragEvent) => {
-      e.preventDefault();
-      e.currentTarget.classList.remove(
-        'ring-2',
-        'ring-coral-500',
-        'ring-opacity-50'
-      );
-
-      const file = e.dataTransfer.files[0];
-      if (file && file.type.startsWith('image/')) {
-        onAvatarChange(file);
-      }
     };
 
     return (
@@ -128,23 +97,12 @@ const BasicInfoSection = React.memo<BasicInfoSectionProps>(
 
             {/* Upload Controls */}
             <div className="flex-1 space-y-3">
-              {/* Camera Button */}
-              <button
-                type="button"
-                onClick={handleCameraClick}
-                disabled={uploading}
-                className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-coral-500 text-white rounded-lg hover:bg-coral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Camera className="w-4 h-4" />
-                <span>写真を撮影</span>
-              </button>
-
               {/* Upload Button */}
               <button
                 type="button"
-                onClick={handleCameraClick}
+                onClick={handleUploadClick}
                 disabled={uploading}
-                className="w-full flex items-center justify-center space-x-2 px-4 py-2 border border-coral-500 text-coral-600 rounded-lg hover:bg-coral-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-coral-500 text-white rounded-lg hover:bg-coral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Upload className="w-4 h-4" />
                 <span>画像を選択</span>
@@ -159,23 +117,6 @@ const BasicInfoSection = React.memo<BasicInfoSectionProps>(
                 className="hidden"
               />
             </div>
-          </div>
-
-          {/* Drag & Drop Area */}
-          <div
-            className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-coral-400 transition-colors cursor-pointer"
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={handleCameraClick}
-          >
-            <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm text-gray-600">
-              画像をドラッグ&ドロップまたはクリックして選択
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              JPG, PNG, GIF (最大5MB)
-            </p>
           </div>
 
           {/* Avatar Error */}
