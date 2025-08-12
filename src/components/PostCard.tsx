@@ -89,10 +89,30 @@ function PostCard({ post, onClick }: PostCardProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-            <span className="text-sm font-medium text-gray-600">
-              {post.profiles.name.charAt(0)}
-            </span>
+          <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+            {post.profiles.avatar_url ? (
+              <img
+                src={post.profiles.avatar_url}
+                alt={`${post.profiles.name}のプロフィール画像`}
+                className="w-full h-full object-cover"
+                onError={e => {
+                  // 画像読み込みエラー時はイニシャルを表示
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const parent = target.parentElement;
+                  if (parent) {
+                    const fallback = document.createElement('span');
+                    fallback.className = 'text-sm font-medium text-gray-600';
+                    fallback.textContent = post.profiles.name.charAt(0);
+                    parent.appendChild(fallback);
+                  }
+                }}
+              />
+            ) : (
+              <span className="text-sm font-medium text-gray-600">
+                {post.profiles.name.charAt(0)}
+              </span>
+            )}
           </div>
           <div>
             <p className="font-medium text-gray-900">{post.profiles.name}</p>

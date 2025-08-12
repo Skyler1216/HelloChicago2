@@ -91,10 +91,30 @@ function CommentItem({
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
       <div className="flex items-start space-x-3">
-        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-          <span className="text-xs font-medium text-gray-600">
-            {comment.profiles.name.charAt(0)}
-          </span>
+        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+          {comment.profiles.avatar_url ? (
+            <img
+              src={comment.profiles.avatar_url}
+              alt={`${comment.profiles.name}のプロフィール画像`}
+              className="w-full h-full object-cover"
+              onError={e => {
+                // 画像読み込みエラー時はイニシャルを表示
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const parent = target.parentElement;
+                if (parent) {
+                  const fallback = document.createElement('span');
+                  fallback.className = 'text-xs font-medium text-gray-600';
+                  fallback.textContent = comment.profiles.name.charAt(0);
+                  parent.appendChild(fallback);
+                }
+              }}
+            />
+          ) : (
+            <span className="text-xs font-medium text-gray-600">
+              {comment.profiles.name.charAt(0)}
+            </span>
+          )}
         </div>
         <div className="flex-1">
           <div className="flex items-center justify-between mb-1">
@@ -374,10 +394,31 @@ export default function PostDetailView({
           {/* Post header, content, etc. - same as PostCard */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium text-gray-600">
-                  {post.profiles.name.charAt(0)}
-                </span>
+              <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+                {post.profiles.avatar_url ? (
+                  <img
+                    src={post.profiles.avatar_url}
+                    alt={`${post.profiles.name}のプロフィール画像`}
+                    className="w-full h-full object-cover"
+                    onError={e => {
+                      // 画像読み込みエラー時はイニシャルを表示
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const parent = target.parentElement;
+                      if (parent) {
+                        const fallback = document.createElement('span');
+                        fallback.className =
+                          'text-sm font-medium text-gray-600';
+                        fallback.textContent = post.profiles.name.charAt(0);
+                        parent.appendChild(fallback);
+                      }
+                    }}
+                  />
+                ) : (
+                  <span className="text-sm font-medium text-gray-600">
+                    {post.profiles.name.charAt(0)}
+                  </span>
+                )}
               </div>
               <div>
                 <p className="font-medium text-gray-900">
@@ -466,12 +507,36 @@ export default function PostDetailView({
             className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6"
           >
             <div className="flex space-x-3">
-              <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-xs font-medium text-gray-600">
-                  {user.user_metadata?.name?.charAt(0) ||
-                    user.email?.charAt(0) ||
-                    'U'}
-                </span>
+              <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                {user.user_metadata?.avatar_url ? (
+                  <img
+                    src={user.user_metadata.avatar_url}
+                    alt="あなたのプロフィール画像"
+                    className="w-full h-full object-cover"
+                    onError={e => {
+                      // 画像読み込みエラー時はイニシャルを表示
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const parent = target.parentElement;
+                      if (parent) {
+                        const fallback = document.createElement('span');
+                        fallback.className =
+                          'text-xs font-medium text-gray-600';
+                        fallback.textContent =
+                          user.user_metadata?.name?.charAt(0) ||
+                          user.email?.charAt(0) ||
+                          'U';
+                        parent.appendChild(fallback);
+                      }
+                    }}
+                  />
+                ) : (
+                  <span className="text-xs font-medium text-gray-600">
+                    {user.user_metadata?.name?.charAt(0) ||
+                      user.email?.charAt(0) ||
+                      'U'}
+                  </span>
+                )}
               </div>
               <div className="flex-1">
                 <textarea
