@@ -57,9 +57,11 @@ export default function ProfileView({
   };
 
   const { stats: userStats } = useUserStats(activeProfile?.id);
-  const { profileDetails, reload: reloadProfileDetails } = useProfileDetails(
-    activeProfile?.id || ''
-  );
+  const {
+    profileDetails,
+    loading: profileDetailsLoading,
+    reload: reloadProfileDetails,
+  } = useProfileDetails(activeProfile?.id || '');
   const {
     communityInfo,
     loading: communityLoading,
@@ -184,9 +186,19 @@ export default function ProfileView({
                 {activeProfile?.name || 'ユーザー'}
               </h2>
             </div>
-            <p className="text-gray-600 text-sm mb-2">
+            <div className="text-gray-600 text-sm mb-2">
               アメリカ在住年月{' '}
               {(() => {
+                // プロフィール詳細情報の読み込み中は「読み込み中...」を表示
+                if (profileDetailsLoading) {
+                  return (
+                    <span className="inline-flex items-center">
+                      <div className="w-3 h-3 border border-gray-300 border-t-coral-500 rounded-full animate-spin mr-2"></div>
+                      読み込み中...
+                    </span>
+                  );
+                }
+
                 // アメリカ到着日が設定されている場合はそちらを優先
                 if (profileDetails?.arrival_date) {
                   const arrival = new Date(profileDetails.arrival_date);
@@ -210,7 +222,7 @@ export default function ProfileView({
                 // アメリカ到着日が未設定の場合は「未設定」と表示
                 return '未設定';
               })()}
-            </p>
+            </div>
             <div className="flex items-center space-x-1 text-gray-500">
               <Calendar className="w-3 h-3" />
               <span className="text-xs">
