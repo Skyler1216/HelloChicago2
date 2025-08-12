@@ -48,6 +48,13 @@ export function useProfileManager(userId: string) {
 
   // プロフィールデータの読み込み
   const loadProfileData = useCallback(async () => {
+    // ユーザーIDが無効な場合は何もしない
+    if (!userId || userId.trim() === '' || userId.length < 36) {
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -110,7 +117,21 @@ export function useProfileManager(userId: string) {
 
   // 初期データの読み込み
   useEffect(() => {
-    loadProfileData();
+    if (userId && userId.trim() !== '' && userId.length >= 36) {
+      loadProfileData();
+    } else {
+      // ユーザーIDが無効な場合は初期状態にリセット
+      setState({
+        profile: null,
+        profileDetails: null,
+        isDirty: false,
+        hasUnsavedChanges: false,
+        lastSaved: null,
+        saveHistory: [],
+      });
+      setLoading(false);
+      setError(null);
+    }
   }, [userId, loadProfileData]);
 
   // プロフィール基本情報の更新

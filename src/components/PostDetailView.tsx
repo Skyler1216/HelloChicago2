@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Heart,
   MessageCircle,
@@ -16,6 +16,7 @@ import { useComments } from '../hooks/useComments';
 import { useLikes } from '../hooks/useLikes';
 import { useAuth } from '../hooks/useAuth';
 import { usePosts } from '../hooks/usePosts';
+import { supabase } from '../lib/supabase';
 
 type Post = Database['public']['Tables']['posts']['Row'] & {
   profiles: Database['public']['Tables']['profiles']['Row'];
@@ -217,6 +218,38 @@ export default function PostDetailView({
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [currentPost, setCurrentPost] = useState(post);
   const { updatePostStatus } = usePosts();
+
+  // ユーザーIDが有効かチェック（UUID形式も確認）
+  const isValidUserId =
+    user?.id && user.id.trim() !== '' && user.id.length >= 36; // UUIDの最小長
+
+  // 現在のユーザーのプロフィール情報を取得
+  const [currentUserProfile, setCurrentUserProfile] = useState<
+    Database['public']['Tables']['profiles']['Row'] | null
+  >(null);
+
+  // プロフィール情報を取得
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (isValidUserId && user?.id) {
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          if (!error && data) {
+            setCurrentUserProfile(data);
+          }
+        } catch (err) {
+          console.error('Failed to fetch user profile:', err);
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [isValidUserId, user?.id]);
 
   // 投稿のいいね数を取得（複数のソースから）
   const getInitialLikesCount = () => {
@@ -501,16 +534,16 @@ export default function PostDetailView({
         </div>
 
         {/* Comment Form */}
-        {user && (
+        {user && isValidUserId && (
           <form
             onSubmit={handleSubmitComment}
             className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6"
           >
             <div className="flex space-x-3">
               <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-                {user.user_metadata?.avatar_url ? (
+                {isValidUserId && currentUserProfile?.avatar_url ? (
                   <img
-                    src={user.user_metadata.avatar_url}
+                    src={currentUserProfile.avatar_url}
                     alt="あなたのプロフィール画像"
                     className="w-full h-full object-cover"
                     onError={e => {
@@ -523,6 +556,7 @@ export default function PostDetailView({
                         fallback.className =
                           'text-xs font-medium text-gray-600';
                         fallback.textContent =
+                          currentUserProfile?.name?.charAt(0) ||
                           user.user_metadata?.name?.charAt(0) ||
                           user.email?.charAt(0) ||
                           'U';
@@ -532,9 +566,11 @@ export default function PostDetailView({
                   />
                 ) : (
                   <span className="text-xs font-medium text-gray-600">
-                    {user.user_metadata?.name?.charAt(0) ||
-                      user.email?.charAt(0) ||
-                      'U'}
+                    {isValidUserId && currentUserProfile?.name
+                      ? currentUserProfile.name.charAt(0)
+                      : user.user_metadata?.name?.charAt(0) ||
+                        user.email?.charAt(0) ||
+                        'U'}
                   </span>
                 )}
               </div>
