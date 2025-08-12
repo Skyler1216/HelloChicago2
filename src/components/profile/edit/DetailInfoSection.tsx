@@ -34,6 +34,7 @@ const DetailInfoSection = React.memo<DetailInfoSectionProps>(
             type="date"
             value={arrivalDate}
             onChange={e => onArrivalDateChange(e.target.value)}
+            max={new Date().toISOString().split('T')[0]} // 今日までの日付のみ選択可能
             className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-coral-500 focus:border-transparent transition-all"
             placeholder="日付を選択してください"
           />

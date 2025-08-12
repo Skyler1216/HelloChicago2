@@ -4,7 +4,7 @@ import { useProfileDetails } from '../../../hooks/useProfileDetails';
 import { useImageUpload } from '../../../hooks/useImageUpload';
 import { useToast } from '../../../hooks/useToast';
 import { useAuth } from '../../../hooks/useAuth';
-import { ProfileValidation } from '../../../utils/validation';
+
 import ProfileEditLayout from './ProfileEditLayout';
 import BasicInfoSection from './BasicInfoSection';
 import DetailInfoSection from './DetailInfoSection';
@@ -84,6 +84,27 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
         isValid = false;
       }
 
+      // アメリカ到着日のバリデーション
+      if (formData.arrivalDate) {
+        const arrivalDate = new Date(formData.arrivalDate);
+        const now = new Date();
+
+        // 未来の日付は設定不可
+        if (arrivalDate > now) {
+          errors.arrival_date = 'アメリカ到着日は未来の日付に設定できません';
+          isValid = false;
+        }
+
+        // 極端に過去の日付も制限（例：100年前）
+        const minDate = new Date();
+        minDate.setFullYear(minDate.getFullYear() - 100);
+        if (arrivalDate < minDate) {
+          errors.arrival_date =
+            'アメリカ到着日は100年前より前の日付に設定できません';
+          isValid = false;
+        }
+      }
+
       // 到着日のバリデーション（必要に応じて実装）
       // if (formData.arrivalDate) {
       //   const arrivalValidation = ProfileValidation.arrivalDate(
@@ -145,10 +166,8 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
           setSaveStatus('success');
           addToast('success', 'プロフィールが更新されました');
 
-          // 成功後少し待ってから元の画面に戻る
-          setTimeout(() => {
-            onSave?.();
-          }, 1500);
+          // 成功後即座に親コンポーネントに通知（即座反映のため）
+          onSave?.();
         } else {
           throw new Error('更新に失敗しました');
         }

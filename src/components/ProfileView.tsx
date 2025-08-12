@@ -16,6 +16,7 @@ import { Database } from '../types/database';
 import { useUserStats } from '../hooks/useUserStats';
 import { useCommunityInfo } from '../hooks/useCommunityInfo';
 import { useAuth } from '../hooks/useAuth';
+import { useProfileDetails } from '../hooks/useProfileDetails';
 import ProfileEditView from './profile/edit/ProfileEditView';
 import UserPostsView from './UserPostsView';
 import FavoritesView from './FavoritesView';
@@ -51,9 +52,14 @@ export default function ProfileView({
   const handleProfileUpdate = async () => {
     console.log('🔄 Profile update detected, reloading auth state...');
     await reloadProfile();
+    // プロフィール詳細情報も再読み込み
+    await reloadProfileDetails();
   };
 
   const { stats: userStats } = useUserStats(activeProfile?.id);
+  const { profileDetails, reload: reloadProfileDetails } = useProfileDetails(
+    activeProfile?.id || ''
+  );
   const {
     communityInfo,
     loading: communityLoading,
@@ -179,11 +185,31 @@ export default function ProfileView({
               </h2>
             </div>
             <p className="text-gray-600 text-sm mb-2">
-              シカゴ在住{' '}
-              {userStats
-                ? Math.max(1, Math.floor(userStats.joinedDaysAgo / 365))
-                : 1}
-              年目
+              アメリカ在住年月{' '}
+              {(() => {
+                // アメリカ到着日が設定されている場合はそちらを優先
+                if (profileDetails?.arrival_date) {
+                  const arrival = new Date(profileDetails.arrival_date);
+                  const now = new Date();
+                  const diffTime = Math.abs(now.getTime() - arrival.getTime());
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                  if (diffDays < 30) {
+                    return `${diffDays}日`;
+                  } else if (diffDays < 365) {
+                    const months = Math.floor(diffDays / 30);
+                    return `約${months}ヶ月`;
+                  } else {
+                    const years = Math.floor(diffDays / 365);
+                    const remainingMonths = Math.floor((diffDays % 365) / 30);
+                    return remainingMonths > 0
+                      ? `${years}年${remainingMonths}ヶ月`
+                      : `${years}年`;
+                  }
+                }
+                // アメリカ到着日が未設定の場合は「未設定」と表示
+                return '未設定';
+              })()}
             </p>
             <div className="flex items-center space-x-1 text-gray-500">
               <Calendar className="w-3 h-3" />

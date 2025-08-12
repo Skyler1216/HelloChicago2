@@ -15,6 +15,7 @@ interface UseProfileDetailsReturn {
   error: string | null;
   updateProfileDetails: (updates: ProfileDetailsUpdate) => Promise<boolean>;
   createProfileDetails: (details: ProfileDetailsInsert) => Promise<boolean>;
+  reload: () => Promise<void>;
 }
 
 export function useProfileDetails(
@@ -106,12 +107,37 @@ export function useProfileDetails(
     }
   };
 
+  const reload = async (): Promise<void> => {
+    if (!profileId) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const { data, error: fetchError } = await supabase
+        .from('profile_details')
+        .select('*')
+        .eq('profile_id', profileId)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+
+      setProfileDetails(data);
+    } catch (err) {
+      logError(err, 'useProfileDetails.updateProfileDetails');
+      setError(formatSupabaseError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     profileDetails,
     loading,
     error,
     updateProfileDetails,
     createProfileDetails,
+    reload,
   };
 }
 
