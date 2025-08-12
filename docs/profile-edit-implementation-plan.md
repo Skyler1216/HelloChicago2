@@ -3,8 +3,8 @@
 ## 文書概要
 
 **作成日**: 2025年1月
-**バージョン**: 2.0
-**対象**: プロフィール編集機能の完全実装
+**バージョン**: 3.0
+**対象**: プロフィール編集機能の完全実装（スマホ最適化版）
 **ステータス**: ✅ 実装完了
 
 ## 1. 現状分析
@@ -29,8 +29,8 @@
 #### **実装済みコンポーネント**
 
 - ✅ `ProfileEditLayout.tsx` - 編集画面のレイアウト
-- ✅ `BasicInfoSection.tsx` - 基本情報セクション
-- ✅ `DetailInfoSection.tsx` - 詳細情報セクション
+- ✅ `BasicInfoSection.tsx` - 基本情報セクション（名前・画像）
+- ✅ `DetailInfoSection.tsx` - 詳細情報セクション（アメリカ到着日・家族構成）
 - ✅ `ValidationMessage.tsx` - バリデーションメッセージ
 - ✅ `SaveProgressIndicator.tsx` - 保存進捗表示
 
@@ -46,9 +46,9 @@
 
 #### **UI/UX面**
 
-- プロフィール編集画面のナビゲーションが分かりにくい
-- フォームのバリデーション表示が不十分
-- モバイルでの操作性に改善の余地
+- ~~プロフィール編集画面のナビゲーションが分かりにくい~~ ✅ スマホ最適化で解決
+- ~~フォームのバリデーション表示が不十分~~ ✅ 実装済み
+- ~~モバイルでの操作性に改善の余地~~ ✅ スマホ前提で最適化済み
 - ~~画像プレビューの表示が最適化されていない~~ ✅ 実装済み
 
 #### **機能面**
@@ -70,7 +70,7 @@
 
 #### 2.1.1 プロフィール編集画面の再設計
 
-**目標**: 直感的で使いやすい編集インターフェースの実装
+**目標**: スマホ前提の直感的で使いやすい編集インターフェースの実装
 
 **実装内容**:
 
@@ -78,16 +78,15 @@
 // 新しいコンポーネント構造
 src/components/profile/edit/
 ├── ProfileEditLayout.tsx        # 編集画面のレイアウト
-├── BasicInfoSection.tsx         # 基本情報セクション
-├── DetailInfoSection.tsx        # 詳細情報セクション
-
+├── BasicInfoSection.tsx         # 基本情報セクション（名前・画像）
+├── DetailInfoSection.tsx        # 詳細情報セクション（アメリカ到着日・家族構成）
 ├── ValidationMessage.tsx        # バリデーションメッセージ
 └── SaveProgressIndicator.tsx    # 保存進捗表示
 ```
 
 **UI改善ポイント**:
 
-- ステップバイステップの編集フロー
+- スマホ前提のシンプルな編集フロー
 - リアルタイムバリデーション
 - 保存状態の明確な表示
 - モバイルファーストのレスポンシブデザイン
@@ -99,28 +98,17 @@ src/components/profile/edit/
 ```typescript
 // 強化されたバリデーション
 interface ValidationRules {
-  bio: {
-    minLength: number;
-    maxLength: number;
-    allowedTags: string[];
-  };
-  location_area: {
+  name: {
     required: boolean;
-    allowedValues: string[];
-  };
-  interests: {
-    minCount: number;
-    maxCount: number;
-    maxLength: number;
-  };
-  languages: {
-    minCount: number;
-    maxCount: number;
+    minLength: number;
   };
   arrival_date: {
     required: boolean;
-    maxDate: Date;
-    minDate: Date;
+    maxDate: Date; // 未来の日付は設定不可
+    minDate: Date; // 極端に過去の日付も制限
+  };
+  family_structure: {
+    required: boolean;
   };
 }
 
@@ -141,30 +129,19 @@ const useFormValidation = (formData: FormData, rules: ValidationRules) => {
 
 ### 2.2 Phase 2: 機能拡張（優先度：中）✅ 完了
 
-#### 2.2.1 画像管理の高度化
+#### 2.2.1 画像管理の最適化
 
 **実装内容**:
 
 ```typescript
-// 画像管理フックの拡張
-export function useAdvancedImageUpload() {
+// 画像管理フックの最適化
+export function useOptimizedImageUpload() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageMetadata, setImageMetadata] = useState<ImageMetadata | null>(
-    null
-  );
 
   const uploadImage = async (file: File) => {
-    // 画像圧縮・リサイズ
-    const optimizedImage = await optimizeImage(file);
-
-    // プレビュー生成
-    const preview = await generatePreview(optimizedImage);
-    setImagePreview(preview);
-
-    // アップロード実行
-    const result = await uploadToStorage(optimizedImage, setUploadProgress);
-
+    // シンプルな画像アップロード（スマホ最適化）
+    const result = await uploadToStorage(file, setUploadProgress);
     return result;
   };
 
@@ -172,48 +149,9 @@ export function useAdvancedImageUpload() {
     uploadImage,
     uploadProgress,
     imagePreview,
-    imageMetadata,
     resetImage,
   };
 }
-
-// 画像最適化ユーティリティ
-const optimizeImage = async (file: File): Promise<File> => {
-  return new Promise(resolve => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d')!;
-    const img = new Image();
-
-    img.onload = () => {
-      // アスペクト比を保持してリサイズ
-      const maxSize = 800;
-      const { width, height } = calculateDimensions(
-        img.width,
-        img.height,
-        maxSize
-      );
-
-      canvas.width = width;
-      canvas.height = height;
-
-      ctx.drawImage(img, 0, 0, width, height);
-
-      canvas.toBlob(
-        blob => {
-          const optimizedFile = new File([blob!], file.name, {
-            type: 'image/jpeg',
-            lastModified: Date.now(),
-          });
-          resolve(optimizedFile);
-        },
-        'image/jpeg',
-        0.8
-      );
-    };
-
-    img.src = URL.createObjectURL(file);
-  });
-};
 ```
 
 #### 2.2.2 プロフィール情報の一括管理
@@ -228,7 +166,6 @@ export function useProfileManager(userId: string) {
     null
   );
   const [isDirty, setIsDirty] = useState(false);
-  const [saveHistory, setSaveHistory] = useState<SaveHistory[]>([]);
 
   const updateProfile = async (updates: Partial<Profile>) => {
     try {
@@ -242,7 +179,6 @@ export function useProfileManager(userId: string) {
       if (result.data) {
         setProfile(result.data);
         setIsDirty(false);
-        addToSaveHistory('profile', updates);
       }
 
       return { success: true, data: result.data };
@@ -255,14 +191,13 @@ export function useProfileManager(userId: string) {
     try {
       const result = await supabase
         .from('profile_details')
-        .upsert({ user_id: userId, ...updates })
+        .upsert({ profile_id: userId, ...updates })
         .select()
         .single();
 
       if (result.data) {
         setProfileDetails(result.data);
         setIsDirty(false);
-        addToSaveHistory('details', updates);
       }
 
       return { success: true, data: result.data };
@@ -271,24 +206,12 @@ export function useProfileManager(userId: string) {
     }
   };
 
-  const saveAll = async () => {
-    // 一括保存処理
-    const results = await Promise.all([
-      updateProfile(profile!),
-      updateProfileDetails(profileDetails!),
-    ]);
-
-    return results.every(r => r.success);
-  };
-
   return {
     profile,
     profileDetails,
     isDirty,
-    saveHistory,
     updateProfile,
     updateProfileDetails,
-    saveAll,
     resetChanges,
   };
 }
@@ -320,10 +243,6 @@ const ProfileEditSection = React.memo(({
 const ProfileEditForm = ({ profile }: ProfileEditFormProps) => {
   const initialFormData = useMemo(() => ({
     name: profile.name || '',
-    bio: profile.bio || '',
-    location_area: profile.location_area || '',
-    interests: profile.interests || [],
-    languages: profile.languages || [],
     arrival_date: profile.arrival_date || '',
     family_structure: profile.family_structure || '',
   }), [profile]);
@@ -353,9 +272,19 @@ const ProfileEditForm = ({ profile }: ProfileEditFormProps) => {
 };
 ```
 
-#### 2.3.2 画像の遅延読み込み
+#### 2.3.2 状態管理の最適化
 
 **実装内容**:
+
+```typescript
+// 効率的な状態更新
+const handleProfileUpdate = async () => {
+  console.log('🔄 Profile update detected, reloading auth state...');
+  await reloadProfile();
+  // プロフィール詳細情報も再読み込み
+  await reloadProfileDetails();
+};
+```
 
 ## 3. 実装スケジュール
 
@@ -377,8 +306,8 @@ const ProfileEditForm = ({ profile }: ProfileEditFormProps) => {
 
 **Week 3**:
 
-- [x] 画像管理の高度化
-- [x] 画像最適化機能の実装
+- [x] 画像管理の最適化
+- [x] シンプルな画像アップロード機能の実装
 - [x] プレビュー機能の改善
 
 **Week 4**:
@@ -403,7 +332,7 @@ const ProfileEditForm = ({ profile }: ProfileEditFormProps) => {
 
 **Week 7**:
 
-- [x] 画像表示の最適化
+- [x] 状態管理の最適化
 - [x] キャッシュ戦略の実装
 - [x] 最終テスト・調整
 
@@ -414,8 +343,8 @@ const ProfileEditForm = ({ profile }: ProfileEditFormProps) => {
 - **フロントエンド**: React 18 + TypeScript
 - **状態管理**: React Hooks + Context API
 - **スタイリング**: Tailwind CSS
-- **画像処理**: Canvas API + Web APIs
-- **バリデーション**: Zod または Yup
+- **画像処理**: Web APIs
+- **バリデーション**: カスタム実装
 - **テスト**: Jest + React Testing Library
 
 ### 4.2 パフォーマンス目標
@@ -469,9 +398,9 @@ describe('useProfileManager', () => {
 
 ### 6.1 技術的リスク
 
-- **画像処理の複雑性**: Canvas APIの互換性問題
-- **パフォーマンス**: 大量データでの処理遅延
-- **ブラウザ互換性**: 古いブラウザでの動作問題
+- **画像処理の複雑性**: シンプルな実装で対応
+- **パフォーマンス**: 最適化済み
+- **ブラウザ互換性**: モダンブラウザ対応
 
 ### 6.2 対策
 
@@ -506,9 +435,9 @@ describe('useProfileManager', () => {
 
 すべてのPhaseが完了し、以下の機能が実装されました：
 
-- ✅ **UI/UX改善**: 直感的で使いやすい編集インターフェース
-- ✅ **機能拡張**: 高度な画像管理とプロフィール情報の一括管理
-- ✅ **パフォーマンス最適化**: React.memo、遅延読み込み、キャッシュ戦略
+- ✅ **UI/UX改善**: スマホ前提の直感的で使いやすい編集インターフェース
+- ✅ **機能拡張**: シンプルな画像管理とプロフィール情報の一括管理
+- ✅ **パフォーマンス最適化**: React.memo、状態管理、キャッシュ戦略
 - ✅ **即座反映**: 画像アップロード後の即座なUI更新
 - ✅ **状態管理**: 統一された`useAuth`フックによる状態管理
 
