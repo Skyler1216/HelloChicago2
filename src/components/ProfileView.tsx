@@ -27,12 +27,14 @@ interface ProfileViewProps {
   user: SupabaseUser | null;
   profile: Profile | null;
   onAdminClick?: () => void;
+  onAdminDashboardClick?: () => void;
 }
 
 export default function ProfileView({
   user,
   profile,
   onAdminClick,
+  onAdminDashboardClick,
 }: ProfileViewProps) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentView, setCurrentView] = useState<
@@ -81,9 +83,16 @@ export default function ProfileView({
     onClick: onAdminClick,
   };
 
+  const adminDashboardMenuItem = {
+    icon: Shield,
+    label: '管理ダッシュボード',
+    description: 'システム監視・セキュリティ監査・パフォーマンス監視',
+    onClick: onAdminDashboardClick,
+  };
+
   const menuItems =
     profile?.role === 'admin'
-      ? [...baseMenuItems, adminMenuItem]
+      ? [...baseMenuItems, adminMenuItem, adminDashboardMenuItem]
       : baseMenuItems;
 
   const handleSignOut = async () => {

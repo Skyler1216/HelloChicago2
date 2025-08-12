@@ -9,6 +9,7 @@ import MapView from './components/MapView';
 import PostFormView from './components/PostFormView';
 import ProfileView from './components/ProfileView';
 import AdminApprovalView from './components/AdminApprovalView';
+import AdminDashboard from './components/admin/AdminDashboard';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useAuth } from './hooks/useAuth';
 import { useToast } from './hooks/useToast';
@@ -20,6 +21,7 @@ export default function App() {
     'home' | 'map' | 'post' | 'profile'
   >('home');
   const [showAdminView, setShowAdminView] = useState(false);
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const { user, profile, loading, isAuthenticated, isApproved } = useAuth();
   const { ToastContainer } = useToast();
 
@@ -114,6 +116,31 @@ export default function App() {
     );
   }
 
+  // Show admin dashboard
+  if (showAdminDashboard) {
+    return (
+      <Layout
+        currentView="profile"
+        onViewChange={view => {
+          setShowAdminDashboard(false);
+          setCurrentView(view);
+        }}
+        user={user}
+        profile={profile}
+      >
+        <div className="px-4 py-6">
+          <button
+            onClick={() => setShowAdminDashboard(false)}
+            className="mb-4 text-coral-600 hover:text-coral-700 transition-colors"
+          >
+            ← プロフィールに戻る
+          </button>
+          <AdminDashboard />
+        </div>
+      </Layout>
+    );
+  }
+
   // Show admin view
   if (showAdminView) {
     return (
@@ -154,6 +181,7 @@ export default function App() {
             user={user}
             profile={profile}
             onAdminClick={() => setShowAdminView(true)}
+            onAdminDashboardClick={() => setShowAdminDashboard(true)}
           />
         );
       default:

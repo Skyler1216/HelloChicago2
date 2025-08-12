@@ -13,7 +13,7 @@ export interface PerformanceMetrics {
   type: 'page_load' | 'api_call' | 'database_query' | 'component_render';
   name: string;
   duration: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // Error tracking interface
@@ -24,7 +24,7 @@ export interface ErrorMetrics {
   component?: string;
   userAgent?: string;
   url?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // Database performance interface
@@ -115,7 +115,7 @@ class PerformanceMonitor {
   trackPageLoad(data: {
     name: string;
     duration: number;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }): void {
     if (!this.isEnabled) return;
 
@@ -136,7 +136,7 @@ class PerformanceMonitor {
   trackApiCall(
     name: string,
     duration: number,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): void {
     if (!this.isEnabled) return;
 
@@ -166,7 +166,7 @@ class PerformanceMonitor {
     this.dbMetrics.push({
       timestamp: Date.now(),
       table: data.table,
-      operation: data.operation as any,
+      operation: data.operation as 'select' | 'insert' | 'update' | 'delete',
       duration: data.duration,
       rowCount: data.rowCount,
       query: data.query,
@@ -181,7 +181,7 @@ class PerformanceMonitor {
   trackComponentRender(
     componentName: string,
     duration: number,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): void {
     if (!this.isEnabled) return;
 
@@ -203,7 +203,7 @@ class PerformanceMonitor {
     error: string,
     stack?: string,
     component?: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): void {
     if (!this.isEnabled) return;
 
@@ -407,7 +407,7 @@ export const performanceMonitor = new PerformanceMonitor();
 export const trackPageLoad = (data: {
   name: string;
   duration: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }) => {
   performanceMonitor.trackPageLoad(data);
 };
@@ -415,7 +415,7 @@ export const trackPageLoad = (data: {
 export const trackApiCall = (
   name: string,
   duration: number,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ) => {
   performanceMonitor.trackApiCall(name, duration, metadata);
 };
@@ -433,7 +433,7 @@ export const trackDatabaseQuery = (data: {
 export const trackComponentRender = (
   componentName: string,
   duration: number,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ) => {
   performanceMonitor.trackComponentRender(componentName, duration, metadata);
 };
@@ -442,7 +442,7 @@ export const trackError = (
   error: string,
   stack?: string,
   component?: string,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ) => {
   performanceMonitor.trackError(error, stack, component, metadata);
 };
@@ -455,4 +455,5 @@ window.addEventListener('beforeunload', () => {
   performanceMonitor.destroy();
 });
 
+export { PerformanceMonitor };
 export default performanceMonitor;

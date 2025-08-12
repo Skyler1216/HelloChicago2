@@ -9,12 +9,20 @@ import { supabase } from './supabase';
 
 // Security audit result interface
 export interface SecurityAuditResult {
-  timestamp: number;
+  timestamp: Date;
   overallScore: number;
   passed: boolean;
   checks: SecurityCheck[];
-  recommendations: string[];
+  recommendations: SecurityRecommendation[];
   criticalIssues: string[];
+  executionTime: number;
+}
+
+// Security recommendation interface
+export interface SecurityRecommendation {
+  title: string;
+  description: string;
+  priority: 'low' | 'medium' | 'high';
 }
 
 // Individual security check interface
@@ -25,6 +33,8 @@ export interface SecurityCheck {
   severity: 'low' | 'medium' | 'high' | 'critical';
   details: string;
   recommendation?: string;
+  status: 'passed' | 'warning' | 'failed';
+  score: number;
 }
 
 // RLS policy check interface
@@ -95,12 +105,13 @@ class SecurityAuditor {
       const recommendations = this.generateRecommendations(checks);
 
       const result: SecurityAuditResult = {
-        timestamp: startTime,
+        timestamp: new Date(startTime),
         overallScore,
         passed: overallScore >= 80, // Pass threshold: 80%
         checks,
         recommendations,
         criticalIssues,
+        executionTime: Date.now() - startTime,
       };
 
       // Store result
@@ -154,6 +165,8 @@ class SecurityAuditor {
             severity: 'high',
             details: `Failed to retrieve policies: ${error.message}`,
             recommendation: 'Verify table permissions and RLS configuration',
+            status: 'failed',
+            score: 0,
           });
           continue;
         }
@@ -173,10 +186,12 @@ class SecurityAuditor {
           }
         }
 
+        const passed = hasPolicies && missingOperations.length === 0;
+        const score = passed ? 100 : hasPolicies ? 50 : 0;
         checks.push({
           name: `RLS Policies - ${table}`,
           description: `Check RLS policies for ${table} table`,
-          passed: hasPolicies && missingOperations.length === 0,
+          passed,
           severity: missingOperations.length > 0 ? 'critical' : 'low',
           details: hasPolicies
             ? `Table has ${policies.length} policies`
@@ -185,6 +200,8 @@ class SecurityAuditor {
             missingOperations.length > 0
               ? `Add missing policies for: ${missingOperations.join(', ')}`
               : 'Policies are properly configured',
+          status: passed ? 'passed' : hasPolicies ? 'warning' : 'failed',
+          score,
         });
       } catch (error) {
         checks.push({
@@ -194,6 +211,8 @@ class SecurityAuditor {
           severity: 'high',
           details: `Error checking policies: ${error}`,
           recommendation: 'Check database permissions and RLS configuration',
+          status: 'failed',
+          score: 0,
         });
       }
     }
@@ -522,8 +541,10 @@ class SecurityAuditor {
   /**
    * Generate security recommendations
    */
-  private generateRecommendations(checks: SecurityCheck[]): string[] {
-    const recommendations: string[] = [];
+  private generateRecommendations(
+    checks: SecurityCheck[]
+  ): SecurityRecommendation[] {
+    const recommendations: SecurityRecommendation[] = [];
     const failedChecks = checks.filter(check => !check.passed);
 
     // Critical issues
@@ -531,17 +552,21 @@ class SecurityAuditor {
       check => check.severity === 'critical'
     );
     if (criticalIssues.length > 0) {
-      recommendations.push(
-        `🚨 IMMEDIATE ACTION REQUIRED: ${criticalIssues.length} critical security issues detected`
-      );
+      recommendations.push({
+        title: 'Critical Security Issues',
+        description: `🚨 IMMEDIATE ACTION REQUIRED: ${criticalIssues.length} critical security issues detected`,
+        priority: 'high',
+      });
     }
 
     // High severity issues
     const highIssues = failedChecks.filter(check => check.severity === 'high');
     if (highIssues.length > 0) {
-      recommendations.push(
-        `⚠️ HIGH PRIORITY: Address ${highIssues.length} high severity security issues`
-      );
+      recommendations.push({
+        title: 'High Priority Issues',
+        description: `⚠️ HIGH PRIORITY: Address ${highIssues.length} high severity security issues`,
+        priority: 'high',
+      });
     }
 
     // Specific recommendations
@@ -579,15 +604,28 @@ class SecurityAuditor {
 
     // General recommendations
     if (failedChecks.length > 0) {
-      recommendations.push(
-        '📋 Schedule regular security audits and penetration testing'
-      );
-      recommendations.push('🔍 Monitor logs for suspicious activities');
-      recommendations.push('📚 Provide security training for development team');
+      recommendations.push({
+        title: 'Regular Security Audits',
+        description:
+          '📋 Schedule regular security audits and penetration testing',
+        priority: 'medium',
+      });
+      recommendations.push({
+        title: 'Log Monitoring',
+        description: '🔍 Monitor logs for suspicious activities',
+        priority: 'medium',
+      });
+      recommendations.push({
+        title: 'Security Training',
+        description: '📚 Provide security training for development team',
+        priority: 'low',
+      });
     } else {
-      recommendations.push(
-        '✅ Security posture is good - maintain current practices'
-      );
+      recommendations.push({
+        title: 'Security Status',
+        description: '✅ Security posture is good - maintain current practices',
+        priority: 'low',
+      });
     }
 
     return recommendations;
@@ -670,9 +708,9 @@ class SecurityAuditor {
         name: 'Quick RLS Check',
         description: 'Basic RLS policy validation',
         passed: !!error, // Should fail without proper authentication
-        severity: !!error ? 'low' : 'critical',
-        details: !!error ? 'RLS is working' : 'RLS bypass detected',
-        recommendation: !!error ? 'RLS is secure' : 'Fix RLS immediately',
+        severity: error ? 'low' : 'critical',
+        details: error ? 'RLS is working' : 'RLS bypass detected',
+        recommendation: error ? 'RLS is secure' : 'Fix RLS immediately',
       });
     } catch (error) {
       checks.push({

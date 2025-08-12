@@ -5,7 +5,7 @@
  * including test data creation, cleanup, and assertion helpers.
  */
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import { Database } from '../types/database';
 
 // Test database configuration
@@ -225,7 +225,7 @@ export const checkDatabaseHealth = async (): Promise<{
 
   try {
     // Check basic connectivity
-    const { data: testQuery, error: testError } = await testSupabase
+    const { error: testError } = await testSupabase
       .from('profiles')
       .select('count')
       .limit(1);
