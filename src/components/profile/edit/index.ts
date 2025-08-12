@@ -11,6 +11,7 @@ export {
   InlineSaveProgress,
 } from './SaveProgressIndicator';
 export { default as ProfileEditView } from './ProfileEditView';
+export { default as ImageCropModal } from './ImageCropModal';
 
 // 型定義のエクスポート
 export type { SaveStatus } from './SaveProgressIndicator';

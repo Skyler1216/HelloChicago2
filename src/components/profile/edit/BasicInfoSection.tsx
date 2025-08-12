@@ -1,156 +1,127 @@
-import React from 'react';
-import { User, Upload, X } from 'lucide-react';
-import { InlineValidationMessage } from './ValidationMessage';
+import React, { useState, useRef } from 'react';
+import { User, Upload } from 'lucide-react';
+import ImageCropModal from './ImageCropModal';
 
 interface BasicInfoSectionProps {
   name: string;
-  avatarUrl: string | null;
+  avatarUrl: string;
   onNameChange: (name: string) => void;
   onAvatarChange: (file: File) => void;
-  onAvatarRemove: () => void;
-  nameError?: string;
-  avatarError?: string;
-  uploading?: boolean;
-  uploadProgress?: number;
 }
 
-const BasicInfoSection = React.memo<BasicInfoSectionProps>(
-  ({
-    name,
-    avatarUrl,
-    onNameChange,
-    onAvatarChange,
-    onAvatarRemove,
-    nameError,
-    avatarError,
-    uploading = false,
-    uploadProgress = 0,
-  }) => {
-    const fileInputRef = React.useRef<HTMLInputElement>(null);
+const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
+  name,
+  avatarUrl,
+  onNameChange,
+  onAvatarChange,
+}) => {
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (file) {
-        onAvatarChange(file);
-      }
-    };
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
 
-    const handleUploadClick = () => {
-      fileInputRef.current?.click();
-    };
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      setSelectedImageFile(file);
+      setShowCropModal(true);
+    }
+  };
 
-    return (
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-6">
-        {/* Section Header */}
-        <div className="flex items-center space-x-3">
-          <User className="w-6 h-6 text-coral-600" />
-          <h2 className="text-xl font-semibold text-gray-900">基本情報</h2>
+  const handleCropComplete = (croppedFile: File) => {
+    // クロップ完了後は、ファイルを親コンポーネントに渡すだけで、自動保存はしない
+    onAvatarChange(croppedFile);
+    setSelectedImageFile(null);
+    setShowCropModal(false);
+  };
+
+  const handleCloseCropModal = () => {
+    setShowCropModal(false);
+    setSelectedImageFile(null);
+    // ファイル入力をリセット
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">基本情報</h3>
+
+      {/* アバターセクション */}
+      <div className="flex items-center space-x-6 mb-6">
+        <div className="relative">
+          <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt="プロフィール画像"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <User className="w-12 h-12 text-gray-400" />
+            )}
+          </div>
         </div>
 
-        {/* Avatar Section */}
-        <div className="space-y-4">
-          <label className="block text-sm font-medium text-gray-700">
-            プロフィール画像
-          </label>
-
-          <div className="flex items-center space-x-6">
-            {/* Avatar Display */}
-            <div className="relative">
-              <div className="w-24 h-24 bg-gradient-to-r from-coral-500 to-coral-400 rounded-full flex items-center justify-center overflow-hidden">
-                {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt="プロフィール画像"
-                    className="w-24 h-24 object-cover"
-                  />
-                ) : (
-                  <span className="text-white font-bold text-3xl">
-                    {name?.charAt(0) || 'U'}
-                  </span>
-                )}
-
-                {/* Upload Overlay */}
-                {uploading && (
-                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-full">
-                    <div className="text-center">
-                      <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mb-1"></div>
-                      <div className="text-xs text-white">
-                        {uploadProgress}%
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Remove Button */}
-              {avatarUrl && !uploading && (
-                <button
-                  type="button"
-                  onClick={onAvatarRemove}
-                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-                  aria-label="画像を削除"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-
-            {/* Upload Controls */}
-            <div className="flex-1 space-y-3">
-              {/* Upload Button */}
-              <button
-                type="button"
-                onClick={handleUploadClick}
-                disabled={uploading}
-                className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-coral-500 text-white rounded-lg hover:bg-coral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Upload className="w-4 h-4" />
-                <span>画像を選択</span>
-              </button>
-
-              {/* Hidden File Input */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-            </div>
+        <div className="flex-1">
+          <div className="mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              プロフィール画像
+            </label>
+            <p className="text-sm text-gray-500 mb-3">
+              正方形の画像が推奨されます
+            </p>
           </div>
 
-          {/* Avatar Error */}
-          {avatarError && (
-            <InlineValidationMessage type="error" message={avatarError} />
-          )}
-        </div>
-
-        {/* Name Section */}
-        <div className="space-y-2">
-          <label
-            htmlFor="name"
-            className="block text-sm font-medium text-gray-700"
-          >
-            名前 <span className="text-red-500">*</span>
-          </label>
           <input
-            id="name"
-            type="text"
-            value={name}
-            onChange={e => onNameChange(e.target.value)}
-            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-coral-500 focus:border-transparent transition-all ${
-              nameError ? 'border-red-300 bg-red-50' : 'border-gray-200'
-            }`}
-            placeholder="お名前を入力してください"
-            required
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileSelect}
+            className="hidden"
           />
-          {nameError && (
-            <InlineValidationMessage type="error" message={nameError} />
-          )}
+
+          <button
+            onClick={handleUploadClick}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            画像を選択
+          </button>
         </div>
       </div>
-    );
-  }
-);
+
+      {/* 名前セクション */}
+      <div>
+        <label
+          htmlFor="name"
+          className="block text-sm font-medium text-gray-700 mb-2"
+        >
+          名前
+        </label>
+        <input
+          type="text"
+          id="name"
+          value={name}
+          onChange={e => onNameChange(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          placeholder="あなたの名前を入力してください"
+        />
+      </div>
+
+      {/* 画像クロップモーダル */}
+      <ImageCropModal
+        isOpen={showCropModal}
+        onClose={handleCloseCropModal}
+        onCrop={handleCropComplete}
+        imageFile={selectedImageFile}
+      />
+    </div>
+  );
+};
 
 export default BasicInfoSection;

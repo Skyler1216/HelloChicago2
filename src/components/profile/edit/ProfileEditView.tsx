@@ -4,7 +4,6 @@ import { useProfileDetails } from '../../../hooks/useProfileDetails';
 import { useImageUpload } from '../../../hooks/useImageUpload';
 import { useToast } from '../../../hooks/useToast';
 import { useAuth } from '../../../hooks/useAuth';
-
 import ProfileEditLayout from './ProfileEditLayout';
 import BasicInfoSection from './BasicInfoSection';
 import DetailInfoSection from './DetailInfoSection';
@@ -30,7 +29,7 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
     } = useProfileDetails(profile.id);
 
     const { addToast } = useToast();
-    const { uploadImage, uploading, uploadProgress } = useImageUpload();
+    const { uploadImage, uploadProgress } = useImageUpload();
     const { updateProfile: updateAuthProfile } = useAuth();
 
     // 保存状態
@@ -44,6 +43,9 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
       arrivalDate: '',
       familyStructure: '',
     });
+
+    // 一時的な画像ファイル（保存時にアップロード用）
+    const [tempImageFile, setTempImageFile] = useState<File | null>(null);
 
     // 初期データの設定
     useEffect(() => {
@@ -64,9 +66,10 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
         formData.name !== (profile.name || '') ||
         formData.avatarUrl !== (profile.avatar_url || '') ||
         formData.arrivalDate !== (profileDetails.arrival_date || '') ||
-        formData.familyStructure !== (profileDetails.family_structure || '')
+        formData.familyStructure !== (profileDetails.family_structure || '') ||
+        tempImageFile !== null
       );
-    }, [formData, profile, profileDetails]);
+    }, [formData, profile, profileDetails, tempImageFile]);
 
     // バリデーションエラー
     const [validationErrors, setValidationErrors] = useState<
@@ -105,17 +108,6 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
         }
       }
 
-      // 到着日のバリデーション（必要に応じて実装）
-      // if (formData.arrivalDate) {
-      //   const arrivalValidation = ProfileValidation.arrivalDate(
-      //     formData.arrivalDate
-      //   );
-      //   if (!arrivalValidation.isValid) {
-      //     errors.arrivalDate = arrivalValidation.errors[0];
-      //     isValid = false;
-      //   }
-      // }
-
       setValidationErrors(errors);
       return isValid;
     }, [formData]);
@@ -132,12 +124,31 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
       setSaveError('');
 
       try {
-        // プロフィール基本情報の更新（現在は使用していない）
-        // const profileUpdates: Partial<Profile> = {
-        //   name: formData.name,
-        //   avatar_url: formData.avatarUrl || null,
-        //   updated_at: new Date().toISOString(),
-        // };
+        let avatarUrl = formData.avatarUrl;
+
+        // 画像ファイルがある場合は先にアップロード
+        if (tempImageFile) {
+          console.log('🔄 Uploading image...');
+          const uploadedUrl = await uploadImage(
+            tempImageFile,
+            profile.id,
+            async url => {
+              console.log('✅ Image uploaded successfully:', url);
+              avatarUrl = url;
+            }
+          );
+
+          if (!uploadedUrl) {
+            throw new Error('画像のアップロードに失敗しました');
+          }
+        }
+
+        // プロフィール基本情報の更新
+        const profileUpdates: Partial<Profile> = {
+          name: formData.name,
+          avatar_url: avatarUrl,
+          updated_at: new Date().toISOString(),
+        };
 
         // プロフィール詳細情報の更新
         const detailsUpdates = {
@@ -148,10 +159,7 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
         // 並行して更新
         const [profileResult, detailsResult] = await Promise.all([
           // 基本情報の更新
-          profile.name !== formData.name ||
-          profile.avatar_url !== formData.avatarUrl
-            ? updateProfile()
-            : Promise.resolve({ success: true }),
+          updateAuthProfile(profileUpdates),
 
           // 詳細情報の更新
           profileDetails
@@ -162,9 +170,12 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
               }),
         ]);
 
-        if (profileResult.success && detailsResult) {
+        if (profileResult && detailsResult) {
           setSaveStatus('success');
           addToast('success', 'プロフィールが更新されました');
+
+          // 一時ファイルをクリア
+          setTempImageFile(null);
 
           // 成功後即座に親コンポーネントに通知（即座反映のため）
           onSave?.();
@@ -181,48 +192,29 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
       }
     };
 
-    // プロフィール更新（基本情報）
-    const updateProfile = async () => {
-      // ここでは既存のuseProfileDetailsフックを使用
-      // 実際の実装では、プロフィール更新用のフックが必要
-      return { success: true };
-    };
-
     // 画像アップロード処理
     const handleAvatarChange = async (file: File) => {
       try {
-        const uploadedUrl = await uploadImage(file, profile.id, async url => {
-          console.log('🔄 Image upload successful, updating profile...', {
-            url,
-          });
+        // 画像ファイルを一時的に保存（アップロードは保存ボタンクリック時に行う）
+        setFormData(prev => ({
+          ...prev,
+          avatarUrl: URL.createObjectURL(file),
+        }));
 
-          // アップロード成功後のコールバック
-          setFormData(prev => ({ ...prev, avatarUrl: url }));
+        // ファイルを一時保存（後でアップロード用）
+        setTempImageFile(file);
 
-          // プロフィール基本情報を即座に更新（useAuthを使用）
-          const success = await updateAuthProfile({ avatar_url: url });
-          if (!success) {
-            console.error('❌ Profile update failed');
-          } else {
-            console.log('✅ Profile updated successfully, notifying parent...');
-            // 成功したら親コンポーネントに通知（即座反映のため）
-            onSave?.();
-          }
+        console.log('🔄 Image selected, waiting for save...', { file });
 
-          addToast('success', '画像がアップロードされました');
-        });
-
-        if (!uploadedUrl) {
-          addToast('error', '画像のアップロードに失敗しました');
-        }
+        // 自動保存は行わない - ユーザーが保存ボタンをクリックするまで待機
+        addToast(
+          'info',
+          '画像が選択されました。保存ボタンをクリックしてプロフィールを更新してください。'
+        );
       } catch (error) {
-        console.error('Image upload failed:', error);
-        addToast('error', '画像のアップロードに失敗しました');
+        console.error('Image selection failed:', error);
+        addToast('error', '画像の選択に失敗しました');
       }
-    };
-
-    const handleAvatarRemove = () => {
-      setFormData(prev => ({ ...prev, avatarUrl: '' }));
     };
 
     // フォームデータ更新ハンドラー
@@ -285,11 +277,6 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
               avatarUrl={formData.avatarUrl}
               onNameChange={name => updateFormData('name', name)}
               onAvatarChange={handleAvatarChange}
-              onAvatarRemove={handleAvatarRemove}
-              nameError={validationErrors.name}
-              avatarError={validationErrors.avatarUrl}
-              uploading={uploading}
-              uploadProgress={uploadProgress}
             />
 
             {/* 詳細情報セクション */}
@@ -316,7 +303,7 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
         {/* 保存進捗表示 */}
         <SaveProgressIndicator
           status={saveStatus}
-          progress={uploadProgress}
+          progress={uploadProgress || 0}
           errorMessage={saveError}
         />
       </>
