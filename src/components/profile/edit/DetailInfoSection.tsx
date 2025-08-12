@@ -308,14 +308,18 @@ const DetailInfoSection = React.memo<DetailInfoSectionProps>(
           <div className="flex items-center space-x-3 mb-4">
             <Calendar className="w-5 h-5 text-coral-600" />
             <h3 className="text-lg font-semibold text-gray-900">
-              シカゴ到着日
+              アメリカ到着日
             </h3>
           </div>
+          <p className="text-sm text-gray-600 mb-3">
+            アメリカに初めて来た日付を設定してください。これにより、シカゴ在住年数が自動計算されます。
+          </p>
           <input
             type="date"
             value={arrivalDate}
             onChange={e => onArrivalDateChange(e.target.value)}
             className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-coral-500 focus:border-transparent transition-all"
+            placeholder="日付を選択してください"
           />
           {errors.arrival_date && (
             <div className="mt-2">

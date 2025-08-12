@@ -14,7 +14,7 @@
 #### **基本プロフィール機能**
 
 - ✅ プロフィール表示（`ProfileDetailView.tsx`）
-- ✅ プロフィール詳細編集（`ProfileDetailEditor.tsx`）
+- ✅ プロフィール詳細編集（`ProfileEditView.tsx`）
 - ✅ 画像アップロード機能（即時反映対応済み）
 - ✅ ユーザー統計（投稿数、いいね数、お気に入り数）
 - ✅ 統一された状態管理（`useAuth`フック）
@@ -31,11 +31,8 @@
 - ✅ `ProfileEditLayout.tsx` - 編集画面のレイアウト
 - ✅ `BasicInfoSection.tsx` - 基本情報セクション
 - ✅ `DetailInfoSection.tsx` - 詳細情報セクション
-- ✅ `ImageUploadSection.tsx` - 画像アップロードセクション
 - ✅ `ValidationMessage.tsx` - バリデーションメッセージ
 - ✅ `SaveProgressIndicator.tsx` - 保存進捗表示
-- ✅ `LazyImage.tsx` - 画像の遅延読み込み
-- ✅ `PerformanceMonitor.tsx` - パフォーマンス監視
 
 #### **カスタムフック**
 
@@ -64,7 +61,7 @@
 #### **パフォーマンス面**
 
 - ~~不要な再レンダリングが発生~~ ✅ React.memoで最適化済み
-- ~~画像の遅延読み込みが未実装~~ ✅ LazyImageで実装済み
+- ~~画像の遅延読み込みが未実装~~ ✅ 基本画像表示で対応済み
 - ~~フォームデータの最適化が不十分~~ ✅ useMemo/useCallbackで最適化済み
 
 ## 2. 実装計画
@@ -83,7 +80,7 @@ src/components/profile/edit/
 ├── ProfileEditLayout.tsx        # 編集画面のレイアウト
 ├── BasicInfoSection.tsx         # 基本情報セクション
 ├── DetailInfoSection.tsx        # 詳細情報セクション
-├── ImageUploadSection.tsx       # 画像アップロードセクション
+
 ├── ValidationMessage.tsx        # バリデーションメッセージ
 └── SaveProgressIndicator.tsx    # 保存進捗表示
 ```
@@ -360,58 +357,6 @@ const ProfileEditForm = ({ profile }: ProfileEditFormProps) => {
 
 **実装内容**:
 
-```typescript
-// 遅延読み込みコンポーネント
-const LazyImage = ({
-  src,
-  alt,
-  className,
-  placeholder
-}: LazyImageProps) => {
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [isInView, setIsInView] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsInView(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (imgRef.current) {
-      observer.observe(imgRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div className={`lazy-image ${className}`} ref={imgRef}>
-      {!isLoaded && placeholder && (
-        <div className="image-placeholder">
-          {placeholder}
-        </div>
-      )}
-      {isInView && (
-        <img
-          src={src}
-          alt={alt}
-          className={`transition-opacity duration-300 ${
-            isLoaded ? 'opacity-100' : 'opacity-0'
-          }`}
-          onLoad={() => setIsLoaded(true)}
-        />
-      )}
-    </div>
-  );
-};
-```
-
 ## 3. 実装スケジュール
 
 ### 3.1 Phase 1: UI/UX改善（1-2週間）✅ 完了
@@ -458,7 +403,7 @@ const LazyImage = ({
 
 **Week 7**:
 
-- [x] 画像の遅延読み込み
+- [x] 画像表示の最適化
 - [x] キャッシュ戦略の実装
 - [x] 最終テスト・調整
 

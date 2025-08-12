@@ -16,7 +16,7 @@ import { Database } from '../types/database';
 import { useUserStats } from '../hooks/useUserStats';
 import { useCommunityInfo } from '../hooks/useCommunityInfo';
 import { useAuth } from '../hooks/useAuth';
-import ProfileEditModal from './ProfileEditModal';
+import ProfileEditView from './profile/edit/ProfileEditView';
 import UserPostsView from './UserPostsView';
 import FavoritesView from './FavoritesView';
 import SettingsView from './settings/SettingsView';
@@ -405,17 +405,19 @@ export default function ProfileView({
 
       {/* Profile Edit Modal */}
       {showEditModal && activeProfile && (
-        <ProfileEditModal
-          isOpen={showEditModal}
-          onClose={() => setShowEditModal(false)}
-          profile={activeProfile}
-          onUpdate={updatedProfile => {
-            // プロフィール更新後の処理
-            console.log('Profile updated:', updatedProfile);
-            // 強制再読み込みで状態を同期
-            handleProfileUpdate();
-          }}
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <ProfileEditView
+              profile={activeProfile}
+              onBack={() => setShowEditModal(false)}
+              onSave={() => {
+                setShowEditModal(false);
+                // 強制再読み込みで状態を同期
+                handleProfileUpdate();
+              }}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

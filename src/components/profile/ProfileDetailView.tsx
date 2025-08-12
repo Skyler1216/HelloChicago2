@@ -112,6 +112,20 @@ export default function ProfileDetailView({
     }
   };
 
+  const calculateYearsInChicago = (arrivalDate: string) => {
+    const arrival = new Date(arrivalDate);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - arrival.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 365) {
+      return null; // 1年未満の場合は年数表示なし
+    }
+
+    const years = Math.floor(diffDays / 365);
+    return years;
+  };
+
   return (
     <div className="space-y-4">
       {/* 編集ボタン（自分のプロフィールの場合） */}
@@ -126,6 +140,25 @@ export default function ProfileDetailView({
           </button>
         </div>
       )}
+
+      {/* シカゴ在住年数（目立つ表示） */}
+      {profileDetails.arrival_date &&
+        calculateYearsInChicago(profileDetails.arrival_date) && (
+          <div className="bg-gradient-to-r from-coral-500 to-coral-600 rounded-2xl p-6 shadow-sm border border-coral-200">
+            <div className="text-center">
+              <div className="flex items-center justify-center space-x-2 mb-2">
+                <Calendar className="w-6 h-6 text-white" />
+                <h3 className="text-xl font-bold text-white">シカゴ在住</h3>
+              </div>
+              <div className="text-4xl font-bold text-white mb-2">
+                {calculateYearsInChicago(profileDetails.arrival_date)}年目
+              </div>
+              <p className="text-coral-100 text-sm">
+                アメリカ到着: {formatDate(profileDetails.arrival_date)}
+              </p>
+            </div>
+          </div>
+        )}
 
       {/* 自己紹介 */}
       {profileDetails.bio && (
@@ -157,12 +190,12 @@ export default function ProfileDetailView({
             </div>
           )}
 
-          {/* シカゴ到着日 */}
+          {/* アメリカ到着日 */}
           {profileDetails.arrival_date && (
             <div className="flex items-center space-x-3">
               <Calendar className="w-5 h-5 text-gray-400 flex-shrink-0" />
               <div>
-                <span className="text-sm text-gray-600">シカゴ到着:</span>
+                <span className="text-sm text-gray-600">アメリカ到着:</span>
                 <span className="ml-2 text-gray-900 font-medium">
                   {formatDate(profileDetails.arrival_date)}
                 </span>

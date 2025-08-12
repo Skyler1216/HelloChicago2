@@ -200,8 +200,14 @@ src/components/settings/
 
 ```
 src/components/profile/
-├── ProfileDetailEditor.tsx    # 詳細情報編集
-├── ImageUploader.tsx          # 画像アップロード
+├── ProfileDetailView.tsx      # 詳細情報表示
+├── edit/                      # プロフィール編集関連
+│   ├── ProfileEditView.tsx    # メイン編集画面
+│   ├── BasicInfoSection.tsx   # 基本情報編集
+│   ├── DetailInfoSection.tsx  # 詳細情報編集
+│   ├── ProfileEditLayout.tsx  # 編集画面レイアウト
+│   ├── ValidationMessage.tsx  # バリデーションメッセージ
+│   └── SaveProgressIndicator.tsx # 保存進捗表示
 ├── AchievementBadges.tsx      # アチーブメント表示
 ├── ActivityDashboard.tsx      # 活動ダッシュボード
 └── SocialConnections.tsx      # フォロー機能
@@ -464,7 +470,7 @@ const scanImageFile = async (file: File): Promise<boolean> => {
 #### 🔍 分析対象ファイル
 
 - `src/components/ProfileView.tsx` (改善済み)
-- `src/components/ProfileEditModal.tsx` (統合編集対応)
+- `src/components/profile/edit/ProfileEditView.tsx` (統合編集対応)
 - `src/hooks/useProfileDetails.ts` (121行)
 - `src/hooks/useUserStats.ts` (128行)
 - `src/hooks/useImageUpload.ts` (142行)
@@ -567,7 +573,7 @@ RETURNS jsonb AS $$
 
 #### 6. バリデーションの強化
 
-**問題箇所**: `ProfileDetailEditor.tsx:236-244`
+**問題箇所**: `ProfileEditView.tsx` (詳細情報セクション)
 
 ```typescript
 // 自己紹介のバリデーション
