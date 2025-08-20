@@ -25,11 +25,29 @@ export default function InboxItem({
   const getIcon = () => {
     switch (item.type) {
       case 'notification':
-        return <Bell className="w-5 h-5 text-blue-500" />;
+        return (
+          <Bell
+            className={`w-5 h-5 ${
+              item.isRead ? 'text-gray-400' : 'text-blue-500'
+            }`}
+          />
+        );
       case 'message':
-        return <MessageSquare className="w-5 h-5 text-green-500" />;
+        return (
+          <MessageSquare
+            className={`w-5 h-5 ${
+              item.isRead ? 'text-gray-400' : 'text-green-500'
+            }`}
+          />
+        );
       default:
-        return <Bell className="w-5 h-5 text-gray-500" />;
+        return (
+          <Bell
+            className={`w-5 h-5 ${
+              item.isRead ? 'text-gray-400' : 'text-gray-500'
+            }`}
+          />
+        );
     }
   };
 
@@ -50,9 +68,9 @@ export default function InboxItem({
 
   return (
     <div
-      className={`p-4 bg-white border-l-4 transition-all duration-200 hover:shadow-md cursor-pointer ${
+      className={`p-4 border-l-4 transition-all duration-200 hover:shadow-md cursor-pointer ${
         item.isRead
-          ? 'border-gray-200 opacity-75'
+          ? 'border-gray-200 bg-gray-50 opacity-90'
           : 'border-coral-500 bg-coral-50'
       }`}
       onClick={onAction}
@@ -62,13 +80,20 @@ export default function InboxItem({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
-            <h3
-              className={`text-sm font-medium ${
-                item.isRead ? 'text-gray-600' : 'text-gray-900'
-              }`}
-            >
-              {item.title}
-            </h3>
+            <div className="flex items-center space-x-2">
+              <h3
+                className={`text-sm font-medium ${
+                  item.isRead ? 'text-gray-600' : 'text-gray-900'
+                }`}
+              >
+                {item.title}
+              </h3>
+              {item.isRead && (
+                <span className="px-2 py-1 text-xs bg-gray-100 text-gray-500 rounded-full">
+                  既読済
+                </span>
+              )}
+            </div>
             <div className="flex items-center space-x-2">
               {item.priority && (
                 <span
