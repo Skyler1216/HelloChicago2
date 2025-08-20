@@ -41,7 +41,7 @@ export default function Layout({
       {/* Bottom Navigation */}
       <nav className="bg-white border-t border-gray-200 sticky bottom-0 z-40">
         <div className="max-w-md mx-auto px-4">
-          <div className="flex justify-around py-2">
+          <div className="flex justify-between py-2">
             {navItems.map(item => {
               const IconComponent = item.icon;
               const isActive = currentView === item.id;
@@ -50,7 +50,7 @@ export default function Layout({
                 <button
                   key={item.id}
                   onClick={() => onViewChange(item.id)}
-                  className={`flex flex-col items-center space-y-1 px-3 py-2 rounded-lg transition-all duration-200 ${
+                  className={`flex-1 flex flex-col items-center space-y-1 px-3 py-2 rounded-lg transition-all duration-200 ${
                     isActive
                       ? 'text-coral-600 bg-coral-50 scale-105'
                       : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
