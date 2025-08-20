@@ -87,8 +87,8 @@ export default function InboxItem({
         <div className="flex-shrink-0 mt-1">{getIcon()}</div>
 
         <div className="flex-1 min-w-0 space-y-2">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center space-x-2">
+          <div className="flex items-start justify-between mb-1">
+            <div className="flex-1 min-w-0 mr-2">
               <h3
                 className={`text-sm font-medium line-clamp-1 ${
                   item.isRead ? 'text-gray-600' : 'text-gray-900'
@@ -97,20 +97,20 @@ export default function InboxItem({
               >
                 {item.title}
               </h3>
+            </div>
+            <div className="flex items-center space-x-2 flex-shrink-0">
               {item.isRead && (
-                <span className="px-2 py-1 text-xs bg-gray-100 text-gray-500 rounded-full">
+                <span className="px-2 py-1 text-xs bg-gray-100 text-gray-500 rounded-full whitespace-nowrap">
                   既読済
                 </span>
               )}
-            </div>
-            <div className="flex items-center space-x-2">
               {!item.isRead && (
                 <button
                   onClick={e => {
                     e.stopPropagation();
                     onMarkAsRead();
                   }}
-                  className="p-1 text-coral-600 hover:text-coral-700 hover:bg-coral-100 rounded-full transition-colors"
+                  className="p-1 text-coral-600 hover:text-coral-700 hover:bg-coral-100 rounded-full transition-colors flex-shrink-0"
                 >
                   <Check className="w-4 h-4" />
                 </button>
