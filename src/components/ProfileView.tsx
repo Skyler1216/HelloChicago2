@@ -444,7 +444,10 @@ export default function ProfileView({
       {/* Profile Edit Modal */}
       {showEditModal && activeProfile && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div
+            className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
             <ProfileEditView
               profile={activeProfile}
               onBack={() => setShowEditModal(false)}
@@ -455,6 +458,11 @@ export default function ProfileView({
               }}
             />
           </div>
+          {/* Overlay click handler */}
+          <div
+            className="absolute inset-0 -z-10"
+            onClick={() => setShowEditModal(false)}
+          />
         </div>
       )}
     </div>

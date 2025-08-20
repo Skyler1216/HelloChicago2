@@ -112,7 +112,10 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden">
+      <div
+        className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
         {/* ヘッダー */}
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="text-lg font-semibold text-gray-900">
@@ -180,6 +183,8 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
           </button>
         </div>
       </div>
+      {/* Overlay click handler */}
+      <div className="absolute inset-0 -z-10" onClick={onClose} />
     </div>
   );
 };

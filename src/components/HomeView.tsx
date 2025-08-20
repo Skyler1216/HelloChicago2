@@ -159,7 +159,10 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
       {/* Post Type Selection Modal */}
       {showPostModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50">
-          <div className="bg-white rounded-t-3xl w-full max-w-md p-6 pb-8">
+          <div
+            className="bg-white rounded-t-3xl w-full max-w-md p-6 pb-8"
+            onClick={e => e.stopPropagation()}
+          >
             {/* Modal Header */}
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-bold text-gray-900">投稿する</h3>
@@ -201,6 +204,11 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
               })}
             </div>
           </div>
+          {/* Overlay click handler */}
+          <div
+            className="absolute inset-0 -z-10"
+            onClick={() => setShowPostModal(false)}
+          />
         </div>
       )}
     </div>

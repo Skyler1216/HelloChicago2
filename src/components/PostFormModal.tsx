@@ -110,7 +110,10 @@ export default function PostFormModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div
+        className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <h2 className="text-xl font-bold text-gray-900">新しい投稿</h2>
@@ -118,7 +121,7 @@ export default function PostFormModal({
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5 text-red-500" />
           </button>
         </div>
 
@@ -219,8 +222,8 @@ export default function PostFormModal({
                 {formData.type === 'post'
                   ? '体験談・詳細'
                   : formData.type === 'consultation'
-                    ? '相談内容'
-                    : '詳細・条件'}
+                    ? '相談内容・詳細'
+                    : '譲渡内容・詳細'}
               </label>
               <textarea
                 value={formData.content}
@@ -229,10 +232,10 @@ export default function PostFormModal({
                 }
                 placeholder={
                   formData.type === 'post'
-                    ? 'あなたの体験を詳しく教えてください。他の方の参考になるように、具体的な情報（料金、予約方法、注意点など）も含めてください。'
+                    ? 'あなたの体験を詳しく教えてください。他の方の参考になるように、具体的な情報 (料金、予約方法、注意点など)も含めてください。'
                     : formData.type === 'consultation'
-                      ? '相談したい内容を詳しく教えてください。状況や背景も含めて書いていただくと、より適切なアドバイスがもらえます。'
-                      : '譲渡したいもの・欲しいものの詳細、状態、受け渡し方法などを教えてください。'
+                      ? 'どのような相談でしょうか？できるだけ詳しく教えてください。他の方からのアドバイスが得やすくなります。'
+                      : '譲渡したいものについて詳しく教えてください。状態、サイズ、受け渡し方法などを含めてください。'
                 }
                 rows={6}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-coral-500 focus:border-transparent transition-all resize-none"
@@ -243,17 +246,11 @@ export default function PostFormModal({
             {/* Photo Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                写真（任意）
+                写真 (任意)
               </label>
-              <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-coral-400 transition-colors">
-                <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-600 mb-2">写真をアップロード</p>
-                <button
-                  type="button"
-                  className="text-coral-600 text-sm font-medium hover:text-coral-700 transition-colors"
-                >
-                  ファイルを選択
-                </button>
+              <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-coral-400 transition-colors">
+                <Camera className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500 text-sm">写真を追加する</p>
               </div>
             </div>
 
@@ -261,33 +258,25 @@ export default function PostFormModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-gradient-to-r from-coral-500 to-coral-400 text-white py-3 px-6 rounded-xl font-semibold flex items-center justify-center space-x-2 hover:from-coral-600 hover:to-coral-500 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-coral-500 text-white py-3 px-6 rounded-xl font-semibold hover:bg-coral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
             >
               {isSubmitting ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>送信中...</span>
+                  <span>投稿中...</span>
                 </>
               ) : (
                 <>
                   <Send className="w-5 h-5" />
-                  <span>
-                    {formData.type === 'post'
-                      ? '体験をシェアする'
-                      : formData.type === 'consultation'
-                        ? '相談する'
-                        : '投稿する'}
-                  </span>
+                  <span>投稿する</span>
                 </>
               )}
             </button>
-
-            <p className="text-xs text-gray-500 text-center">
-              投稿内容はコミュニティガイドラインに従ってください
-            </p>
           </form>
         </div>
       </div>
+      {/* Overlay click handler */}
+      <div className="absolute inset-0 -z-10" onClick={onClose} />
     </div>
   );
 }
