@@ -46,30 +46,60 @@ export default function CategoryFilter({
         >
           すべて
         </button>
-        {categories.map(category => {
-          const IconComponent =
-            LucideIcons[category.icon as keyof typeof LucideIcons];
+        {categories
+          .sort((a, b) => {
+            // カテゴリの並び順を定義（その他を確実に最後に）
+            const order = [
+              'restaurant',
+              'park',
+              'shopping',
+              'entertainment',
+              'sports',
+              'school',
+              'children', // 子ども
+              'hospital', // 病院
+              'beauty', // 美容院
+              'other', // その他を最後に
+            ];
 
-          return (
-            <button
-              key={category.id}
-              onClick={() => onCategorySelect(category.id)}
-              className={`flex-shrink-0 flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                selectedCategory === category.id
-                  ? 'text-white border-2 border-transparent'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-              style={
-                selectedCategory === category.id
-                  ? { backgroundColor: category.color }
-                  : {}
-              }
-            >
-              {IconComponent && <IconComponent className="w-4 h-4" />}
-              <span>{category.name_ja}</span>
-            </button>
-          );
-        })}
+            const aIndex = order.indexOf(a.id);
+            const bIndex = order.indexOf(b.id);
+
+            // その他は必ず最後に
+            if (a.id === 'other') return 1;
+            if (b.id === 'other') return -1;
+
+            // 定義された順序にないカテゴリはその他の前に配置
+            if (aIndex === -1 && bIndex === -1) return 0;
+            if (aIndex === -1) return -1;
+            if (bIndex === -1) return 1;
+
+            return aIndex - bIndex;
+          })
+          .map(category => {
+            const IconComponent =
+              LucideIcons[category.icon as keyof typeof LucideIcons];
+
+            return (
+              <button
+                key={category.id}
+                onClick={() => onCategorySelect(category.id)}
+                className={`flex-shrink-0 flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  selectedCategory === category.id
+                    ? 'text-white border-2 border-transparent'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+                style={
+                  selectedCategory === category.id
+                    ? { backgroundColor: category.color }
+                    : {}
+                }
+              >
+                {IconComponent && <IconComponent className="w-4 h-4" />}
+                <span>{category.name_ja}</span>
+              </button>
+            );
+          })}
       </div>
     </div>
   );

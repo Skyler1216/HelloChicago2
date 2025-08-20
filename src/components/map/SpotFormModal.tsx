@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, MapPin } from 'lucide-react';
+import { X, MapPin, Star, MessageSquare } from 'lucide-react';
 import { useCategories } from '../../hooks/useCategories';
 import { useMapSpots } from '../../hooks/useMapSpots';
 import { MapSpot, CreateMapSpotData, UpdateMapSpotData } from '../../types/map';
@@ -27,9 +27,15 @@ export default function SpotFormModal({
     is_public: true,
   });
 
+  // 口コミと評価の状態
+  const [rating, setRating] = useState<number>(0);
+  const [comment, setComment] = useState<string>('');
+  const [showRatingSection, setShowRatingSection] = useState(false);
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { categories } = useCategories();
-  const { createSpot, updateSpot, loading, error } = useMapSpots();
+  const { createSpot, updateSpot, rateSpot, addNote, loading, error } =
+    useMapSpots();
 
   const isEditing = !!spot;
 
@@ -91,6 +97,24 @@ export default function SpotFormModal({
       } else {
         const newSpot = await createSpot(formData);
         if (newSpot) {
+          // 評価と口コミを追加
+          if (rating > 0) {
+            await rateSpot({
+              spot_id: newSpot.id,
+              rating,
+              comment: comment.trim() || undefined,
+            });
+          }
+
+          // メモを追加（口コミとして）
+          if (comment.trim()) {
+            await addNote({
+              spot_id: newSpot.id,
+              note: comment.trim(),
+              is_private: false,
+            });
+          }
+
           onClose();
         }
       }
@@ -222,6 +246,81 @@ export default function SpotFormModal({
               </span>
             </label>
           </div>
+
+          {/* 評価と口コミセクション */}
+          {!isEditing && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium text-gray-900">
+                  評価と口コミ
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowRatingSection(!showRatingSection)}
+                  className="text-sm text-coral-600 hover:text-coral-700 font-medium"
+                >
+                  {showRatingSection ? '非表示' : '追加'}
+                </button>
+              </div>
+
+              {showRatingSection && (
+                <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                  {/* 星評価 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      評価{' '}
+                      <span className="text-sm text-gray-500">
+                        （オプション）
+                      </span>
+                    </label>
+                    <div className="flex items-center space-x-1">
+                      {[1, 2, 3, 4, 5].map(star => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setRating(star)}
+                          className="p-1 hover:scale-110 transition-transform"
+                        >
+                          <Star
+                            className={`w-6 h-6 ${
+                              star <= rating
+                                ? 'text-yellow-400 fill-current'
+                                : 'text-gray-300'
+                            }`}
+                          />
+                        </button>
+                      ))}
+                      {rating > 0 && (
+                        <span className="ml-2 text-sm text-gray-600">
+                          {rating}/5
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 口コミ */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      口コミ・感想{' '}
+                      <span className="text-sm text-gray-500">
+                        （オプション）
+                      </span>
+                    </label>
+                    <div className="relative">
+                      <MessageSquare className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                      <textarea
+                        value={comment}
+                        onChange={e => setComment(e.target.value)}
+                        rows={3}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent transition-all"
+                        placeholder="このスポットについての感想やおすすめポイントを教えてください"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* エラーメッセージ */}
           {error && (

@@ -27,7 +27,7 @@ export default function MapView() {
     'recent'
   );
   const [showSpotForm, setShowSpotForm] = useState(false);
-  const [clickedLocation] = useState<{
+  const [clickedLocation, setClickedLocation] = useState<{
     lat: number;
     lng: number;
     address?: string;
@@ -307,6 +307,10 @@ export default function MapView() {
               onPostSelect={setSelectedPost}
               searchQuery={searchQuery}
               distanceFilter={distanceFilter}
+              onLocationClick={location => {
+                console.log('Location clicked in MapView:', location); // デバッグログ
+                setClickedLocation(location);
+              }}
             />
           )}
         </div>
@@ -322,8 +326,11 @@ export default function MapView() {
 
       {/* Spot Form Modal */}
       <SpotFormModal
-        isOpen={showSpotForm}
-        onClose={() => setShowSpotForm(false)}
+        isOpen={showSpotForm || !!clickedLocation}
+        onClose={() => {
+          setShowSpotForm(false);
+          setClickedLocation(null);
+        }}
         location={clickedLocation || undefined}
       />
     </div>
