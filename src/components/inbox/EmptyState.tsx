@@ -2,7 +2,7 @@ import React from 'react';
 import { Inbox, Bell, MessageSquare } from 'lucide-react';
 
 interface EmptyStateProps {
-  currentFilter: 'all' | 'notification' | 'message';
+  currentFilter: 'notification' | 'message';
 }
 
 export default function EmptyState({ currentFilter }: EmptyStateProps) {
@@ -22,9 +22,9 @@ export default function EmptyState({ currentFilter }: EmptyStateProps) {
         };
       default:
         return {
-          icon: Inbox,
-          title: '受信トレイは空です',
-          description: '通知やメッセージが届くとここに表示されます',
+          icon: Bell,
+          title: '通知はありません',
+          description: '新しい通知が届くとここに表示されます',
         };
     }
   };

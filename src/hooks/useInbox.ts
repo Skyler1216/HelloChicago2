@@ -5,12 +5,18 @@ import { formatSupabaseError, logError } from '../utils/errorHandler';
 
 type Notification = Database['public']['Tables']['notifications']['Row'];
 type Comment = Database['public']['Tables']['comments']['Row'];
-// 未使用の型定義を削除
-type CommentWithProfile = Comment & {
+
+// Comment with profile and read status
+type CommentWithProfileAndReadStatus = Comment & {
   profiles: {
     name: string;
     avatar_url: string | null;
   };
+  comment_reads:
+    | {
+        read_at: string;
+      }[]
+    | null;
 };
 
 interface InboxItem {
@@ -43,8 +49,8 @@ interface UseInboxReturn {
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   refreshInbox: () => Promise<void>;
-  filterByType: (type: 'all' | 'notification' | 'message') => void;
-  currentFilter: 'all' | 'notification' | 'message';
+  filterByType: (type: 'notification' | 'message') => void;
+  currentFilter: 'notification' | 'message';
 }
 
 export function useInbox(userId: string): UseInboxReturn {
@@ -54,8 +60,8 @@ export function useInbox(userId: string): UseInboxReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentFilter, setCurrentFilter] = useState<
-    'all' | 'notification' | 'message'
-  >('all');
+    'notification' | 'message'
+  >('notification');
 
   // Load notifications
   const loadNotifications = useCallback(async () => {
@@ -88,13 +94,14 @@ export function useInbox(userId: string): UseInboxReturn {
       if (userPosts && userPosts.length > 0) {
         const postIds = userPosts.map(post => post.id);
 
-        // Get comments on user's posts
+        // Get comments on user's posts with read status
         const { data: comments, error: commentsError } = await supabase
           .from('comments')
           .select(
             `
             *,
-            profiles!comments_author_id_fkey(name, avatar_url)
+            profiles!comments_author_id_fkey(name, avatar_url),
+            comment_reads!left(read_at)
           `
           )
           .in('post_id', postIds)
@@ -102,8 +109,6 @@ export function useInbox(userId: string): UseInboxReturn {
           .order('created_at', { ascending: false });
 
         if (commentsError) throw commentsError;
-
-        // コメントに投稿情報を追加（未使用のため削除）
 
         setMessages(comments || []);
       } else {
@@ -134,18 +139,20 @@ export function useInbox(userId: string): UseInboxReturn {
       });
     });
 
-    // Transform messages
-    (messages as CommentWithProfile[]).forEach(comment => {
+    // Transform messages with read status
+    (messages as CommentWithProfileAndReadStatus[]).forEach(comment => {
+      const isRead = comment.comment_reads && comment.comment_reads.length > 0;
+
       items.push({
         id: comment.id,
         type: 'message' as const,
         title: `${comment.profiles?.name || 'ユーザー'}からのコメント`,
         message: comment.content,
         timestamp: comment.created_at,
-        isRead: false, // Comments are always considered unread for inbox
+        isRead: isRead || false,
         postId: comment.post_id,
         postTitle: '投稿', // TODO: 投稿タイトルを取得
-        postType: 'post', // TODO: 投稿タイプを取得
+        postType: 'post', // TODO: 投稿タイトルを取得
         authorName: comment.profiles?.name || 'ユーザー',
         authorAvatar: comment.profiles?.avatar_url || '',
         commentContent: comment.content,
@@ -177,44 +184,66 @@ export function useInbox(userId: string): UseInboxReturn {
     }
   }, [loadNotifications, loadMessages]);
 
-  // Mark notification as read
+  // Mark item as read (handles both notifications and comments)
   const markAsRead = useCallback(
     async (id: string) => {
       try {
-        const { error: updateError } = await supabase
-          .from('notifications')
-          .update({
-            is_read: true,
-            read_at: new Date().toISOString(),
-          })
-          .eq('id', id)
-          .eq('recipient_id', userId);
+        // Find the item to determine its type
+        const item = inboxItems.find(item => item.id === id);
+        if (!item) return;
 
-        if (updateError) throw updateError;
+        if (item.type === 'notification') {
+          // Mark notification as read
+          const { error: updateError } = await supabase
+            .from('notifications')
+            .update({
+              is_read: true,
+              read_at: new Date().toISOString(),
+            })
+            .eq('id', id)
+            .eq('recipient_id', userId);
 
-        // Update local state
-        setNotifications(prev =>
-          prev.map(notification =>
-            notification.id === id
-              ? {
-                  ...notification,
-                  is_read: true,
-                  read_at: new Date().toISOString(),
-                }
-              : notification
-          )
-        );
+          if (updateError) throw updateError;
+
+          // Update local state
+          setNotifications(prev =>
+            prev.map(notification =>
+              notification.id === id
+                ? {
+                    ...notification,
+                    is_read: true,
+                    read_at: new Date().toISOString(),
+                  }
+                : notification
+            )
+          );
+        } else if (item.type === 'message') {
+          // Mark comment as read using the function
+          const { error: functionError } = await supabase.rpc(
+            'mark_comment_as_read',
+            {
+              p_comment_id: id,
+              p_post_author_id: userId,
+            }
+          );
+
+          if (functionError) throw functionError;
+
+          // Update local state by refreshing messages
+          await loadMessages();
+        }
       } catch (err) {
         logError(err, 'useInbox.markAsRead');
         setError(formatSupabaseError(err));
       }
     },
-    [userId]
+    [userId, inboxItems, loadMessages]
   );
 
-  // Mark all notifications as read
+  // Mark all items as read (handles both notifications and comments)
   const markAllAsRead = useCallback(async () => {
     try {
+      // Mark all notifications as read
       const { error: updateError } = await supabase
         .from('notifications')
         .update({
@@ -226,7 +255,7 @@ export function useInbox(userId: string): UseInboxReturn {
 
       if (updateError) throw updateError;
 
-      // Update local state
+      // Update local state for notifications
       setNotifications(prev =>
         prev.map(notification => ({
           ...notification,
@@ -234,11 +263,35 @@ export function useInbox(userId: string): UseInboxReturn {
           read_at: new Date().toISOString(),
         }))
       );
+
+      // Mark all unread comments as read
+      const unreadComments = (
+        messages as CommentWithProfileAndReadStatus[]
+      ).filter(comment => {
+        const isRead =
+          comment.comment_reads && comment.comment_reads.length > 0;
+        return !(isRead || false);
+      });
+
+      if (unreadComments.length > 0) {
+        // Use batch processing for multiple comments
+        const promises = unreadComments.map(comment =>
+          supabase.rpc('mark_comment_as_read', {
+            p_comment_id: comment.id,
+            p_post_author_id: userId,
+          })
+        );
+
+        await Promise.all(promises);
+
+        // Refresh messages to update read status
+        await loadMessages();
+      }
     } catch (err) {
       logError(err, 'useInbox.markAllAsRead');
       setError(formatSupabaseError(err));
     }
-  }, [userId]);
+  }, [userId, messages, loadMessages]);
 
   // Refresh inbox
   const refreshInbox = useCallback(async () => {
@@ -246,12 +299,9 @@ export function useInbox(userId: string): UseInboxReturn {
   }, [loadInbox]);
 
   // Filter inbox items
-  const filterByType = useCallback(
-    (type: 'all' | 'notification' | 'message') => {
-      setCurrentFilter(type);
-    },
-    []
-  );
+  const filterByType = useCallback((type: 'notification' | 'message') => {
+    setCurrentFilter(type);
+  }, []);
 
   // Load data on mount and when userId changes
   useEffect(() => {
@@ -265,14 +315,16 @@ export function useInbox(userId: string): UseInboxReturn {
     transformToInboxItems();
   }, [transformToInboxItems]);
 
-  // Calculate unread count
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  // Calculate unread count (notifications + comments)
+  const unreadCount =
+    notifications.filter(n => !n.is_read).length +
+    (messages as CommentWithProfileAndReadStatus[]).filter(comment => {
+      const isRead = comment.comment_reads && comment.comment_reads.length > 0;
+      return !(isRead || false);
+    }).length;
 
   return {
-    inboxItems:
-      currentFilter === 'all'
-        ? inboxItems
-        : inboxItems.filter(item => item.type === currentFilter),
+    inboxItems: inboxItems.filter(item => item.type === currentFilter),
     notifications,
     messages,
     unreadCount,

@@ -53,7 +53,6 @@ export default function InboxView({ onNavigateToPost }: InboxViewProps) {
   };
 
   const tabs = [
-    { id: 'all' as const, label: 'すべて', icon: Inbox },
     { id: 'notification' as const, label: '通知', icon: Bell },
     { id: 'message' as const, label: 'メッセージ', icon: MessageSquare },
   ];
