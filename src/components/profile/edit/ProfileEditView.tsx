@@ -58,15 +58,29 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
       }
     }, [profileDetails]);
 
+    // フォームデータの安全な初期化
+    useEffect(() => {
+      // 空文字列の日付を適切に処理
+      if (formData.arrivalDate === '') {
+        setFormData(prev => ({
+          ...prev,
+          arrivalDate: '',
+        }));
+      }
+    }, [formData.arrivalDate]);
+
     // 変更の検知
     const hasChanges = useMemo(() => {
       if (!profileDetails) return true; // 新規作成の場合
 
+      const currentArrivalDate = profileDetails.arrival_date || '';
+      const currentFamilyStructure = profileDetails.family_structure || '';
+
       return (
         formData.name !== (profile.name || '') ||
         formData.avatarUrl !== (profile.avatar_url || '') ||
-        formData.arrivalDate !== (profileDetails.arrival_date || '') ||
-        formData.familyStructure !== (profileDetails.family_structure || '') ||
+        formData.arrivalDate !== currentArrivalDate ||
+        formData.familyStructure !== currentFamilyStructure ||
         tempImageFile !== null
       );
     }, [formData, profile, profileDetails, tempImageFile]);
@@ -88,7 +102,7 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
       }
 
       // アメリカ到着日のバリデーション
-      if (formData.arrivalDate) {
+      if (formData.arrivalDate && formData.arrivalDate.trim()) {
         const arrivalDate = new Date(formData.arrivalDate);
         const now = new Date();
 
@@ -111,6 +125,19 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
       setValidationErrors(errors);
       return isValid;
     }, [formData]);
+
+    // 日付フィールドの安全な処理
+    const safeDateValue = (dateString: string): string | null => {
+      if (!dateString || dateString.trim() === '') {
+        return null;
+      }
+      // 有効な日付かチェック
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return null;
+      }
+      return dateString;
+    };
 
     // 保存処理
     const handleSave = async () => {
@@ -152,8 +179,8 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
 
         // プロフィール詳細情報の更新
         const detailsUpdates = {
-          arrival_date: formData.arrivalDate,
-          family_structure: formData.familyStructure,
+          arrival_date: safeDateValue(formData.arrivalDate),
+          family_structure: formData.familyStructure || null,
         };
 
         // 並行して更新
@@ -166,7 +193,8 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
             ? updateProfileDetails(detailsUpdates)
             : createProfileDetails({
                 profile_id: profile.id,
-                ...detailsUpdates,
+                arrival_date: safeDateValue(formData.arrivalDate),
+                family_structure: formData.familyStructure || null,
               }),
         ]);
 
@@ -185,10 +213,28 @@ const ProfileEditView = React.memo<ProfileEditViewProps>(
       } catch (error) {
         console.error('❌ Error updating profile:', error);
         setSaveStatus('error');
-        setSaveError(
-          error instanceof Error ? error.message : '保存に失敗しました'
-        );
-        addToast('error', 'プロフィールの更新に失敗しました');
+
+        // エラーメッセージの詳細化
+        let errorMessage = '保存に失敗しました';
+        if (error instanceof Error) {
+          if (error.message.includes('invalid input syntax for type date')) {
+            errorMessage =
+              '日付の形式が正しくありません。正しい日付を入力してください。';
+          } else if (
+            error.message.includes('画像のアップロードに失敗しました')
+          ) {
+            errorMessage =
+              '画像のアップロードに失敗しました。再度お試しください。';
+          } else if (error.message.includes('更新に失敗しました')) {
+            errorMessage =
+              'プロフィールの更新に失敗しました。入力内容を確認してください。';
+          } else {
+            errorMessage = error.message;
+          }
+        }
+
+        setSaveError(errorMessage);
+        addToast('error', errorMessage);
       }
     };
 
