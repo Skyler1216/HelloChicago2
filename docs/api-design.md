@@ -663,6 +663,8 @@ Strict-Transport-Security: max-age=31536000; includeSubDomains
 
 #### 通知機能 ✅
 
+**ユーザー通知API**
+
 ```
 GET /notifications
 PUT /notifications/{id}/read
@@ -670,6 +672,26 @@ PUT /notifications/mark-all-read
 DELETE /notifications/{id}
 GET /notification-settings
 PUT /notification-settings
+```
+
+**システム通知管理API（管理者専用）** ✅
+
+```
+GET /system-notifications
+POST /system-notifications
+DELETE /system-notifications/{id}
+GET /system-notifications/{id}/stats
+GET /notification-deliveries
+PUT /notification-deliveries/{id}/status
+```
+
+**PostgreSQL関数（Supabase RPC）** ✅
+
+```
+send_system_notification(title, message, type, priority, expires_at, action_url, action_text, target_users)
+mark_notification_as_read(notification_id)
+get_unread_notifications_count(user_id)
+get_user_notifications(user_id, limit_count, offset_count)
 ```
 
 #### プロフィール詳細機能 ✅
@@ -687,6 +709,102 @@ DELETE /profile-details/{id}
 POST /storage/avatars
 DELETE /storage/avatars/{filename}
 ```
+
+### システム通知管理API詳細仕様 ✅
+
+#### 1. システム通知作成 ✅
+
+**エンドポイント**: `POST /system-notifications` (Supabase RPC: `send_system_notification`)
+
+**権限**: 管理者のみ
+
+**リクエスト例**:
+
+```json
+{
+  "title": "アプリアップデートのお知らせ",
+  "message": "新機能が追加されました。アプリを更新してください。",
+  "type": "app_update",
+  "priority": "normal",
+  "expires_at": "2025-02-10T23:59:59Z",
+  "action_url": "https://app.hellochicago.com/update",
+  "action_text": "今すぐ更新",
+  "target_users": []
+}
+```
+
+**レスポンス例**:
+
+```json
+{
+  "success": true,
+  "data": {
+    "system_notification_id": "uuid",
+    "total_recipients": 150,
+    "delivered_count": 150,
+    "status": "sent"
+  }
+}
+```
+
+#### 2. システム通知一覧取得 ✅
+
+**エンドポイント**: `GET /system-notifications`
+
+**権限**: 管理者のみ
+
+**レスポンス例**:
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "title": "システムメンテナンス",
+      "message": "明日の午前2時よりメンテナンスを実施します",
+      "type": "system_maintenance",
+      "priority": "high",
+      "status": "sent",
+      "total_recipients": 150,
+      "delivered_count": 150,
+      "read_count": 45,
+      "created_at": "2025-01-10T10:00:00Z"
+    }
+  ]
+}
+```
+
+#### 3. 配信統計取得 ✅
+
+**エンドポイント**: `GET /system-notifications/{id}/stats`
+
+**権限**: 管理者のみ
+
+**レスポンス例**:
+
+```json
+{
+  "data": {
+    "total": 150,
+    "delivered": 150,
+    "read": 45,
+    "pending": 0,
+    "failed": 0
+  }
+}
+```
+
+#### 4. ユーザー通知既読処理 ✅
+
+**エンドポイント**: `PUT /notifications/{id}/read` (Supabase RPC: `mark_notification_as_read`)
+
+**権限**: 認証済みユーザー（自分の通知のみ）
+
+**効果**:
+
+- `notifications`テーブルの`is_read`を`true`に更新
+- `notification_deliveries`テーブルの`status`を`'read'`に更新
+- システム通知の`read_count`を自動更新
 
 ### 将来の拡張予定
 

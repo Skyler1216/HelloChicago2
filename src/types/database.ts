@@ -120,9 +120,9 @@ export interface Database {
           id: string;
           post_id: string;
           author_id: string;
+          parent_comment_id: string | null;
           content: string;
-          parent_id: string | null;
-          approved: boolean;
+          is_approved: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -130,9 +130,9 @@ export interface Database {
           id?: string;
           post_id: string;
           author_id: string;
+          parent_comment_id?: string | null;
           content: string;
-          parent_id?: string | null;
-          approved?: boolean;
+          is_approved?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -140,9 +140,9 @@ export interface Database {
           id?: string;
           post_id?: string;
           author_id?: string;
+          parent_comment_id?: string | null;
           content?: string;
-          parent_id?: string | null;
-          approved?: boolean;
+          is_approved?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -264,12 +264,109 @@ export interface Database {
           updated_at?: string;
         };
       };
+      system_notifications: {
+        Row: {
+          id: string;
+          title: string;
+          message: string;
+          type: string;
+          priority: string;
+          expires_at: string | null;
+          action_url: string | null;
+          action_text: string | null;
+          target_users: string[];
+          total_recipients: number;
+          delivered_count: number;
+          read_count: number;
+          status: string;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          message: string;
+          type: string;
+          priority?: string;
+          expires_at?: string | null;
+          action_url?: string | null;
+          action_text?: string | null;
+          target_users?: string[];
+          total_recipients?: number;
+          delivered_count?: number;
+          read_count?: number;
+          status?: string;
+          created_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          message?: string;
+          type?: string;
+          priority?: string;
+          expires_at?: string | null;
+          action_url?: string | null;
+          action_text?: string | null;
+          target_users?: string[];
+          total_recipients?: number;
+          delivered_count?: number;
+          read_count?: number;
+          status?: string;
+          created_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      notification_deliveries: {
+        Row: {
+          id: string;
+          system_notification_id: string;
+          recipient_id: string;
+          user_notification_id: string;
+          status: string;
+          delivered_at: string | null;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          system_notification_id: string;
+          recipient_id: string;
+          user_notification_id: string;
+          status?: string;
+          delivered_at?: string | null;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          system_notification_id?: string;
+          recipient_id?: string;
+          user_notification_id?: string;
+          status?: string;
+          delivered_at?: string | null;
+          read_at?: string | null;
+          created_at?: string;
+        };
+      };
       notifications: {
         Row: {
           id: string;
           recipient_id: string;
           sender_id: string | null;
-          type: 'like' | 'comment' | 'mention' | 'system' | 'weekly_digest';
+          type:
+            | 'like'
+            | 'comment'
+            | 'mention'
+            | 'system'
+            | 'weekly_digest'
+            | 'app_update'
+            | 'system_maintenance'
+            | 'feature_release'
+            | 'community_event';
           title: string;
           message: string;
           metadata: Record<string, unknown>;
@@ -282,12 +379,25 @@ export interface Database {
           read_at: string | null;
           pushed_at: string | null;
           emailed_at: string | null;
+          priority: 'low' | 'normal' | 'high' | 'urgent';
+          expires_at: string | null;
+          action_url: string | null;
+          action_text: string | null;
         };
         Insert: {
           id?: string;
           recipient_id: string;
           sender_id?: string | null;
-          type: 'like' | 'comment' | 'mention' | 'system' | 'weekly_digest';
+          type:
+            | 'like'
+            | 'comment'
+            | 'mention'
+            | 'system'
+            | 'weekly_digest'
+            | 'app_update'
+            | 'system_maintenance'
+            | 'feature_release'
+            | 'community_event';
           title: string;
           message: string;
           metadata?: Record<string, unknown>;
@@ -300,12 +410,25 @@ export interface Database {
           read_at?: string | null;
           pushed_at?: string | null;
           emailed_at?: string | null;
+          priority?: 'low' | 'normal' | 'high' | 'urgent';
+          expires_at?: string | null;
+          action_url?: string | null;
+          action_text?: string | null;
         };
         Update: {
           id?: string;
           recipient_id?: string;
           sender_id?: string | null;
-          type?: 'like' | 'comment' | 'mention' | 'system' | 'weekly_digest';
+          type?:
+            | 'like'
+            | 'comment'
+            | 'mention'
+            | 'system'
+            | 'weekly_digest'
+            | 'app_update'
+            | 'system_maintenance'
+            | 'feature_release'
+            | 'community_event';
           title?: string;
           message?: string;
           metadata?: Record<string, unknown>;
@@ -318,6 +441,10 @@ export interface Database {
           read_at?: string | null;
           pushed_at?: string | null;
           emailed_at?: string | null;
+          priority?: 'low' | 'normal' | 'high' | 'urgent';
+          expires_at?: string | null;
+          action_url?: string | null;
+          action_text?: string | null;
         };
       };
     };

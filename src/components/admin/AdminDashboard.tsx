@@ -9,11 +9,13 @@ import {
   Clock,
   Database,
   Eye,
+  Bell,
 } from 'lucide-react';
 import { SecurityAuditDashboard } from '../security/SecurityAuditDashboard';
 import { PerformanceDashboard } from '../performance/PerformanceDashboard';
+import SystemNotificationManager from './SystemNotificationManager';
 
-type DashboardTab = 'overview' | 'security' | 'performance';
+type DashboardTab = 'overview' | 'security' | 'performance' | 'notifications';
 
 interface AdminDashboardProps {
   className?: string;
@@ -31,6 +33,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       icon: BarChart3,
     },
     {
+      id: 'notifications',
+      name: '通知管理',
+      icon: Bell,
+    },
+    {
       id: 'security',
       name: 'セキュリティ',
       icon: Shield,
@@ -44,6 +51,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const renderTabContent = () => {
     switch (activeTab) {
+      case 'notifications':
+        return <SystemNotificationManager />;
       case 'security':
         return <SecurityAuditDashboard />;
       case 'performance':

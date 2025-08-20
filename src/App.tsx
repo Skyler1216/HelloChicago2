@@ -7,6 +7,8 @@ import Layout from './components/Layout';
 import HomeView from './components/HomeView';
 import MapView from './components/MapView';
 import PostFormView from './components/PostFormView';
+import InboxView from './components/inbox/InboxView';
+import PostDetailView from './components/PostDetailView';
 import ProfileView from './components/ProfileView';
 import AdminApprovalView from './components/AdminApprovalView';
 import AdminDashboard from './components/admin/AdminDashboard';
@@ -18,8 +20,9 @@ import { validateConfig } from './lib/config';
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [currentView, setCurrentView] = useState<
-    'home' | 'map' | 'post' | 'profile'
+    'home' | 'map' | 'post' | 'inbox' | 'profile'
   >('home');
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [showAdminView, setShowAdminView] = useState(false);
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const { user, profile, loading, isAuthenticated, isApproved } = useAuth();
@@ -175,6 +178,15 @@ export default function App() {
         return <MapView />;
       case 'post':
         return <PostFormView />;
+      case 'inbox':
+        return selectedPostId ? (
+          <PostDetailView
+            postId={selectedPostId}
+            onBack={() => setSelectedPostId(null)}
+          />
+        ) : (
+          <InboxView onNavigateToPost={postId => setSelectedPostId(postId)} />
+        );
       case 'profile':
         return (
           <ProfileView

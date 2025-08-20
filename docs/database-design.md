@@ -178,16 +178,16 @@ CREATE TABLE comments (
 
 #### カラム詳細
 
-| カラム名   | 型          | 制約                                   | 説明                     |
-| ---------- | ----------- | -------------------------------------- | ------------------------ |
-| id         | uuid        | PRIMARY KEY, DEFAULT gen_random_uuid() | コメントID               |
-| post_id    | uuid        | NOT NULL, REFERENCES posts(id)         | 投稿ID                   |
-| author_id  | uuid        | NOT NULL, REFERENCES profiles(id)      | コメント投稿者ID         |
-| content    | text        | NOT NULL                               | コメント内容             |
-| parent_id  | uuid        | REFERENCES comments(id)                | 親コメントID（返信用）   |
-| approved   | boolean     | DEFAULT true                           | 承認状態                 |
-| created_at | timestamptz | DEFAULT now()                          | 作成日時                 |
-| updated_at | timestamptz | DEFAULT now()                          | 更新日時                 |
+| カラム名   | 型          | 制約                                   | 説明                   |
+| ---------- | ----------- | -------------------------------------- | ---------------------- |
+| id         | uuid        | PRIMARY KEY, DEFAULT gen_random_uuid() | コメントID             |
+| post_id    | uuid        | NOT NULL, REFERENCES posts(id)         | 投稿ID                 |
+| author_id  | uuid        | NOT NULL, REFERENCES profiles(id)      | コメント投稿者ID       |
+| content    | text        | NOT NULL                               | コメント内容           |
+| parent_id  | uuid        | REFERENCES comments(id)                | 親コメントID（返信用） |
+| approved   | boolean     | DEFAULT true                           | 承認状態               |
+| created_at | timestamptz | DEFAULT now()                          | 作成日時               |
+| updated_at | timestamptz | DEFAULT now()                          | 更新日時               |
 
 ### 5. likes テーブル
 
@@ -207,12 +207,12 @@ CREATE TABLE likes (
 
 #### カラム詳細
 
-| カラム名   | 型          | 制約                                   | 説明                     |
-| ---------- | ----------- | -------------------------------------- | ------------------------ |
-| id         | uuid        | PRIMARY KEY, DEFAULT gen_random_uuid() | いいねID                 |
-| user_id    | uuid        | NOT NULL, REFERENCES profiles(id)      | いいねしたユーザーID     |
-| post_id    | uuid        | NOT NULL, REFERENCES posts(id)         | いいねされた投稿ID       |
-| created_at | timestamptz | DEFAULT now()                          | いいね日時               |
+| カラム名   | 型          | 制約                                   | 説明                 |
+| ---------- | ----------- | -------------------------------------- | -------------------- |
+| id         | uuid        | PRIMARY KEY, DEFAULT gen_random_uuid() | いいねID             |
+| user_id    | uuid        | NOT NULL, REFERENCES profiles(id)      | いいねしたユーザーID |
+| post_id    | uuid        | NOT NULL, REFERENCES posts(id)         | いいねされた投稿ID   |
+| created_at | timestamptz | DEFAULT now()                          | いいね日時           |
 
 ### 6. profile_details テーブル
 
@@ -237,27 +237,27 @@ CREATE TABLE profile_details (
 
 #### カラム詳細
 
-| カラム名         | 型      | 制約                                   | 説明                           |
-| ---------------- | ------- | -------------------------------------- | ------------------------------ |
-| profile_id       | uuid    | PRIMARY KEY, REFERENCES profiles(id)   | プロフィールID                 |
-| bio              | text    | NULL                                   | 自己紹介                       |
-| location_area    | text    | NULL                                   | 居住エリア                     |
-| interests        | text[]  | NULL                                   | 趣味・関心事の配列             |
-| languages        | text[]  | NULL                                   | 話せる言語の配列               |
-| arrival_date     | date    | NULL                                   | シカゴ到着日                   |
-| family_structure | text    | NULL                                   | 家族構成                       |
-| privacy_settings | jsonb   | DEFAULT privacy_settings_default        | プライバシー設定               |
-| created_at       | timestamptz | DEFAULT now()                      | 作成日時                       |
-| updated_at       | timestamptz | DEFAULT now()                      | 更新日時                       |
+| カラム名         | 型          | 制約                                 | 説明               |
+| ---------------- | ----------- | ------------------------------------ | ------------------ |
+| profile_id       | uuid        | PRIMARY KEY, REFERENCES profiles(id) | プロフィールID     |
+| bio              | text        | NULL                                 | 自己紹介           |
+| location_area    | text        | NULL                                 | 居住エリア         |
+| interests        | text[]      | NULL                                 | 趣味・関心事の配列 |
+| languages        | text[]      | NULL                                 | 話せる言語の配列   |
+| arrival_date     | date        | NULL                                 | シカゴ到着日       |
+| family_structure | text        | NULL                                 | 家族構成           |
+| privacy_settings | jsonb       | DEFAULT privacy_settings_default     | プライバシー設定   |
+| created_at       | timestamptz | DEFAULT now()                        | 作成日時           |
+| updated_at       | timestamptz | DEFAULT now()                        | 更新日時           |
 
 #### プライバシー設定の詳細
 
 ```json
 {
-  "profile_visible": true,      // プロフィール表示許可
-  "posts_visible": true,        // 投稿表示許可
-  "activity_visible": true,     // 活動履歴表示許可
-  "contact_allowed": true       // 連絡許可
+  "profile_visible": true, // プロフィール表示許可
+  "posts_visible": true, // 投稿表示許可
+  "activity_visible": true, // 活動履歴表示許可
+  "contact_allowed": true // 連絡許可
 }
 ```
 
@@ -286,33 +286,118 @@ CREATE TABLE notification_settings (
 
 #### カラム詳細
 
-| カラム名              | 型      | 制約                                   | 説明                     |
-| --------------------- | ------- | -------------------------------------- | ------------------------ |
-| user_id               | uuid    | PRIMARY KEY, REFERENCES profiles(id)   | ユーザーID               |
-| push_likes            | boolean | DEFAULT true                           | プッシュ通知（いいね）   |
-| push_comments         | boolean | DEFAULT true                           | プッシュ通知（コメント） |
-| push_mentions         | boolean | DEFAULT true                           | プッシュ通知（メンション）|
-| email_likes           | boolean | DEFAULT false                          | メール通知（いいね）     |
-| email_comments        | boolean | DEFAULT true                           | メール通知（コメント）   |
-| email_mentions        | boolean | DEFAULT false                          | メール通知（メンション） |
-| weekly_digest         | boolean | DEFAULT false                          | 週次ダイジェスト         |
-| important_updates     | boolean | DEFAULT true                           | 重要更新通知             |
-| system_notifications  | boolean | DEFAULT true                           | システム通知             |
-| created_at            | timestamptz | DEFAULT now()                      | 作成日時                 |
-| updated_at            | timestamptz | DEFAULT now()                      | 更新日時                 |
+| カラム名             | 型          | 制約                                 | 説明                       |
+| -------------------- | ----------- | ------------------------------------ | -------------------------- |
+| user_id              | uuid        | PRIMARY KEY, REFERENCES profiles(id) | ユーザーID                 |
+| push_likes           | boolean     | DEFAULT true                         | プッシュ通知（いいね）     |
+| push_comments        | boolean     | DEFAULT true                         | プッシュ通知（コメント）   |
+| push_mentions        | boolean     | DEFAULT true                         | プッシュ通知（メンション） |
+| email_likes          | boolean     | DEFAULT false                        | メール通知（いいね）       |
+| email_comments       | boolean     | DEFAULT true                         | メール通知（コメント）     |
+| email_mentions       | boolean     | DEFAULT false                        | メール通知（メンション）   |
+| weekly_digest        | boolean     | DEFAULT false                        | 週次ダイジェスト           |
+| important_updates    | boolean     | DEFAULT true                         | 重要更新通知               |
+| system_notifications | boolean     | DEFAULT true                         | システム通知               |
+| created_at           | timestamptz | DEFAULT now()                        | 作成日時                   |
+| updated_at           | timestamptz | DEFAULT now()                        | 更新日時                   |
 
-### 8. notifications テーブル
+### 8. 通知システム（3テーブル構成）
 
-通知履歴とリアルタイム通知を管理するテーブルです。
+通知システムは効率的な管理のため、以下の3つのテーブルで構成されています。
 
-#### スキーマ
+#### 8.1 system_notifications テーブル
+
+管理者が作成するシステム通知を管理するテーブルです。
+
+##### スキーマ
+
+```sql
+CREATE TABLE system_notifications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  message text NOT NULL,
+  type text NOT NULL CHECK (type IN ('app_update', 'system_maintenance', 'feature_release', 'community_event', 'system')),
+  priority text DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
+  expires_at timestamptz,
+  action_url text,
+  action_text text,
+  target_users text[] DEFAULT '{}',
+  total_recipients integer DEFAULT 0,
+  delivered_count integer DEFAULT 0,
+  read_count integer DEFAULT 0,
+  status text DEFAULT 'draft' CHECK (status IN ('draft', 'sending', 'sent', 'cancelled')),
+  created_by uuid REFERENCES profiles(id),
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+```
+
+##### カラム詳細
+
+| カラム名         | 型          | 制約                    | 説明                             |
+| ---------------- | ----------- | ----------------------- | -------------------------------- |
+| id               | uuid        | PRIMARY KEY             | システム通知ID                   |
+| title            | text        | NOT NULL                | 通知タイトル                     |
+| message          | text        | NOT NULL                | 通知メッセージ                   |
+| type             | text        | NOT NULL, CHECK         | 通知タイプ                       |
+| priority         | text        | DEFAULT 'normal', CHECK | 優先度（低・通常・高・緊急）     |
+| expires_at       | timestamptz | NULL                    | 有効期限                         |
+| action_url       | text        | NULL                    | アクションURL                    |
+| action_text      | text        | NULL                    | アクションボタンテキスト         |
+| target_users     | text[]      | DEFAULT '{}'            | 対象ユーザー（空なら全ユーザー） |
+| total_recipients | integer     | DEFAULT 0               | 総対象者数                       |
+| delivered_count  | integer     | DEFAULT 0               | 配信済み数                       |
+| read_count       | integer     | DEFAULT 0               | 既読数                           |
+| status           | text        | DEFAULT 'draft', CHECK  | 配信状態                         |
+| created_by       | uuid        | REFERENCES profiles(id) | 作成者ID                         |
+| created_at       | timestamptz | DEFAULT now()           | 作成日時                         |
+| updated_at       | timestamptz | DEFAULT now()           | 更新日時                         |
+
+#### 8.2 notification_deliveries テーブル
+
+システム通知の配信状況を追跡するテーブルです。
+
+##### スキーマ
+
+```sql
+CREATE TABLE notification_deliveries (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  system_notification_id uuid REFERENCES system_notifications(id) ON DELETE CASCADE,
+  recipient_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
+  user_notification_id uuid REFERENCES notifications(id) ON DELETE CASCADE,
+  status text DEFAULT 'pending' CHECK (status IN ('pending', 'delivered', 'read', 'failed')),
+  delivered_at timestamptz,
+  read_at timestamptz,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(system_notification_id, recipient_id)
+);
+```
+
+##### カラム詳細
+
+| カラム名               | 型          | 制約                                | 説明           |
+| ---------------------- | ----------- | ----------------------------------- | -------------- |
+| id                     | uuid        | PRIMARY KEY                         | 配信記録ID     |
+| system_notification_id | uuid        | REFERENCES system_notifications(id) | システム通知ID |
+| recipient_id           | uuid        | REFERENCES profiles(id)             | 受信者ID       |
+| user_notification_id   | uuid        | REFERENCES notifications(id)        | ユーザー通知ID |
+| status                 | text        | DEFAULT 'pending', CHECK            | 配信状態       |
+| delivered_at           | timestamptz | NULL                                | 配信日時       |
+| read_at                | timestamptz | NULL                                | 既読日時       |
+| created_at             | timestamptz | DEFAULT now()                       | 作成日時       |
+
+#### 8.3 notifications テーブル
+
+個別ユーザーへの通知を管理するテーブルです。
+
+##### スキーマ
 
 ```sql
 CREATE TABLE notifications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   recipient_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   sender_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
-  type text NOT NULL CHECK (type IN ('like', 'comment', 'mention', 'system', 'weekly_digest')),
+  type text NOT NULL CHECK (type IN ('like', 'comment', 'mention', 'system', 'weekly_digest', 'app_update', 'system_maintenance', 'feature_release', 'community_event')),
   title text NOT NULL,
   message text NOT NULL,
   metadata jsonb DEFAULT '{}',
@@ -321,6 +406,10 @@ CREATE TABLE notifications (
   is_read boolean DEFAULT false,
   is_pushed boolean DEFAULT false,
   is_emailed boolean DEFAULT false,
+  priority text DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
+  expires_at timestamptz,
+  action_url text,
+  action_text text,
   created_at timestamptz DEFAULT now(),
   read_at timestamptz,
   pushed_at timestamptz,
@@ -328,35 +417,52 @@ CREATE TABLE notifications (
 );
 ```
 
-#### カラム詳細
+##### カラム詳細
 
-| カラム名           | 型      | 制約                                   | 説明                           |
-| ------------------ | ------- | -------------------------------------- | ------------------------------ |
-| id                 | uuid    | PRIMARY KEY, DEFAULT gen_random_uuid() | 通知ID                         |
-| recipient_id       | uuid    | NOT NULL, REFERENCES profiles(id)      | 受信者ID                       |
-| sender_id          | uuid    | REFERENCES profiles(id)                | 送信者ID                       |
-| type               | text    | NOT NULL, CHECK                        | 通知タイプ                     |
-| title              | text    | NOT NULL                               | 通知タイトル                   |
-| message            | text    | NOT NULL                               | 通知メッセージ                 |
-| metadata           | jsonb   | DEFAULT '{}'                           | 通知メタデータ                 |
-| related_post_id    | uuid    | REFERENCES posts(id)                   | 関連投稿ID                     |
-| related_comment_id | uuid    | REFERENCES comments(id)                | 関連コメントID                 |
-| is_read            | boolean | DEFAULT false                          | 既読状態                       |
-| is_pushed          | boolean | DEFAULT false                          | プッシュ配信済み               |
-| is_emailed         | boolean | DEFAULT false                          | メール配信済み                 |
-| created_at         | timestamptz | DEFAULT now()                      | 作成日時                       |
-| read_at            | timestamptz | NULL                               | 既読日時                       |
-| pushed_at          | timestamptz | NULL                               | プッシュ配信日時               |
-| emailed_at         | timestamptz | NULL                               | メール配信日時                 |
+| カラム名           | 型          | 制約                              | 説明                     |
+| ------------------ | ----------- | --------------------------------- | ------------------------ |
+| id                 | uuid        | PRIMARY KEY                       | 通知ID                   |
+| recipient_id       | uuid        | NOT NULL, REFERENCES profiles(id) | 受信者ID                 |
+| sender_id          | uuid        | REFERENCES profiles(id)           | 送信者ID                 |
+| type               | text        | NOT NULL, CHECK                   | 通知タイプ               |
+| title              | text        | NOT NULL                          | 通知タイトル             |
+| message            | text        | NOT NULL                          | 通知メッセージ           |
+| metadata           | jsonb       | DEFAULT '{}'                      | 通知メタデータ           |
+| related_post_id    | uuid        | REFERENCES posts(id)              | 関連投稿ID               |
+| related_comment_id | uuid        | REFERENCES comments(id)           | 関連コメントID           |
+| is_read            | boolean     | DEFAULT false                     | 既読状態                 |
+| is_pushed          | boolean     | DEFAULT false                     | プッシュ配信済み         |
+| is_emailed         | boolean     | DEFAULT false                     | メール配信済み           |
+| priority           | text        | DEFAULT 'normal', CHECK           | 優先度                   |
+| expires_at         | timestamptz | NULL                              | 有効期限                 |
+| action_url         | text        | NULL                              | アクションURL            |
+| action_text        | text        | NULL                              | アクションボタンテキスト |
+| created_at         | timestamptz | DEFAULT now()                     | 作成日時                 |
+| read_at            | timestamptz | NULL                              | 既読日時                 |
+| pushed_at          | timestamptz | NULL                              | プッシュ配信日時         |
+| emailed_at         | timestamptz | NULL                              | メール配信日時           |
 
 #### インデックス
 
 ```sql
--- 通知テーブルのパフォーマンス最適化インデックス
+-- system_notifications テーブルのインデックス
+CREATE INDEX idx_system_notifications_status ON system_notifications(status);
+CREATE INDEX idx_system_notifications_type ON system_notifications(type);
+CREATE INDEX idx_system_notifications_created_at ON system_notifications(created_at);
+
+-- notification_deliveries テーブルのインデックス
+CREATE INDEX idx_notification_deliveries_system_id ON notification_deliveries(system_notification_id);
+CREATE INDEX idx_notification_deliveries_recipient ON notification_deliveries(recipient_id);
+CREATE INDEX idx_notification_deliveries_status ON notification_deliveries(status);
+
+-- notifications テーブルのインデックス
 CREATE INDEX idx_notifications_recipient_id ON notifications(recipient_id);
 CREATE INDEX idx_notifications_type ON notifications(type);
 CREATE INDEX idx_notifications_created_at ON notifications(created_at);
 CREATE INDEX idx_notifications_is_read ON notifications(is_read);
+CREATE INDEX idx_notifications_priority ON notifications(priority);
+CREATE INDEX idx_notifications_expires_at ON notifications(expires_at);
+CREATE INDEX idx_notifications_metadata_system_id ON notifications USING GIN (metadata);
 ```
 
 ## リレーション
@@ -619,12 +725,12 @@ CREATE OR REPLACE FUNCTION update_post_likes_count()
 RETURNS TRIGGER AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
-    UPDATE posts 
-    SET likes = COALESCE(likes, 0) + 1 
+    UPDATE posts
+    SET likes = COALESCE(likes, 0) + 1
     WHERE id = NEW.post_id;
     RETURN NEW;
   ELSIF TG_OP = 'DELETE' THEN
-    UPDATE posts 
+    UPDATE posts
     SET likes = GREATEST(COALESCE(likes, 0) - 1, 0)
     WHERE id = OLD.post_id;
     RETURN OLD;
@@ -648,13 +754,13 @@ CREATE OR REPLACE FUNCTION update_post_replies_count()
 RETURNS TRIGGER AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
-    UPDATE posts 
-    SET replies = replies + 1 
+    UPDATE posts
+    SET replies = replies + 1
     WHERE id = NEW.post_id;
     RETURN NEW;
   ELSIF TG_OP = 'DELETE' THEN
-    UPDATE posts 
-    SET replies = replies - 1 
+    UPDATE posts
+    SET replies = replies - 1
     WHERE id = OLD.post_id;
     RETURN OLD;
   END IF;
@@ -685,12 +791,12 @@ BEGIN
   SELECT author_id, title INTO post_author_id, post_title
   FROM posts
   WHERE id = NEW.post_id;
-  
+
   -- 自分の投稿へのいいねは通知しない
   IF NEW.user_id = post_author_id THEN
     RETURN NEW;
   END IF;
-  
+
   -- 通知を作成
   INSERT INTO notifications (
     recipient_id,
@@ -709,7 +815,7 @@ BEGIN
     jsonb_build_object('post_id', NEW.post_id, 'post_title', post_title),
     NEW.post_id
   );
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -736,17 +842,17 @@ BEGIN
   SELECT author_id, title INTO post_author_id, post_title
   FROM posts
   WHERE id = NEW.post_id;
-  
+
   -- コメント投稿者の名前を取得
   SELECT name INTO commenter_name
   FROM profiles
   WHERE id = NEW.author_id;
-  
+
   -- 自分の投稿へのコメントは通知しない
   IF NEW.author_id = post_author_id THEN
     RETURN NEW;
   END IF;
-  
+
   -- 通知を作成
   INSERT INTO notifications (
     recipient_id,
@@ -772,7 +878,7 @@ BEGIN
     NEW.post_id,
     NEW.id
   );
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -799,27 +905,27 @@ BEGIN
   IF NEW.parent_id IS NULL THEN
     RETURN NEW;
   END IF;
-  
+
   -- 親コメントの著者を取得
   SELECT author_id INTO parent_comment_author_id
   FROM comments
   WHERE id = NEW.parent_id;
-  
+
   -- 投稿タイトルを取得
   SELECT title INTO post_title
   FROM posts
   WHERE id = NEW.post_id;
-  
+
   -- 返信者の名前を取得
   SELECT name INTO replier_name
   FROM profiles
   WHERE id = NEW.author_id;
-  
+
   -- 自分のコメントへの返信は通知しない
   IF NEW.author_id = parent_comment_author_id THEN
     RETURN NEW;
   END IF;
-  
+
   -- 通知を作成
   INSERT INTO notifications (
     recipient_id,
@@ -846,7 +952,7 @@ BEGIN
     NEW.post_id,
     NEW.id
   );
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -887,7 +993,7 @@ BEGIN
     p_metadata, p_related_post_id, p_related_comment_id
   )
   RETURNING id INTO notification_id;
-  
+
   RETURN notification_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -900,10 +1006,10 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION mark_notification_read(notification_id uuid)
 RETURNS boolean AS $$
 BEGIN
-  UPDATE notifications 
+  UPDATE notifications
   SET is_read = true, read_at = now()
   WHERE id = notification_id AND recipient_id = auth.uid();
-  
+
   RETURN FOUND;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -914,10 +1020,10 @@ RETURNS integer AS $$
 DECLARE
   updated_count integer;
 BEGIN
-  UPDATE notifications 
+  UPDATE notifications
   SET is_read = true, read_at = now()
   WHERE recipient_id = user_id AND is_read = false;
-  
+
   GET DIAGNOSTICS updated_count = ROW_COUNT;
   RETURN updated_count;
 END;
@@ -933,10 +1039,10 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION sync_all_post_likes()
 RETURNS void AS $$
 BEGIN
-  UPDATE posts 
+  UPDATE posts
   SET likes = (
-    SELECT COUNT(*) 
-    FROM likes 
+    SELECT COUNT(*)
+    FROM likes
     WHERE likes.post_id = posts.id
   );
 END;
@@ -946,10 +1052,10 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION sync_all_post_replies()
 RETURNS void AS $$
 BEGIN
-  UPDATE posts 
+  UPDATE posts
   SET replies = (
-    SELECT COUNT(*) 
-    FROM comments 
+    SELECT COUNT(*)
+    FROM comments
     WHERE comments.post_id = posts.id
   );
 END;
@@ -1164,17 +1270,17 @@ COPY (
 
 ```sql
 -- 遅いクエリの特定
-SELECT 
+SELECT
   query,
   mean_time,
   calls,
   total_time
-FROM pg_stat_statements 
+FROM pg_stat_statements
 WHERE mean_time > 1000
 ORDER BY mean_time DESC;
 
 -- インデックス使用状況
-SELECT 
+SELECT
   schemaname,
   tablename,
   indexname,

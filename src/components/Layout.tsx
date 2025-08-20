@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Plus, User, Home } from 'lucide-react';
+import { MapPin, Plus, User, Home, Inbox } from 'lucide-react';
 import { signOut } from '../lib/supabase';
 import { Database } from '../types/database';
 
@@ -7,8 +7,8 @@ type Profile = Database['public']['Tables']['profiles']['Row'];
 
 interface LayoutProps {
   children: React.ReactNode;
-  currentView: 'home' | 'map' | 'post' | 'profile';
-  onViewChange: (view: 'home' | 'map' | 'post' | 'profile') => void;
+  currentView: 'home' | 'map' | 'post' | 'inbox' | 'profile';
+  onViewChange: (view: 'home' | 'map' | 'post' | 'inbox' | 'profile') => void;
   user: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   profile: Profile | null;
 }
@@ -24,6 +24,7 @@ export default function Layout({
     { id: 'home' as const, icon: Home, label: 'ホーム' },
     { id: 'map' as const, icon: MapPin, label: 'マップ' },
     { id: 'post' as const, icon: Plus, label: '投稿' },
+    { id: 'inbox' as const, icon: Inbox, label: '受信トレイ' },
     { id: 'profile' as const, icon: User, label: 'プロフィール' },
   ];
 
