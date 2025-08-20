@@ -1,20 +1,15 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Inbox, Bell, MessageSquare, RefreshCw } from 'lucide-react';
 import { useInbox } from '../../hooks/useInbox';
 import { useAuth } from '../../hooks/useAuth';
-import InboxItem from './InboxItem';
-import EmptyState from './EmptyState';
+import { InboxItem, EmptyState } from './';
 
 interface InboxViewProps {
   onNavigateToPost?: (postId: string) => void;
-  onNavigateToComment?: (commentId: string) => void;
   onBack?: () => void;
 }
 
-export default function InboxView({
-  onNavigateToPost,
-  onNavigateToComment,
-}: InboxViewProps) {
+export default function InboxView({ onNavigateToPost }: InboxViewProps) {
   const { user } = useAuth();
   const {
     inboxItems,
@@ -40,7 +35,11 @@ export default function InboxView({
     await markAllAsRead();
   };
 
-  const handleItemAction = (item: any) => {
+  const handleItemAction = (item: {
+    type: 'notification' | 'message';
+    postId?: string;
+    actionUrl?: string;
+  }) => {
     if (item.type === 'message' && item.postId) {
       onNavigateToPost?.(item.postId);
     } else if (item.type === 'notification' && item.actionUrl) {

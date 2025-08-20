@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Bell,
   Plus,
@@ -14,9 +14,9 @@ import {
   NOTIFICATION_PRIORITIES,
 } from '../../hooks/useSystemNotifications';
 import { useToast } from '../../hooks/useToast';
-import { Database } from '../../types/database';
+// 未使用のインポートを削除
 
-type Notification = Database['public']['Tables']['notifications']['Row'];
+// 未使用の型定義を削除
 
 interface SystemNotificationManagerProps {
   onClose?: () => void;
@@ -40,14 +40,27 @@ export default function SystemNotificationManager({
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [notificationStats, setNotificationStats] = useState<
-    Record<string, any>
+    Record<
+      string,
+      {
+        total: number;
+        delivered: number;
+        read: number;
+        pending: number;
+      }
+    >
   >({});
 
   const [formData, setFormData] = useState({
     title: '',
     message: '',
-    type: 'system' as const,
-    priority: 'normal' as const,
+    type: 'system' as
+      | 'system'
+      | 'app_update'
+      | 'system_maintenance'
+      | 'feature_release'
+      | 'community_event',
+    priority: 'normal' as 'low' | 'normal' | 'high' | 'urgent',
     expiresAt: '',
     actionUrl: '',
     actionText: '',
@@ -55,13 +68,21 @@ export default function SystemNotificationManager({
   });
 
   // システム通知一覧を読み込み
-  const loadSystemNotifications = async () => {
+  const loadSystemNotifications = useCallback(async () => {
     await getSystemNotifications();
-  };
+  }, [getSystemNotifications]);
 
   // 通知統計を読み込み
-  const loadNotificationStats = async () => {
-    const stats: Record<string, any> = {};
+  const loadNotificationStats = useCallback(async () => {
+    const stats: Record<
+      string,
+      {
+        total: number;
+        delivered: number;
+        read: number;
+        pending: number;
+      }
+    > = {};
     for (const notification of systemNotifications) {
       const stat = await getNotificationStats(notification.id);
       if (stat) {
@@ -69,17 +90,17 @@ export default function SystemNotificationManager({
       }
     }
     setNotificationStats(stats);
-  };
+  }, [systemNotifications, getNotificationStats]);
 
   useEffect(() => {
     loadSystemNotifications();
-  }, []);
+  }, [loadSystemNotifications]);
 
   useEffect(() => {
     if (systemNotifications.length > 0) {
       loadNotificationStats();
     }
-  }, [systemNotifications]);
+  }, [systemNotifications, loadNotificationStats]);
 
   // フォームをリセット
   const resetForm = () => {
@@ -94,6 +115,31 @@ export default function SystemNotificationManager({
       targetUsers: [],
     });
     setShowCreateForm(false);
+  };
+
+  // 全ユーザーに通知を配信
+  const broadcastNotification = async (notificationData: {
+    title: string;
+    message: string;
+    type:
+      | 'system'
+      | 'app_update'
+      | 'system_maintenance'
+      | 'feature_release'
+      | 'community_event';
+    priority: 'low' | 'normal' | 'high' | 'urgent';
+    expiresAt?: string;
+    actionUrl?: string;
+    actionText?: string;
+    targetUsers?: string[];
+  }) => {
+    try {
+      // 全ユーザーに通知を配信する場合は、createSystemNotificationを使用
+      return await createSystemNotification(notificationData);
+    } catch (err) {
+      console.error('❌ 通知配信エラー:', err);
+      return false;
+    }
   };
 
   // 通知を作成
@@ -275,7 +321,15 @@ export default function SystemNotificationManager({
                   <select
                     value={formData.type}
                     onChange={e =>
-                      setFormData({ ...formData, type: e.target.value as any })
+                      setFormData({
+                        ...formData,
+                        type: e.target.value as
+                          | 'app_update'
+                          | 'system_maintenance'
+                          | 'feature_release'
+                          | 'community_event'
+                          | 'system',
+                      })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
@@ -296,7 +350,11 @@ export default function SystemNotificationManager({
                     onChange={e =>
                       setFormData({
                         ...formData,
-                        priority: e.target.value as any,
+                        priority: e.target.value as
+                          | 'low'
+                          | 'normal'
+                          | 'high'
+                          | 'urgent',
                       })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"

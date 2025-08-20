@@ -72,8 +72,15 @@ export function useComments(postId?: string): UseCommentsReturn {
     [postId]
   );
 
+  // コメントを再読み込み
+  const refreshComments = useCallback(async () => {
+    await loadComments();
+  }, [loadComments]);
+
   // コメントを階層構造に変換
-  const buildCommentTree = (flatComments: any[]): CommentWithProfile[] => {
+  const buildCommentTree = (
+    flatComments: CommentWithProfile[]
+  ): CommentWithProfile[] => {
     const commentMap = new Map<string, CommentWithProfile>();
     const rootComments: CommentWithProfile[] = [];
 
@@ -104,48 +111,6 @@ export function useComments(postId?: string): UseCommentsReturn {
 
     return rootComments;
   };
-
-  // コメントを作成
-  const createComment = useCallback(
-    async (
-      comment: Omit<CommentInsert, 'id' | 'created_at' | 'updated_at'>
-    ): Promise<boolean> => {
-      try {
-        setError(null);
-
-        const { data, error: insertError } = await supabase
-          .from('comments')
-          .insert(comment)
-          .select(
-            `
-          *,
-          profiles!comments_author_id_fkey(id, name, avatar_url)
-        `
-          )
-          .single();
-
-        if (insertError) throw insertError;
-
-        // コメント作成時に投稿者に通知を送信
-        if (comment.post_id && !comment.parent_comment_id) {
-          await createCommentNotification(
-            comment.post_id,
-            comment.author_id,
-            data.id
-          );
-        }
-
-        // リアルタイムでコメントリストを更新
-        await refreshComments();
-        return true;
-      } catch (err) {
-        logError(err, 'useComments.createComment');
-        setError(formatSupabaseError(err));
-        return false;
-      }
-    },
-    []
-  );
 
   // コメント通知を作成
   const createCommentNotification = useCallback(
@@ -194,6 +159,48 @@ export function useComments(postId?: string): UseCommentsReturn {
     []
   );
 
+  // コメントを作成
+  const createComment = useCallback(
+    async (
+      comment: Omit<CommentInsert, 'id' | 'created_at' | 'updated_at'>
+    ): Promise<boolean> => {
+      try {
+        setError(null);
+
+        const { data, error: insertError } = await supabase
+          .from('comments')
+          .insert(comment)
+          .select(
+            `
+          *,
+          profiles!comments_author_id_fkey(id, name, avatar_url)
+        `
+          )
+          .single();
+
+        if (insertError) throw insertError;
+
+        // コメント作成時に投稿者に通知を送信
+        if (comment.post_id && !comment.parent_comment_id) {
+          await createCommentNotification(
+            comment.post_id,
+            comment.author_id,
+            data.id
+          );
+        }
+
+        // リアルタイムでコメントリストを更新
+        await refreshComments();
+        return true;
+      } catch (err) {
+        logError(err, 'useComments.createComment');
+        setError(formatSupabaseError(err));
+        return false;
+      }
+    },
+    [createCommentNotification, refreshComments]
+  );
+
   // コメントを更新
   const updateComment = useCallback(
     async (id: string, content: string): Promise<boolean> => {
@@ -218,34 +225,32 @@ export function useComments(postId?: string): UseCommentsReturn {
         return false;
       }
     },
-    []
+    [refreshComments]
   );
 
   // コメントを削除
-  const deleteComment = useCallback(async (id: string): Promise<boolean> => {
-    try {
-      setError(null);
+  const deleteComment = useCallback(
+    async (id: string): Promise<boolean> => {
+      try {
+        setError(null);
 
-      const { error: deleteError } = await supabase
-        .from('comments')
-        .delete()
-        .eq('id', id);
+        const { error: deleteError } = await supabase
+          .from('comments')
+          .delete()
+          .eq('id', id);
 
-      if (deleteError) throw deleteError;
+        if (deleteError) throw deleteError;
 
-      await refreshComments();
-      return true;
-    } catch (err) {
-      logError(err, 'useComments.deleteComment');
-      setError(formatSupabaseError(err));
-      return false;
-    }
-  }, []);
-
-  // コメントを再読み込み
-  const refreshComments = useCallback(async () => {
-    await loadComments();
-  }, [loadComments]);
+        await refreshComments();
+        return true;
+      } catch (err) {
+        logError(err, 'useComments.deleteComment');
+        setError(formatSupabaseError(err));
+        return false;
+      }
+    },
+    [refreshComments]
+  );
 
   // 特定の投稿のコメントを取得
   const getCommentsByPost = useCallback(

@@ -5,10 +5,7 @@ import { formatSupabaseError, logError } from '../utils/errorHandler';
 
 type SystemNotification =
   Database['public']['Tables']['system_notifications']['Row'];
-type SystemNotificationInsert =
-  Database['public']['Tables']['system_notifications']['Insert'];
-type NotificationDelivery =
-  Database['public']['Tables']['notification_deliveries']['Row'];
+// 未使用の型定義を削除
 
 interface SystemNotificationCreate {
   title: string;
@@ -49,6 +46,29 @@ export function useSystemNotifications(): UseSystemNotificationsReturn {
   const [systemNotifications, setSystemNotifications] = useState<
     SystemNotification[]
   >([]);
+
+  // システム通知一覧を取得
+  const getSystemNotifications = useCallback(async (): Promise<void> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const { data, error: fetchError } = await supabase
+        .from('system_notifications')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (fetchError) throw fetchError;
+
+      setSystemNotifications(data || []);
+    } catch (err) {
+      logError(err, 'useSystemNotifications.getSystemNotifications');
+      setError(formatSupabaseError(err));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // システム通知を作成・配信
   const createSystemNotification = useCallback(
@@ -93,7 +113,7 @@ export function useSystemNotifications(): UseSystemNotificationsReturn {
         setLoading(false);
       }
     },
-    []
+    [getSystemNotifications]
   );
 
   // システム通知を削除
@@ -122,31 +142,8 @@ export function useSystemNotifications(): UseSystemNotificationsReturn {
         setLoading(false);
       }
     },
-    []
+    [getSystemNotifications]
   );
-
-  // システム通知一覧を取得
-  const getSystemNotifications = useCallback(async (): Promise<void> => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const { data, error: fetchError } = await supabase
-        .from('system_notifications')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100);
-
-      if (fetchError) throw fetchError;
-
-      setSystemNotifications(data || []);
-    } catch (err) {
-      logError(err, 'useSystemNotifications.getSystemNotifications');
-      setError(formatSupabaseError(err));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   // 通知の配信統計を取得
   const getNotificationStats = useCallback(

@@ -5,8 +5,13 @@ import { formatSupabaseError, logError } from '../utils/errorHandler';
 
 type Notification = Database['public']['Tables']['notifications']['Row'];
 type Comment = Database['public']['Tables']['comments']['Row'];
-type Post = Database['public']['Tables']['posts']['Row'];
-type Profile = Database['public']['Tables']['profiles']['Row'];
+// 未使用の型定義を削除
+type CommentWithProfile = Comment & {
+  profiles: {
+    name: string;
+    avatar_url: string | null;
+  };
+};
 
 interface InboxItem {
   id: string;
@@ -82,7 +87,6 @@ export function useInbox(userId: string): UseInboxReturn {
 
       if (userPosts && userPosts.length > 0) {
         const postIds = userPosts.map(post => post.id);
-        const postsMap = new Map(userPosts.map(post => [post.id, post]));
 
         // Get comments on user's posts
         const { data: comments, error: commentsError } = await supabase
@@ -99,13 +103,9 @@ export function useInbox(userId: string): UseInboxReturn {
 
         if (commentsError) throw commentsError;
 
-        // コメントに投稿情報を追加
-        const commentsWithPostInfo = (comments || []).map(comment => ({
-          ...comment,
-          post: postsMap.get(comment.post_id) || null,
-        }));
+        // コメントに投稿情報を追加（未使用のため削除）
 
-        setMessages(commentsWithPostInfo);
+        setMessages(comments || []);
       } else {
         setMessages([]);
       }
@@ -135,9 +135,7 @@ export function useInbox(userId: string): UseInboxReturn {
     });
 
     // Transform messages
-    messages.forEach(comment => {
-      const post = comment.post || null;
-
+    (messages as CommentWithProfile[]).forEach(comment => {
       items.push({
         id: comment.id,
         type: 'message' as const,
@@ -145,9 +143,9 @@ export function useInbox(userId: string): UseInboxReturn {
         message: comment.content,
         timestamp: comment.created_at,
         isRead: false, // Comments are always considered unread for inbox
-        postId: post?.id,
-        postTitle: post?.title || '投稿',
-        postType: post?.type || 'post',
+        postId: comment.post_id,
+        postTitle: '投稿', // TODO: 投稿タイトルを取得
+        postType: 'post', // TODO: 投稿タイプを取得
         authorName: comment.profiles?.name || 'ユーザー',
         authorAvatar: comment.profiles?.avatar_url || '',
         commentContent: comment.content,

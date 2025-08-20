@@ -93,11 +93,27 @@ src/
 
 詳細なドキュメントは`docs/`フォルダを参照してください：
 
-- [Product Requirements Document](docs/prd.md)
-- [Database Design](docs/database-design.md)
-- [API Design](docs/api-design.md)
-- [Test Strategy](docs/test-strategy.md)
-- [Deployment Design](docs/deployment-design.md)
+### **📋 基盤文書**
+
+- [Product Requirements Document](docs/prd.md) - プロダクト要件定義
+- [Test Strategy](docs/test-strategy.md) - テスト戦略
+
+### **🏗️ 技術仕様書**
+
+- [Technical Specification](docs/technical-specification.md) - 統合技術仕様書（データベース設計・API設計・機能仕様）
+- [Deployment Design](docs/deployment-design.md) - デプロイメント設計
+
+### **📱 機能仕様書**
+
+- [Profile Documentation](docs/profile-documentation.md) - プロフィール機能統合ドキュメント
+
+### **📊 実装レポート**
+
+- [Implementation Report](docs/implementation-report.md) - 統合実装完了レポート
+
+### **📖 文書構成の詳細**
+
+各文書の詳細な説明や使用方法については、[docs/README.md](docs/README.md)を参照してください。
 
 ## 🤝 貢献
 
