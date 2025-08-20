@@ -133,9 +133,9 @@ export function useInbox(userId: string): UseInboxReturn {
         message: notification.message,
         timestamp: notification.created_at,
         isRead: notification.is_read,
-        priority: notification.priority,
         actionUrl: notification.action_url || undefined,
         actionText: notification.action_text || undefined,
+        metadata: notification.metadata,
       });
     });
 

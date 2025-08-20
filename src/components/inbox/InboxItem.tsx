@@ -9,6 +9,7 @@ type InboxItemData = {
   isRead: boolean;
   actionUrl?: string;
   postId?: string;
+  metadata?: Record<string, unknown>;
 };
 
 interface InboxItemProps {
@@ -22,7 +23,21 @@ export default function InboxItem({
   onAction,
   onMarkAsRead,
 }: InboxItemProps) {
+  // 管理者通知かどうかを判定
+  const isAdminNotification = () => {
+    return item.metadata?.system_notification_id !== undefined;
+  };
+
   const getIcon = () => {
+    // 管理者通知の場合は特別なアイコン
+    if (isAdminNotification()) {
+      return (
+        <div className="w-5 h-5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+          <span className="text-white text-xs font-bold">管</span>
+        </div>
+      );
+    }
+
     switch (item.type) {
       case 'notification':
         return (
@@ -54,9 +69,13 @@ export default function InboxItem({
   return (
     <div
       className={`p-4 border-l-4 transition-all duration-200 hover:shadow-md cursor-pointer ${
-        item.isRead
-          ? 'border-gray-200 bg-gray-50 opacity-90'
-          : 'border-coral-500 bg-coral-50'
+        isAdminNotification()
+          ? item.isRead
+            ? 'border-purple-300 bg-purple-50 opacity-90'
+            : 'border-purple-500 bg-purple-50'
+          : item.isRead
+            ? 'border-gray-200 bg-gray-50 opacity-90'
+            : 'border-coral-500 bg-coral-50'
       }`}
       onClick={() => onAction(item)}
     >
@@ -73,6 +92,11 @@ export default function InboxItem({
               >
                 {item.title}
               </h3>
+              {isAdminNotification() && (
+                <span className="px-2 py-1 text-xs bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-medium">
+                  管理者からのお知らせ
+                </span>
+              )}
               {item.isRead && (
                 <span className="px-2 py-1 text-xs bg-gray-100 text-gray-500 rounded-full">
                   既読済

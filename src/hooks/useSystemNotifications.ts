@@ -86,7 +86,6 @@ export function useSystemNotifications(): UseSystemNotificationsReturn {
             p_title: notification.title,
             p_message: notification.message,
             p_type: notification.type,
-            p_priority: notification.priority,
             p_expires_at: notification.expiresAt || null,
             p_action_url: notification.actionUrl || null,
             p_action_text: notification.actionText || null,
