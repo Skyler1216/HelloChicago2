@@ -1,92 +1,173 @@
-import React from 'react';
-import { TrendingUp, Star } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
+import { TrendingUp, MapPin, Users, Calendar } from 'lucide-react';
 
-export default function PopularSpots() {
-  // Mock data for popular spots - in real app, this would come from database
-  const spots = [
-    {
-      id: 'spot1',
-      name: 'Millennium Park',
-      category: { icon: 'Trees', name_ja: '公園', color: '#A8E6CF' },
-      postCount: 5,
-      averageRating: 4.8,
-    },
-    {
-      id: 'spot2',
-      name: 'Whole Foods Market Lincoln Park',
-      category: { icon: 'ShoppingBag', name_ja: '買い物', color: '#FFE66D' },
-      postCount: 8,
-      averageRating: 4.5,
-    },
-    {
-      id: 'spot3',
-      name: 'Lincoln Park Zoo',
-      category: { icon: 'Baby', name_ja: '子ども', color: '#F38BA8' },
-      postCount: 12,
-      averageRating: 4.7,
-    },
-  ];
+interface Spot {
+  location: string;
+  lat: number;
+  lng: number;
+  address: string;
+  posts: Array<{
+    id: string;
+    title: string;
+    category_id?: string;
+    created_at: string;
+  }>;
+  postCount: number;
+  categories: Set<string>;
+}
+
+interface PopularSpotsProps {
+  spots: Spot[];
+  onSpotSelect?: (spot: Spot) => void;
+}
+
+export default function PopularSpots({
+  spots,
+  onSpotSelect,
+}: PopularSpotsProps) {
+  if (spots.length === 0) {
+    return (
+      <div className="px-4 py-6">
+        <div className="text-center py-8">
+          <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            スポットが見つかりません
+          </h3>
+          <p className="text-gray-500 text-sm">
+            このエリアにはまだ投稿がありません
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 py-6">
       <div className="flex items-center space-x-2 mb-4">
         <TrendingUp className="w-5 h-5 text-coral-600" />
         <h2 className="text-lg font-bold text-gray-900">人気スポット</h2>
+        <span className="text-sm text-gray-500">({spots.length}件)</span>
       </div>
 
       <div className="space-y-3">
         {spots.map((spot, index) => {
-          const IconComponent =
-            LucideIcons[spot.category.icon as keyof typeof LucideIcons];
+          // 最新の投稿を取得
+          const latestPost = spot.posts.sort(
+            (a, b) =>
+              new Date(b.created_at).getTime() -
+              new Date(a.created_at).getTime()
+          )[0];
+
+          // カテゴリの色を決定（最初のカテゴリを使用）
+          const categoryColor =
+            index < 3 ? ['#FF6B6B', '#4ECDC4', '#45B7D1'][index] : '#6B7280';
 
           return (
             <div
-              key={spot.id}
-              className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-md transition-all duration-200"
+              key={spot.location}
+              onClick={() => onSpotSelect?.(spot)}
+              className={`bg-white rounded-xl p-4 border border-gray-100 hover:shadow-md transition-all duration-200 cursor-pointer ${
+                onSpotSelect ? 'hover:border-coral-300 hover:scale-[1.02]' : ''
+              }`}
             >
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center space-x-3">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg text-white font-bold text-sm bg-gradient-to-r from-coral-500 to-coral-400">
+                  <div
+                    className="flex items-center justify-center w-10 h-10 rounded-lg text-white font-bold text-lg"
+                    style={{ backgroundColor: categoryColor }}
+                  >
                     {index + 1}
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 text-sm">
-                      {spot.name}
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900 text-sm mb-1">
+                      {spot.address ||
+                        `${spot.lat.toFixed(4)}, ${spot.lng.toFixed(4)}`}
                     </h3>
-                    <div className="flex items-center space-x-1 mt-1">
-                      <div
-                        className="flex items-center space-x-1 px-2 py-1 rounded-full text-xs"
-                        style={{
-                          backgroundColor: spot.category.color + '20',
-                          color: spot.category.color,
-                        }}
-                      >
-                        {IconComponent &&
-                          typeof IconComponent === 'function' &&
-                          React.createElement(
-                            IconComponent as React.ComponentType<{
-                              className?: string;
-                            }>,
-                            { className: 'w-4 h-4' }
-                          )}
-                        <span>{spot.category.name_ja}</span>
-                      </div>
-                    </div>
+                    {latestPost && (
+                      <p className="text-xs text-gray-600 line-clamp-1">
+                        {latestPost.title}
+                      </p>
+                    )}
                   </div>
+                </div>
+
+                <div className="text-right">
+                  <div className="flex items-center space-x-1 text-xs text-gray-500 mb-1">
+                    <Users className="w-3 h-3" />
+                    <span>{spot.postCount}件</span>
+                  </div>
+                  {latestPost && (
+                    <div className="flex items-center space-x-1 text-xs text-gray-400">
+                      <Calendar className="w-3 h-3" />
+                      <span>
+                        {new Date(latestPost.created_at).toLocaleDateString(
+                          'ja-JP',
+                          {
+                            month: 'short',
+                            day: 'numeric',
+                          }
+                        )}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-sm text-gray-500">
-                <span>{spot.postCount}件の投稿</span>
-                <div className="flex items-center space-x-1">
-                  <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                  <span>{spot.averageRating}</span>
-                </div>
+              {/* カテゴリタグ */}
+              <div className="flex flex-wrap gap-2">
+                {Array.from(spot.categories)
+                  .slice(0, 3)
+                  .map(categoryId => (
+                    <span
+                      key={categoryId}
+                      className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full"
+                    >
+                      {categoryId}
+                    </span>
+                  ))}
+                {spot.categories.size > 3 && (
+                  <span className="px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded-full">
+                    +{spot.categories.size - 3}
+                  </span>
+                )}
               </div>
+
+              {/* アクションボタン */}
+              {onSpotSelect && (
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <button
+                    onClick={e => {
+                      e.stopPropagation();
+                      onSpotSelect(spot);
+                    }}
+                    className="w-full flex items-center justify-center space-x-2 py-2 px-4 bg-coral-50 text-coral-700 rounded-lg hover:bg-coral-100 transition-colors text-sm font-medium"
+                  >
+                    <MapPin className="w-4 h-4" />
+                    <span>地図で見る</span>
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}
+      </div>
+
+      {/* 統計情報 */}
+      <div className="mt-6 p-4 bg-gradient-to-r from-coral-50 to-teal-50 rounded-xl">
+        <h3 className="text-sm font-medium text-gray-700 mb-2">エリア統計</h3>
+        <div className="grid grid-cols-2 gap-4 text-center">
+          <div>
+            <div className="text-2xl font-bold text-coral-600">
+              {spots.reduce((sum, spot) => sum + spot.postCount, 0)}
+            </div>
+            <div className="text-xs text-gray-600">総投稿数</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-teal-600">
+              {spots.length}
+            </div>
+            <div className="text-xs text-gray-600">スポット数</div>
+          </div>
+        </div>
       </div>
     </div>
   );

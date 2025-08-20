@@ -2,7 +2,6 @@ import { useRef, useEffect, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MapPin, Navigation, Layers } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
 
 // Set your Mapbox access token with fallback
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
@@ -15,26 +14,46 @@ interface MapboxMapProps {
     id: string;
     title: string;
     content: string;
-    summary?: string;
+    summary?: string | null;
     location_lat: number;
     location_lng: number;
-    categories?: {
-      id: string;
-      name: string;
-      name_ja: string;
-      icon: string;
-      color: string;
-    };
+    location_address?: string;
+    category_id: string;
     created_at: string;
+  }>;
+  mapSpots?: Array<{
+    id: string;
+    name: string;
+    description?: string;
+    category_id?: string;
+    location_lat: number;
+    location_lng: number;
+    location_address?: string;
+    created_by: string;
+    is_public: boolean;
+    created_at: string;
+    updated_at: string;
   }>;
   selectedCategory: string | null;
   onPostSelect: (post: MapboxMapProps['posts'][0]) => void;
+  onSpotSelect?: (spot: NonNullable<MapboxMapProps['mapSpots']>[0]) => void;
+  onLocationClick?: (location: {
+    lat: number;
+    lng: number;
+    address?: string;
+  }) => void;
+  searchQuery?: string;
+  distanceFilter?: number;
 }
 
 export default function MapboxMap({
   posts,
+  mapSpots,
   selectedCategory,
   onPostSelect,
+  onSpotSelect,
+  onLocationClick,
+  searchQuery,
 }: MapboxMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -50,6 +69,24 @@ export default function MapboxMap({
 
   // Chicago coordinates
   const chicagoCenter: [number, number] = [-87.6298, 41.8781];
+
+  // Get category information for posts
+  const getCategoryInfo = (categoryId: string) => {
+    // This would typically come from a categories hook or prop
+    // For now, return a default color
+    const defaultColors = [
+      '#FF6B6B',
+      '#4ECDC4',
+      '#45B7D1',
+      '#96CEB4',
+      '#FFEAA7',
+    ];
+    const colorIndex = categoryId.charCodeAt(0) % defaultColors.length;
+    return {
+      color: defaultColors[colorIndex],
+      name_ja: categoryId,
+    };
+  };
 
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
@@ -132,83 +169,91 @@ export default function MapboxMap({
     markers.current.forEach(marker => marker.remove());
     markers.current = [];
 
-    // Filter posts based on selected category
-    const filteredPosts = selectedCategory
-      ? posts.filter(post => post.categories?.id === selectedCategory)
-      : posts;
+    // Filter posts based on category and search
+    const filteredPosts = posts.filter(post => {
+      if (selectedCategory && post.category_id !== selectedCategory) {
+        return false;
+      }
+      if (
+        searchQuery &&
+        !post.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !post.content.toLowerCase().includes(searchQuery.toLowerCase())
+      ) {
+        return false;
+      }
+      return true;
+    });
 
-    // Add markers for each post
+    // Add markers for filtered posts
     filteredPosts.forEach(post => {
-      if (!post.location_lat || !post.location_lng) return;
-
       // Create custom marker element
       const markerElement = document.createElement('div');
       markerElement.className = 'custom-marker';
-      markerElement.style.cssText = `
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background-color: ${post.categories?.color || '#FF6B6B'};
-        border: 3px solid white;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: transform 0.2s ease;
+
+      // Determine marker color based on category or default
+      const markerColor = post.category_id
+        ? getCategoryInfo(post.category_id).color
+        : '#FF6B6B';
+      const isHighlighted =
+        searchQuery &&
+        (post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          post.content.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      markerElement.innerHTML = `
+        <div style="
+          width: 24px; 
+          height: 24px; 
+          background: ${markerColor}; 
+          border: 3px solid white; 
+          border-radius: 50%; 
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          cursor: pointer;
+          transition: all 0.2s ease;
+          ${isHighlighted ? 'transform: scale(1.2); box-shadow: 0 4px 16px rgba(0,0,0,0.4);' : ''}
+        "></div>
       `;
 
-      // Add icon to marker
-      const IconComponent = post.categories?.icon
-        ? LucideIcons[post.categories.icon as keyof typeof LucideIcons]
-        : MapPin;
-      if (IconComponent) {
-        const iconSvg = document.createElementNS(
-          'http://www.w3.org/2000/svg',
-          'svg'
-        );
-        iconSvg.setAttribute('width', '20');
-        iconSvg.setAttribute('height', '20');
-        iconSvg.setAttribute('fill', 'white');
-        iconSvg.setAttribute('viewBox', '0 0 24 24');
-        iconSvg.innerHTML =
-          '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>';
-        markerElement.appendChild(iconSvg);
-      }
-
-      // Add hover effects
-      markerElement.addEventListener('mouseenter', () => {
-        markerElement.style.transform = 'scale(1.1)';
-      });
-
-      markerElement.addEventListener('mouseleave', () => {
-        markerElement.style.transform = 'scale(1)';
-      });
-
-      // Create popup
+      // Create popup content
       const popup = new mapboxgl.Popup({
-        offset: 25,
         closeButton: true,
         closeOnClick: false,
+        maxWidth: '300px',
+        className: 'custom-popup',
       }).setHTML(`
-        <div style="padding: 12px; max-width: 250px;">
-          <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold; color: #1f2937;">
+        <div style="padding: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #1f2937;">
             ${post.title}
           </h3>
           <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 8px;">
-            <div style="width: 16px; height: 16px; background-color: ${post.categories?.color || '#FF6B6B'}; border-radius: 4px;"></div>
-            <span style="font-size: 12px; color: #6b7280;">${post.categories?.name_ja || 'カテゴリなし'}</span>
+            <div style="width: 12px; height: 12px; background-color: ${markerColor}; border-radius: 50%;"></div>
+            <span style="font-size: 11px; color: #6b7280;">
+              ${post.category_id ? getCategoryInfo(post.category_id).name_ja : 'カテゴリなし'}
+            </span>
           </div>
-          <p style="margin: 0 0 8px 0; font-size: 12px; color: #4b5563; line-height: 1.4;">
-            ${post.summary || post.content.substring(0, 100) + '...'}
+          <p style="margin: 0 0 8px 0; font-size: 11px; color: #4b5563; line-height: 1.4; max-height: 60px; overflow: hidden;">
+            ${post.summary || post.content.substring(0, 80) + '...'}
           </p>
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 11px; color: #9ca3af;">
-              ${new Date(post.created_at).toLocaleDateString('ja-JP')}
+            <span style="font-size: 10px; color: #9ca3af;">
+              ${new Date(post.created_at).toLocaleDateString('ja-JP', {
+                month: 'short',
+                day: 'numeric',
+              })}
             </span>
             <button 
               onclick="window.selectPost('${post.id}')"
-              style="background: #ff6b6b; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;"
+              style="
+                background: ${markerColor}; 
+                color: white; 
+                border: none; 
+                padding: 4px 8px; 
+                border-radius: 4px; 
+                font-size: 10px; 
+                cursor: pointer;
+                transition: opacity 0.2s ease;
+              "
+              onmouseover="this.style.opacity='0.8'"
+              onmouseout="this.style.opacity='1'"
             >
               詳細を見る
             </button>
@@ -228,7 +273,105 @@ export default function MapboxMap({
       markerElement.addEventListener('click', () => {
         onPostSelect(post);
       });
+
+      // Add hover effects
+      markerElement.addEventListener('mouseenter', () => {
+        markerElement.style.transform = 'scale(1.1)';
+      });
+
+      markerElement.addEventListener('mouseleave', () => {
+        markerElement.style.transform = isHighlighted
+          ? 'scale(1.2)'
+          : 'scale(1)';
+      });
     });
+
+    // Add markers for filtered map spots
+    if (mapSpots) {
+      const filteredMapSpots = mapSpots.filter(spot => {
+        if (selectedCategory && spot.category_id !== selectedCategory) {
+          return false;
+        }
+        if (
+          searchQuery &&
+          !spot.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+          !(
+            spot.description &&
+            spot.description.toLowerCase().includes(searchQuery.toLowerCase())
+          )
+        ) {
+          return false;
+        }
+        return true;
+      });
+
+      filteredMapSpots.forEach(spot => {
+        const markerElement = document.createElement('div');
+        markerElement.className = 'custom-marker';
+
+        const markerColor = spot.category_id
+          ? getCategoryInfo(spot.category_id).color
+          : '#FF6B6B';
+
+        markerElement.innerHTML = `
+          <div style="
+            width: 24px; 
+            height: 24px; 
+            background: ${markerColor}; 
+            border: 3px solid white; 
+            border-radius: 50%; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: all 0.2s ease;
+          "></div>
+        `;
+
+        const popup = new mapboxgl.Popup({
+          closeButton: true,
+          closeOnClick: false,
+          maxWidth: '300px',
+          className: 'custom-popup',
+        }).setHTML(`
+          <div style="padding: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #1f2937;">
+              ${spot.name}
+            </h3>
+            <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 8px;">
+              <div style="width: 12px; height: 12px; background-color: ${markerColor}; border-radius: 50%;"></div>
+              <span style="font-size: 11px; color: #6b7280;">
+                ${spot.category_id ? getCategoryInfo(spot.category_id).name_ja : 'カテゴリなし'}
+              </span>
+            </div>
+            <p style="margin: 0 0 8px 0; font-size: 11px; color: #4b5563; line-height: 1.4; max-height: 60px; overflow: hidden;">
+              ${spot.description || 'スポット情報'}
+            </p>
+          </div>
+        `);
+
+        const marker = new mapboxgl.Marker(markerElement)
+          .setLngLat([spot.location_lng, spot.location_lat])
+          .setPopup(popup)
+          .addTo(map.current!);
+
+        markers.current.push(marker);
+
+        if (onSpotSelect) {
+          markerElement.addEventListener('click', () => {
+            onSpotSelect(spot);
+          });
+        }
+
+        if (onLocationClick) {
+          markerElement.addEventListener('dblclick', () => {
+            onLocationClick({
+              lat: spot.location_lat,
+              lng: spot.location_lng,
+              address: spot.location_address,
+            });
+          });
+        }
+      });
+    }
 
     // Add global function for popup button clicks
     (window as unknown as { selectPost: (postId: string) => void }).selectPost =
@@ -238,7 +381,16 @@ export default function MapboxMap({
           onPostSelect(post);
         }
       };
-  }, [posts, selectedCategory, mapLoaded, onPostSelect]);
+  }, [
+    posts,
+    mapSpots,
+    selectedCategory,
+    searchQuery,
+    mapLoaded,
+    onPostSelect,
+    onSpotSelect,
+    onLocationClick,
+  ]);
 
   const mapStyles = [
     { id: 'mapbox://styles/mapbox/streets-v12', name: 'Streets', icon: '🗺️' },
@@ -391,7 +543,7 @@ export default function MapboxMap({
           <div className="w-2 h-2 bg-coral-500 rounded-full"></div>
           <span className="text-xs text-gray-700">
             {selectedCategory
-              ? posts.filter(p => p.categories?.id === selectedCategory).length
+              ? posts.filter(p => p.category_id === selectedCategory).length
               : posts.length}
             件の投稿
           </span>
