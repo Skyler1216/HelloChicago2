@@ -269,8 +269,12 @@ export interface Database {
           id: string;
           title: string;
           message: string;
-          type: string;
-          priority: string;
+          type:
+            | 'app_update'
+            | 'system_maintenance'
+            | 'feature_release'
+            | 'community_event'
+            | 'system';
           expires_at: string | null;
           action_url: string | null;
           action_text: string | null;
@@ -278,7 +282,7 @@ export interface Database {
           total_recipients: number;
           delivered_count: number;
           read_count: number;
-          status: string;
+          status: 'draft' | 'sending' | 'sent' | 'cancelled';
           created_by: string;
           created_at: string;
           updated_at: string;
@@ -287,8 +291,12 @@ export interface Database {
           id?: string;
           title: string;
           message: string;
-          type: string;
-          priority?: string;
+          type:
+            | 'app_update'
+            | 'system_maintenance'
+            | 'feature_release'
+            | 'community_event'
+            | 'system';
           expires_at?: string | null;
           action_url?: string | null;
           action_text?: string | null;
@@ -296,7 +304,7 @@ export interface Database {
           total_recipients?: number;
           delivered_count?: number;
           read_count?: number;
-          status?: string;
+          status?: 'draft' | 'sending' | 'sent' | 'cancelled';
           created_by: string;
           created_at?: string;
           updated_at?: string;
@@ -305,8 +313,12 @@ export interface Database {
           id?: string;
           title?: string;
           message?: string;
-          type?: string;
-          priority?: string;
+          type?:
+            | 'app_update'
+            | 'system_maintenance'
+            | 'feature_release'
+            | 'community_event'
+            | 'system';
           expires_at?: string | null;
           action_url?: string | null;
           action_text?: string | null;
@@ -314,7 +326,7 @@ export interface Database {
           total_recipients?: number;
           delivered_count?: number;
           read_count?: number;
-          status?: string;
+          status?: 'draft' | 'sending' | 'sent' | 'cancelled';
           created_by?: string;
           created_at?: string;
           updated_at?: string;
@@ -326,7 +338,7 @@ export interface Database {
           system_notification_id: string;
           recipient_id: string;
           user_notification_id: string;
-          status: string;
+          status: 'pending' | 'delivered' | 'read' | 'failed';
           delivered_at: string | null;
           read_at: string | null;
           created_at: string;
@@ -336,7 +348,7 @@ export interface Database {
           system_notification_id: string;
           recipient_id: string;
           user_notification_id: string;
-          status?: string;
+          status?: 'pending' | 'delivered' | 'read' | 'failed';
           delivered_at?: string | null;
           read_at?: string | null;
           created_at?: string;
@@ -346,7 +358,7 @@ export interface Database {
           system_notification_id?: string;
           recipient_id?: string;
           user_notification_id?: string;
-          status?: string;
+          status?: 'pending' | 'delivered' | 'read' | 'failed';
           delivered_at?: string | null;
           read_at?: string | null;
           created_at?: string;
