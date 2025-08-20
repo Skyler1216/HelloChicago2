@@ -97,12 +97,6 @@ export default function InboxItem({
               >
                 {item.title}
               </h3>
-              {isAdminNotification() && (
-                <span className="px-3 py-1.5 text-xs bg-gradient-to-r from-blue-600 to-teal-500 text-white rounded-full font-semibold shadow-sm flex items-center space-x-1">
-                  <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
-                  <span>管理者からのお知らせ</span>
-                </span>
-              )}
               {item.isRead && (
                 <span className="px-2 py-1 text-xs bg-gray-100 text-gray-500 rounded-full">
                   既読済
@@ -130,22 +124,48 @@ export default function InboxItem({
                 item.isRead ? 'text-gray-500' : 'text-gray-700'
               }`}
             >
-              {item.message.length > 120 ? (
+              {isAdminNotification() ? (
+                // システム通知の場合は2行程度（約39文字）で制限
                 <>
-                  {item.message.slice(0, 120)}
-                  <span className="text-gray-400">...</span>
-                  <button
-                    onClick={e => {
-                      e.stopPropagation();
-                      setShowDetailModal(true);
-                    }}
-                    className="ml-1 text-coral-600 hover:text-coral-700 text-xs font-medium hover:underline"
-                  >
-                    続きを読む
-                  </button>
+                  {item.message.length > 39 ? (
+                    <>
+                      {item.message.slice(0, 39)}
+                      <span className="text-gray-400">...</span>
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          setShowDetailModal(true);
+                        }}
+                        className="ml-1 text-coral-600 hover:text-coral-700 text-xs font-medium hover:underline"
+                      >
+                        詳細を見る
+                      </button>
+                    </>
+                  ) : (
+                    item.message
+                  )}
                 </>
               ) : (
-                item.message
+                // 通常の通知・メッセージの場合は2行程度（約39文字）で制限
+                <>
+                  {item.message.length > 39 ? (
+                    <>
+                      {item.message.slice(0, 39)}
+                      <span className="text-gray-400">...</span>
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          setShowDetailModal(true);
+                        }}
+                        className="ml-1 text-coral-600 hover:text-coral-700 text-xs font-medium hover:underline"
+                      >
+                        続きを読む
+                      </button>
+                    </>
+                  ) : (
+                    item.message
+                  )}
+                </>
               )}
             </p>
           </div>
