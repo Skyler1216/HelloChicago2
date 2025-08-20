@@ -11,7 +11,6 @@ import {
 import {
   useSystemNotifications,
   NOTIFICATION_TYPES,
-  NOTIFICATION_PRIORITIES,
 } from '../../hooks/useSystemNotifications';
 import { useToast } from '../../hooks/useToast';
 // 未使用のインポートを削除
@@ -60,7 +59,7 @@ export default function SystemNotificationManager({
       | 'system_maintenance'
       | 'feature_release'
       | 'community_event',
-    priority: 'normal' as 'low' | 'normal' | 'high' | 'urgent',
+
     expiresAt: '',
     actionUrl: '',
     actionText: '',
@@ -108,7 +107,7 @@ export default function SystemNotificationManager({
       title: '',
       message: '',
       type: 'system',
-      priority: 'normal',
+
       expiresAt: '',
       actionUrl: '',
       actionText: '',
@@ -127,7 +126,7 @@ export default function SystemNotificationManager({
       | 'system_maintenance'
       | 'feature_release'
       | 'community_event';
-    priority: 'low' | 'normal' | 'high' | 'urgent';
+
     expiresAt?: string;
     actionUrl?: string;
     actionText?: string;
@@ -152,7 +151,6 @@ export default function SystemNotificationManager({
         title: formData.title,
         message: formData.message,
         type: formData.type,
-        priority: formData.priority,
         expiresAt: formData.expiresAt || undefined,
         actionUrl: formData.actionUrl || undefined,
         actionText: formData.actionText || undefined,
@@ -194,22 +192,6 @@ export default function SystemNotificationManager({
       await loadSystemNotifications();
     } else {
       addToast('error', error || '通知の削除に失敗しました');
-    }
-  };
-
-  // 優先度の色を取得
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent':
-        return 'bg-red-100 text-red-700 border-red-200';
-      case 'high':
-        return 'bg-orange-100 text-orange-700 border-orange-200';
-      case 'normal':
-        return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'low':
-        return 'bg-gray-100 text-gray-700 border-gray-200';
-      default:
-        return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
 
@@ -340,32 +322,6 @@ export default function SystemNotificationManager({
                     ))}
                   </select>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    優先度
-                  </label>
-                  <select
-                    value={formData.priority}
-                    onChange={e =>
-                      setFormData({
-                        ...formData,
-                        priority: e.target.value as
-                          | 'low'
-                          | 'normal'
-                          | 'high'
-                          | 'urgent',
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    {NOTIFICATION_PRIORITIES.map(priority => (
-                      <option key={priority.value} value={priority.value}>
-                        {priority.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
 
               {/* 有効期限 */}
@@ -476,15 +432,7 @@ export default function SystemNotificationManager({
                             <h3 className="font-medium text-gray-900">
                               {notification.title}
                             </h3>
-                            <span
-                              className={`px-2 py-1 text-xs rounded-full border ${getPriorityColor(notification.priority)}`}
-                            >
-                              {
-                                NOTIFICATION_PRIORITIES.find(
-                                  p => p.value === notification.priority
-                                )?.label
-                              }
-                            </span>
+
                             <span className="px-2 py-1 text-xs rounded-full border bg-gray-100 text-gray-700 border-gray-200">
                               {notification.status === 'sent'
                                 ? '配信済み'

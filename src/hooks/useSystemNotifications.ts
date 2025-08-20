@@ -10,7 +10,7 @@ type SystemNotification =
 interface SystemNotificationCreate {
   title: string;
   message: string;
-  priority: 'low' | 'normal' | 'high' | 'urgent';
+
   expiresAt?: string;
   actionUrl?: string;
   actionText?: string;
@@ -192,25 +192,15 @@ export function useSystemNotifications(): UseSystemNotificationsReturn {
 
 // 通知タイプのオプション
 export const NOTIFICATION_TYPES = [
-  { value: 'app_update', label: 'アプリアップデート', priority: 'normal' },
+  { value: 'app_update', label: 'アプリアップデート' },
   {
     value: 'system_maintenance',
     label: 'システムメンテナンス',
-    priority: 'high',
   },
-  { value: 'feature_release', label: '新機能リリース', priority: 'normal' },
+  { value: 'feature_release', label: '新機能リリース' },
   {
     value: 'community_event',
     label: 'コミュニティイベント',
-    priority: 'normal',
   },
-  { value: 'system', label: 'システム通知', priority: 'normal' },
-] as const;
-
-// 優先度のオプション
-export const NOTIFICATION_PRIORITIES = [
-  { value: 'low', label: '低', color: 'gray' },
-  { value: 'normal', label: '通常', color: 'blue' },
-  { value: 'high', label: '高', color: 'orange' },
-  { value: 'urgent', label: '緊急', color: 'red' },
+  { value: 'system', label: 'システム通知' },
 ] as const;

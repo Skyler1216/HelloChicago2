@@ -7,7 +7,6 @@ type InboxItemData = {
   message: string;
   timestamp: string;
   isRead: boolean;
-  priority?: 'low' | 'normal' | 'high' | 'urgent';
   actionUrl?: string;
   postId?: string;
 };
@@ -52,21 +51,6 @@ export default function InboxItem({
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent':
-        return 'bg-red-100 text-red-700';
-      case 'high':
-        return 'bg-orange-100 text-orange-700';
-      case 'normal':
-        return 'bg-blue-100 text-blue-700';
-      case 'low':
-        return 'bg-gray-100 text-gray-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
-    }
-  };
-
   return (
     <div
       className={`p-4 border-l-4 transition-all duration-200 hover:shadow-md cursor-pointer ${
@@ -96,15 +80,6 @@ export default function InboxItem({
               )}
             </div>
             <div className="flex items-center space-x-2">
-              {item.priority && (
-                <span
-                  className={`px-2 py-1 text-xs rounded-full ${getPriorityColor(
-                    item.priority
-                  )}`}
-                >
-                  {item.priority}
-                </span>
-              )}
               {!item.isRead && (
                 <button
                   onClick={e => {

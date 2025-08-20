@@ -26,7 +26,7 @@ interface InboxItem {
   message: string;
   timestamp: string;
   isRead: boolean;
-  priority?: 'low' | 'normal' | 'high' | 'urgent';
+
   actionUrl?: string;
   actionText?: string;
   // For messages

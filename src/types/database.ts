@@ -379,7 +379,7 @@ export interface Database {
           read_at: string | null;
           pushed_at: string | null;
           emailed_at: string | null;
-          priority: 'low' | 'normal' | 'high' | 'urgent';
+
           expires_at: string | null;
           action_url: string | null;
           action_text: string | null;
@@ -410,7 +410,7 @@ export interface Database {
           read_at?: string | null;
           pushed_at?: string | null;
           emailed_at?: string | null;
-          priority?: 'low' | 'normal' | 'high' | 'urgent';
+
           expires_at?: string | null;
           action_url?: string | null;
           action_text?: string | null;
@@ -441,7 +441,7 @@ export interface Database {
           read_at?: string | null;
           pushed_at?: string | null;
           emailed_at?: string | null;
-          priority?: 'low' | 'normal' | 'high' | 'urgent';
+
           expires_at?: string | null;
           action_url?: string | null;
           action_text?: string | null;
