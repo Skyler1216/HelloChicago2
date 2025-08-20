@@ -16,6 +16,7 @@ interface UseCommentsReturn {
   comments: CommentWithProfile[];
   loading: boolean;
   error: string | null;
+  totalCount: number;
   createComment: (
     comment: Omit<CommentInsert, 'id' | 'created_at' | 'updated_at'>
   ) => Promise<boolean>;
@@ -30,6 +31,7 @@ export function useComments(postId?: string): UseCommentsReturn {
   const [comments, setComments] = useState<CommentWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState<number>(0);
 
   // コメントを取得
   const loadComments = useCallback(
@@ -62,6 +64,7 @@ export function useComments(postId?: string): UseCommentsReturn {
         // コメントを階層構造に変換
         const commentsWithReplies = buildCommentTree(data || []);
         setComments(commentsWithReplies);
+        setTotalCount(data?.length || 0);
       } catch (err) {
         logError(err, 'useComments.loadComments');
         setError(formatSupabaseError(err));
@@ -318,6 +321,7 @@ export function useComments(postId?: string): UseCommentsReturn {
     comments,
     loading,
     error,
+    totalCount,
     createComment,
     updateComment,
     deleteComment,
