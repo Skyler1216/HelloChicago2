@@ -1,4 +1,3 @@
-import React from 'react';
 import { Bell, MessageSquare, Clock, Check } from 'lucide-react';
 
 type InboxItemData = {
