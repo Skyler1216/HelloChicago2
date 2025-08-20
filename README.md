@@ -21,6 +21,13 @@ HelloChicago2は、シカゴ在住の日本人妻が情報交換や相談を行�
 - **Maps**: Mapbox GL JS
 - **Deployment**: Netlify
 
+## 📛 名称について
+
+- プロダクト名: HelloChicago
+- リポジトリ名: HelloChicago2
+
+本READMEではプロダクト全般を「HelloChicago」と記載する場合があります。
+
 ## 📋 セットアップ手順
 
 ### 1. リポジトリのクローン
@@ -91,29 +98,7 @@ src/
 
 ## 📚 ドキュメント
 
-詳細なドキュメントは`docs/`フォルダを参照してください：
-
-### **📋 基盤文書**
-
-- [Product Requirements Document](docs/prd.md) - プロダクト要件定義
-- [Test Strategy](docs/test-strategy.md) - テスト戦略
-
-### **🏗️ 技術仕様書**
-
-- [Technical Specification](docs/technical-specification.md) - 統合技術仕様書（データベース設計・API設計・機能仕様）
-- [Deployment Design](docs/deployment-design.md) - デプロイメント設計
-
-### **📱 機能仕様書**
-
-- [Profile Documentation](docs/profile-documentation.md) - プロフィール機能統合ドキュメント
-
-### **📊 実装レポート**
-
-- [Implementation Report](docs/implementation-report.md) - 統合実装完了レポート
-
-### **📖 文書構成の詳細**
-
-各文書の詳細な説明や使用方法については、[docs/README.md](docs/README.md)を参照してください。
+プロジェクトの正式なドキュメント索引は [docs/README.md](docs/README.md) を正典として参照してください。
 
 ## 🤝 貢献
 

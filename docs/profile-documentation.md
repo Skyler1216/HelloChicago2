@@ -7,6 +7,13 @@
 **対象**: HelloChicagoアプリケーションのプロフィール機能全般  
 **ステータス**: ✅ 統合完了・実装完了
 
+## 📚 この文書の役割と境界
+
+- 本書: プロフィール機能の目的、UX、運用ガイド
+- データベーススキーマ・API詳細は [技術仕様書](./technical-specification.md) を参照
+- CI/CD・環境構成は [デプロイメント設計書](./deployment-design.md) を参照
+- テスト観点・網羅性は [テスト戦略書](./test-strategy.md) を参照
+
 ## 🎯 プロフィール機能概要
 
 HelloChicagoアプリケーションのプロフィール機能は、駐在妻コミュニティのメンバーが自己紹介や詳細情報を管理し、他のメンバーとつながるための重要な機能です。
@@ -21,56 +28,14 @@ HelloChicagoアプリケーションのプロフィール機能は、駐在妻�
 
 ## 🏗️ 技術仕様
 
-### **データベース設計**
+- プロフィール関連のデータモデルおよびAPIの正典は [技術仕様書](./technical-specification.md) を参照してください。
+- 本書ではUX観点を中心に説明します。
 
-#### **1. profiles テーブル（基本情報）**
-
-```sql
-CREATE TABLE profiles (
-  id uuid REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
-  name text NOT NULL,
-  email text UNIQUE NOT NULL,
-  avatar_url text,
-  is_approved boolean DEFAULT false,
-  role text DEFAULT 'user' CHECK (role IN ('user', 'admin')),
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-```
-
-#### **2. profile_details テーブル（詳細情報）**
-
-```sql
-CREATE TABLE profile_details (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  profile_id uuid REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
-  bio text,
-  location_area text,
-  interests text[],
-  languages text[],
-  arrival_date date,
-  family_structure text,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-```
-
-### **テーブル関係**
+### 関連テーブルの関係（概要）
 
 ```
-profiles (1) ←→ (1) profile_details
-    ↓
-auth.users (1) ←→ (1) profiles
-```
-
-### **インデックス**
-
-```sql
--- パフォーマンス向上のためのインデックス
-CREATE INDEX idx_profiles_email ON profiles(email);
-CREATE INDEX idx_profiles_is_approved ON profiles(is_approved);
-CREATE INDEX idx_profiles_role ON profiles(role);
-CREATE INDEX idx_profile_details_profile_id ON profile_details(profile_id);
+auth.users (1) ←→ (1) profiles (基本情報)
+profiles (1) ←→ (1) profile_details (詳細情報)
 ```
 
 ## 📱 フロントエンド実装

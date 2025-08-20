@@ -7,6 +7,14 @@
 **実装者**: AI Assistant  
 **ステータス**: ✅ 全機能実装完了・最適化済み
 
+## 📚 この文書の役割と関連
+
+- 本書: 実装のサマリ、意思決定の背景、結果の記録
+- 技術詳細は [技術仕様書](./technical-specification.md) を参照
+- CI/CDと環境設定は [デプロイメント設計書](./deployment-design.md) を参照
+- テストの方針と網羅性は [テスト戦略書](./test-strategy.md) を参照
+- プロフィール機能のUX/運用は [プロフィール機能ドキュメント](./profile-documentation.md) を参照
+
 ## 🎯 実装完了機能一覧
 
 ### **1. プロフィール機能** ✅
@@ -120,21 +128,10 @@ notifications           # 既存テーブルを拡張・最適化
 
 ## 🏗️ 技術的実装詳細
 
-### **データベース設計**
+### **データベース設計（サマリ）**
 
-#### **テーブル構成**
-
-1. **profiles** - ユーザープロフィール管理
-2. **categories** - 投稿カテゴリ管理
-3. **posts** - 投稿情報管理
-4. **comments** - コメント・返信管理
-5. **likes** - いいね機能
-6. **profile_details** - 詳細プロフィール情報
-7. **notification_settings** - 通知設定
-8. **通知システム（3テーブル構成）**
-   - system_notifications - システム通知管理
-   - notification_deliveries - 配信状況追跡
-   - notifications - 個別ユーザー通知
+- 主要ドメイン: プロフィール、投稿、コメント、いいね、通知（3テーブル構成）、設定
+- 詳細なスキーマとカラム情報の正典は [技術仕様書](./technical-specification.md) および `supabase/migrations/` を参照してください。
 
 #### **主要機能**
 

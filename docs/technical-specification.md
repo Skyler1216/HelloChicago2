@@ -11,6 +11,15 @@
 
 HelloChicagoアプリケーションの包括的な技術仕様書です。データベース設計、API設計、機能仕様を統合し、開発・保守・運用に必要な情報を一元化しています。
 
+## 📚 ドキュメント構成
+
+- 技術仕様書（本書）
+- [プロダクト要件定義書（PRD）](./prd.md)
+- [実装レポート](./implementation-report.md)
+- [デプロイメント設計書](./deployment-design.md)
+- [テスト戦略書](./test-strategy.md)
+- [プロフィール機能ドキュメント](./profile-documentation.md)
+
 ## 🏗️ システムアーキテクチャ
 
 ### **技術スタック**
@@ -80,7 +89,7 @@ CREATE TABLE profiles (
 **notification_deliveries**: 各ユーザーへの配信状況を追跡
 **notifications**: 個別ユーザーへの通知を管理
 
-詳細なスキーマとカラム情報は、統合作業完了後に完全版で提供します。
+詳細なスキーマとカラム情報は、`supabase/migrations/` の各SQLに正典として記載しています（本書は概要を提供）。
 
 ## 🔌 API設計
 
