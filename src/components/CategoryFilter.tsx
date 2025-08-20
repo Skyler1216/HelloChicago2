@@ -77,8 +77,9 @@ export default function CategoryFilter({
             return aIndex - bIndex;
           })
           .map(category => {
-            const IconComponent =
-              LucideIcons[category.icon as keyof typeof LucideIcons];
+            const IconComponent = LucideIcons[
+              category.icon as keyof typeof LucideIcons
+            ] as React.ComponentType<{ className?: string }>;
 
             return (
               <button

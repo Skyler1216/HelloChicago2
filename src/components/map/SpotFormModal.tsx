@@ -17,6 +17,9 @@ export default function SpotFormModal({
   spot,
   location,
 }: SpotFormModalProps) {
+  // デバッグログを追加
+  console.log('SpotFormModal render:', { isOpen, location, spot });
+
   const [formData, setFormData] = useState<CreateMapSpotData>({
     name: '',
     description: '',
@@ -134,7 +137,12 @@ export default function SpotFormModal({
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    console.log('SpotFormModal: isOpen is false, not rendering');
+    return null;
+  }
+
+  console.log('SpotFormModal: isOpen is true, rendering modal');
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

@@ -302,14 +302,15 @@ export default function MapView() {
           ) : (
             <MapboxMap
               posts={filteredPosts}
-              mapSpots={filteredMapSpots}
               selectedCategory={selectedCategory}
               onPostSelect={setSelectedPost}
               searchQuery={searchQuery}
               distanceFilter={distanceFilter}
               onLocationClick={location => {
                 console.log('Location clicked in MapView:', location); // デバッグログ
+                console.log('Setting clickedLocation state:', location); // 追加デバッグログ
                 setClickedLocation(location);
+                console.log('clickedLocation state after set:', location); // 状態更新後のログ
               }}
             />
           )}
@@ -328,11 +329,23 @@ export default function MapView() {
       <SpotFormModal
         isOpen={showSpotForm || !!clickedLocation}
         onClose={() => {
+          console.log('Closing SpotFormModal'); // デバッグログ
           setShowSpotForm(false);
           setClickedLocation(null);
         }}
         location={clickedLocation || undefined}
       />
+
+      {/* Debug info for modal state */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed top-20 right-4 bg-black bg-opacity-75 text-white text-xs p-2 rounded z-50">
+          <div>showSpotForm: {showSpotForm ? 'true' : 'false'}</div>
+          <div>clickedLocation: {clickedLocation ? 'set' : 'null'}</div>
+          <div>
+            Modal isOpen: {showSpotForm || !!clickedLocation ? 'true' : 'false'}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

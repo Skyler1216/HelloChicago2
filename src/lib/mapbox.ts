@@ -1,9 +1,11 @@
 import mapboxgl from 'mapbox-gl';
 
-const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
+const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
 if (!mapboxToken) {
-  throw new Error('Missing Mapbox environment variable: VITE_MAPBOX_TOKEN');
+  throw new Error(
+    'Missing Mapbox environment variable: VITE_MAPBOX_ACCESS_TOKEN'
+  );
 }
 
 // Set the access token
