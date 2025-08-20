@@ -82,3 +82,52 @@ export interface CreateSpotNoteData {
   note: string;
   is_private?: boolean;
 }
+
+// マップ関連の新しい型定義
+export interface Post {
+  id: string;
+  title: string;
+  content: string;
+  summary?: string | null;
+  location_lat: number;
+  location_lng: number;
+  location_address?: string;
+  category_id: string;
+  created_at: string;
+}
+
+export interface Location {
+  lat: number;
+  lng: number;
+  address?: string;
+}
+
+export interface POIFeature {
+  text?: string;
+  text_ja?: string;
+  place_name?: string;
+  place_name_ja?: string;
+  relevance: number;
+  distance: number;
+  place_type: string[];
+}
+
+export interface POISearchResult {
+  poiFound: boolean;
+  poiName: string;
+  poiAddress: string;
+  coordinates: [number, number];
+}
+
+export interface MapConfig {
+  center: [number, number];
+  zoom: number;
+  minZoom: number;
+  maxZoom: number;
+  style: string;
+}
+
+export interface CategoryInfo {
+  color: string;
+  name_ja: string;
+}

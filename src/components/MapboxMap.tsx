@@ -1,7 +1,11 @@
-import { useRef, useEffect, useState, useMemo } from 'react';
+import { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MapPin, Navigation, Layers } from 'lucide-react';
+import { Post, Location, CategoryInfo } from '../types/map';
+import { useMapPOI } from '../hooks/useMapPOI';
+import { useMapMarkers } from '../hooks/useMapMarkers';
+import { useMapControls } from '../hooks/useMapControls';
 
 // Set your Mapbox access token with fallback
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
@@ -10,24 +14,10 @@ if (MAPBOX_TOKEN) {
 }
 
 interface MapboxMapProps {
-  posts: Array<{
-    id: string;
-    title: string;
-    content: string;
-    summary?: string | null;
-    location_lat: number;
-    location_lng: number;
-    location_address?: string;
-    category_id: string;
-    created_at: string;
-  }>;
+  posts: Post[];
   selectedCategory: string | null;
-  onPostSelect: (post: MapboxMapProps['posts'][0]) => void;
-  onLocationClick?: (location: {
-    lat: number;
-    lng: number;
-    address?: string;
-  }) => void;
+  onPostSelect: (post: Post) => void;
+  onLocationClick?: (location: Location) => void;
   searchQuery?: string;
   distanceFilter?: number;
 }
@@ -41,8 +31,8 @@ export default function MapboxMap({
 }: MapboxMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const markers = useRef<mapboxgl.Marker[]>([]);
-  const clickMarker = useRef<mapboxgl.Marker | null>(null);
+  const buildingToggleRef = useRef<HTMLDivElement | null>(null);
+
   const [mapLoaded, setMapLoaded] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(
     null
@@ -53,6 +43,23 @@ export default function MapboxMap({
   const [showBuildings, setShowBuildings] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
 
+  // カスタムフック
+  const { searchPOI, isSearching } = useMapPOI();
+  const {
+    clearAllMarkers,
+    createPostMarker,
+    createClickMarker,
+    addGlobalSelectPostFunction,
+  } = useMapMarkers();
+  const {
+    addNavigationControl,
+    addGeolocateControl,
+    addBuildingToggleControl,
+    centerOnLocation,
+    updateMapStyle,
+    updateBuildingVisibility,
+  } = useMapControls();
+
   // Chicago coordinates
   const chicagoCenter: [number, number] = useMemo(
     () => [-87.6298, 41.8781],
@@ -60,7 +67,7 @@ export default function MapboxMap({
   );
 
   // Get category information for posts
-  const getCategoryInfo = (categoryId: string) => {
+  const getCategoryInfo = useCallback((categoryId: string): CategoryInfo => {
     const defaultColors = [
       '#FF6B6B',
       '#4ECDC4',
@@ -73,8 +80,9 @@ export default function MapboxMap({
       color: defaultColors[colorIndex],
       name_ja: categoryId,
     };
-  };
+  }, []);
 
+  // Initialize map
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
@@ -84,8 +92,8 @@ export default function MapboxMap({
       return;
     }
 
-    // Initialize map
     try {
+      // Initialize map
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: mapStyle,
@@ -95,67 +103,25 @@ export default function MapboxMap({
         bearing: 0,
       });
 
-      // Add navigation controls
-      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-
-      // Add geolocate control
-      const geolocate = new mapboxgl.GeolocateControl({
-        positionOptions: {
-          enableHighAccuracy: true,
-        },
-        trackUserLocation: true,
-        showUserHeading: true,
-      });
-
-      map.current.addControl(geolocate, 'top-right');
+      // Add controls
+      addNavigationControl(map.current);
+      const geolocate = addGeolocateControl(map.current, setUserLocation);
 
       // Add building toggle control
-      const buildingToggle = document.createElement('div');
-      buildingToggle.className = 'mapboxgl-ctrl mapboxgl-ctrl-group';
-      buildingToggle.style.cssText = `
-        position: absolute;
-        top: 120px;
-        right: 10px;
-        background: white;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        padding: 8px;
-        cursor: pointer;
-        font-size: 12px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      `;
-      buildingToggle.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 4px;">
-          <input type="checkbox" id="building-toggle" ${showBuildings ? 'checked' : ''} style="margin: 0;">
-          <label for="building-toggle" style="margin: 0; cursor: pointer;">建物</label>
-        </div>
-      `;
-
-      buildingToggle
-        .querySelector('#building-toggle')
-        ?.addEventListener('change', e => {
-          const target = e.target as HTMLInputElement;
-          setShowBuildings(target.checked);
-        });
-
-      mapContainer.current.appendChild(buildingToggle);
+      buildingToggleRef.current = addBuildingToggleControl(
+        map.current,
+        showBuildings,
+        setShowBuildings
+      );
+      mapContainer.current.appendChild(buildingToggleRef.current);
 
       // Handle map load
       map.current.on('load', () => {
         setMapLoaded(true);
         setMapError(null);
 
-        // 建物レイヤーを強調表示
-        if (map.current && showBuildings) {
-          try {
-            if (map.current.getLayer('building')) {
-              map.current.setPaintProperty('building', 'fill-color', '#f0f0f0');
-              map.current.setPaintProperty('building', 'fill-opacity', 0.8);
-            }
-          } catch {
-            console.log('Building layer not available in current style');
-          }
-        }
+        // Initialize building layer
+        updateBuildingVisibility(map.current!, showBuildings);
       });
 
       // Handle geolocate
@@ -174,260 +140,98 @@ export default function MapboxMap({
 
       // Handle map clicks for location selection
       map.current.on('click', async e => {
-        console.log('=== MAP CLICK EVENT START ===');
-        console.log('Map clicked at:', e.lngLat);
-        console.log('onLocationClick available:', !!onLocationClick);
-
-        if (!onLocationClick) {
-          console.log('onLocationClick is not available, exiting');
-          return;
-        }
+        if (!onLocationClick) return;
 
         const { lng, lat } = e.lngLat;
-        console.log('Raw coordinates:', { lng, lat });
+        console.log('Map clicked at:', { lng, lat });
 
         try {
-          // 座標の形式を確認し、適切な範囲内に収める
-          const validLng = Math.max(-180, Math.min(180, lng));
-          const validLat = Math.max(-90, Math.min(90, lat));
-          console.log('Valid coordinates:', { validLng, validLat });
+          const searchResult = await searchPOI({ lat, lng });
 
-          // 基本的な逆ジオコーディングを実行
-          let address = '';
-          let buildingName = '';
-          let hasValidPOI = false;
+          if (searchResult.poiFound) {
+            console.log('✅ Valid POI found, opening modal');
 
-          try {
-            // 基本的な逆ジオコーディング（POIタイプ指定なし）
-            const basicGeocodingUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${validLng},${validLat}.json?access_token=${MAPBOX_TOKEN}&language=ja&limit=5`;
-            console.log('Basic geocoding URL:', basicGeocodingUrl);
+            // Create click marker for POI
+            createClickMarker(
+              {
+                lat: searchResult.coordinates[1],
+                lng: searchResult.coordinates[0],
+              },
+              true,
+              map.current!
+            );
 
-            const response = await fetch(basicGeocodingUrl);
-            console.log('Response status:', response.status);
+            // Open modal
+            onLocationClick({
+              lat: searchResult.coordinates[1],
+              lng: searchResult.coordinates[0],
+              address: searchResult.poiAddress || searchResult.poiName,
+            });
+          } else {
+            console.log('❌ No valid POI, showing temporary marker');
 
-            if (response.ok) {
-              const data = await response.json();
-              console.log('Geocoding response:', data);
-
-              if (data.features && data.features.length > 0) {
-                console.log('Found features:', data.features.length);
-
-                // 各フィーチャーを確認
-                data.features.forEach(
-                  (feature: Record<string, unknown>, index: number) => {
-                    console.log(`Feature ${index}:`, {
-                      type: feature.place_type,
-                      text: feature.text,
-                      text_ja: feature.text_ja,
-                      relevance: feature.relevance,
-                      distance: feature.distance,
-                      place_name: feature.place_name,
-                    });
-                  }
-                );
-
-                // POIタイプのフィーチャーを探す
-                const poiFeatures = data.features.filter(
-                  (feature: Record<string, unknown>) =>
-                    feature.place_type &&
-                    Array.isArray(feature.place_type) &&
-                    feature.place_type.includes('poi')
-                );
-
-                if (poiFeatures.length > 0) {
-                  console.log('Found POI features:', poiFeatures.length);
-                  const bestPOI = poiFeatures[0];
-
-                  // POIの信頼性をチェック
-                  const relevance = bestPOI.relevance || 0;
-                  const distance = bestPOI.distance || 0;
-
-                  console.log('Best POI:', {
-                    relevance,
-                    distance,
-                    feature: bestPOI,
-                  });
-
-                  // より緩い条件でPOIを有効とする
-                  if (relevance > 0.3 && distance < 500) {
-                    console.log('POI is valid enough');
-                    hasValidPOI = true;
-
-                    // POI名を取得
-                    if (bestPOI.text_ja) {
-                      buildingName = bestPOI.text_ja;
-                    } else if (bestPOI.text) {
-                      buildingName = bestPOI.text;
-                    }
-
-                    // 住所を取得
-                    if (bestPOI.place_name_ja) {
-                      address = bestPOI.place_name_ja;
-                    } else if (bestPOI.place_name) {
-                      address = bestPOI.place_name;
-                    }
-                  }
-                }
-
-                // POIが見つからない場合は、最初のフィーチャーから住所を取得
-                if (!hasValidPOI) {
-                  const firstFeature = data.features[0];
-                  console.log('Using first feature for address:', firstFeature);
-
-                  if (firstFeature.place_name_ja) {
-                    address = firstFeature.place_name_ja;
-                  } else if (firstFeature.place_name) {
-                    address = firstFeature.place_name;
-                  }
-
-                  if (firstFeature.text_ja) {
-                    buildingName = firstFeature.text_ja;
-                  } else if (firstFeature.text) {
-                    buildingName = firstFeature.text;
-                  }
-                }
-              }
-            } else {
-              console.log(
-                'Geocoding request failed:',
-                response.status,
-                response.statusText
-              );
-            }
-          } catch (geocodingError) {
-            console.error('Geocoding error:', geocodingError);
+            // Create temporary marker
+            createClickMarker(
+              {
+                lat: searchResult.coordinates[1],
+                lng: searchResult.coordinates[0],
+              },
+              false,
+              map.current!
+            );
           }
-
-          // 最終的な住所情報を組み立て
-          if (buildingName && address) {
-            if (!address.includes(buildingName)) {
-              address = `${buildingName} - ${address}`;
-            }
-          } else if (buildingName) {
-            address = buildingName;
-          } else if (!address) {
-            address = `${validLat.toFixed(6)}, ${validLng.toFixed(6)}`;
-          }
-
-          console.log('Final address info:', {
-            buildingName,
-            address,
-            hasValidPOI,
-          });
-
-          // 常にモーダルを開く（POIの有無に関係なく）
-          console.log('Opening modal for location');
-
-          // クリックマーカーを表示
-          if (clickMarker.current) {
-            clickMarker.current.remove();
-          }
-
-          const clickMarkerElement = document.createElement('div');
-          clickMarkerElement.innerHTML = `
-            <div style="
-              width: 20px;
-              height: 20px;
-              background: ${hasValidPOI ? '#FF6B6B' : '#9CA3AF'};
-              border: 3px solid white;
-              border-radius: 50%;
-              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-              animation: ${hasValidPOI ? 'pulse 1s infinite' : 'none'};
-            "></div>
-            <style>
-              @keyframes pulse {
-                0% { transform: scale(1); opacity: 1; }
-                50% { transform: scale(1.2); opacity: 0.7; }
-                100% { transform: scale(1); opacity: 1; }
-              }
-            </style>
-          `;
-
-          clickMarker.current = new mapboxgl.Marker(clickMarkerElement)
-            .setLngLat([validLng, validLat])
-            .addTo(map.current!);
-
-          console.log('Calling onLocationClick with:', {
-            lat: validLat,
-            lng: validLng,
-            address,
-          });
-
-          // モーダルを開く
-          onLocationClick({
-            lat: validLat,
-            lng: validLng,
-            address,
-          });
-
-          console.log('=== MAP CLICK EVENT END ===');
-        } catch (processingError) {
-          console.error('Error processing map click:', processingError);
-
-          // エラーが発生した場合でも、基本的な位置情報でモーダルを開く
-          const { lng, lat } = e.lngLat;
-          const validLng = Math.max(-180, Math.min(180, lng));
-          const validLat = Math.max(-90, Math.min(90, lat));
-
-          console.log('Error fallback: opening modal with basic coordinates');
-
-          onLocationClick({
-            lat: validLat,
-            lng: validLng,
-            address: `${validLat.toFixed(6)}, ${validLng.toFixed(6)}`,
-          });
+        } catch (error) {
+          console.error('POI search error:', error);
         }
       });
+
+      return () => {
+        if (map.current) {
+          map.current.remove();
+          map.current = null;
+        }
+        if (buildingToggleRef.current) {
+          buildingToggleRef.current.remove();
+          buildingToggleRef.current = null;
+        }
+      };
     } catch (error) {
       console.error('Map initialization error:', error);
       setMapError('地図の初期化に失敗しました');
     }
-
-    return () => {
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-      }
-      if (clickMarker.current) {
-        clickMarker.current.remove();
-        clickMarker.current = null;
-      }
-    };
-  }, [onLocationClick, chicagoCenter, mapStyle, showBuildings]);
+  }, [
+    onLocationClick,
+    chicagoCenter,
+    mapStyle,
+    showBuildings,
+    addNavigationControl,
+    addGeolocateControl,
+    addBuildingToggleControl,
+    updateBuildingVisibility,
+    searchPOI,
+    createClickMarker,
+  ]);
 
   // Update map style
   useEffect(() => {
     if (map.current && mapLoaded) {
-      map.current.setStyle(mapStyle);
+      updateMapStyle(map.current, mapStyle);
     }
-  }, [mapStyle, mapLoaded]);
+  }, [mapStyle, mapLoaded, updateMapStyle]);
 
   // Update building visibility
   useEffect(() => {
     if (map.current && mapLoaded) {
-      try {
-        if (map.current.getLayer('building')) {
-          if (showBuildings) {
-            map.current.setLayoutProperty('building', 'visibility', 'visible');
-            map.current.setPaintProperty('building', 'fill-color', '#f0f0f0');
-            map.current.setPaintProperty('building', 'fill-opacity', 0.8);
-          } else {
-            map.current.setLayoutProperty('building', 'visibility', 'none');
-          }
-        }
-      } catch {
-        console.log('Building layer not available in current style');
-      }
+      updateBuildingVisibility(map.current, showBuildings);
     }
-  }, [showBuildings, mapLoaded]);
+  }, [showBuildings, mapLoaded, updateBuildingVisibility]);
 
   // Update markers when posts or category filter changes
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
     // Clear existing markers
-    markers.current.forEach(marker => marker.remove());
-    markers.current = [];
+    clearAllMarkers();
 
     // Filter posts based on category and search
     const filteredPosts = posts.filter(post => {
@@ -446,120 +250,48 @@ export default function MapboxMap({
 
     // Add markers for filtered posts
     filteredPosts.forEach(post => {
-      const markerElement = document.createElement('div');
-      markerElement.className = 'custom-marker';
-
-      const markerColor = post.category_id
-        ? getCategoryInfo(post.category_id).color
-        : '#FF6B6B';
+      const categoryInfo = getCategoryInfo(post.category_id);
       const isHighlighted =
-        searchQuery &&
+        !!searchQuery &&
         (post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
           post.content.toLowerCase().includes(searchQuery.toLowerCase()));
 
-      markerElement.innerHTML = `
-        <div style="
-          width: 24px; 
-          height: 24px; 
-          background: ${markerColor}; 
-          border: 3px solid white; 
-          border-radius: 50%; 
-          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-          cursor: pointer;
-          transition: all 0.2s ease;
-          ${isHighlighted ? 'transform: scale(1.2); box-shadow: 0 4px 16px rgba(0,0,0,0.4);' : ''}
-        "></div>
-      `;
-
-      const popup = new mapboxgl.Popup({
-        closeButton: true,
-        closeOnClick: false,
-        maxWidth: '300px',
-        className: 'custom-popup',
-      }).setHTML(`
-        <div style="padding: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-          <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #1f2937;">
-            ${post.title}
-          </h3>
-          <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 8px;">
-            <div style="width: 12px; height: 12px; background-color: ${markerColor}; border-radius: 50%;"></div>
-            <span style="font-size: 11px; color: #6b7280;">
-              ${post.category_id ? getCategoryInfo(post.category_id).name_ja : 'カテゴリなし'}
-            </span>
-          </div>
-          <p style="margin: 0 0 8px 0; font-size: 11px; color: #4b5563; line-height: 1.4; max-height: 60px; overflow: hidden;">
-            ${post.content}
-          </p>
-          <div style="display: flex; gap: 8px;">
-            <button onclick="window.selectPost('${post.id}')" style="
-              padding: 4px 8px;
-              background: #f59e0b;
-              color: white;
-              border: none;
-              border-radius: 4px;
-              font-size: 11px;
-              cursor: pointer;
-            ">詳細を見る</button>
-          </div>
-        </div>
-      `);
-
-      const marker = new mapboxgl.Marker(markerElement)
-        .setLngLat([post.location_lng, post.location_lat])
-        .setPopup(popup)
-        .addTo(map.current!);
-
-      markers.current.push(marker);
-
-      // Handle marker click
-      markerElement.addEventListener('click', () => {
-        onPostSelect(post);
-      });
-
-      // Add hover effects
-      markerElement.addEventListener('mouseenter', () => {
-        markerElement.style.transform = 'scale(1.1)';
-      });
-      markerElement.addEventListener('mouseleave', () => {
-        markerElement.style.transform = isHighlighted
-          ? 'scale(1.2)'
-          : 'scale(1)';
-      });
+      createPostMarker(
+        post,
+        categoryInfo,
+        isHighlighted,
+        onPostSelect,
+        map.current!
+      );
     });
 
     // Add global function for popup button clicks
-    (
-      window as Window &
-        typeof globalThis & { selectPost?: (postId: string) => void }
-    ).selectPost = (postId: string) => {
-      const post = posts.find(p => p.id === postId);
-      if (post) {
-        onPostSelect(post);
-      }
-    };
-  }, [posts, selectedCategory, searchQuery, mapLoaded, onPostSelect]);
+    addGlobalSelectPostFunction(posts, onPostSelect);
+  }, [
+    posts,
+    selectedCategory,
+    searchQuery,
+    mapLoaded,
+    onPostSelect,
+    clearAllMarkers,
+    createPostMarker,
+    addGlobalSelectPostFunction,
+    getCategoryInfo,
+  ]);
 
   // Center on Chicago function
-  const centerOnChicago = () => {
+  const centerOnChicago = useCallback(() => {
     if (map.current) {
-      map.current.flyTo({
-        center: chicagoCenter,
-        zoom: 11,
-        duration: 2000,
-      });
+      centerOnLocation(map.current, chicagoCenter, 11);
     }
-  };
+  }, [centerOnLocation, chicagoCenter]);
 
   // Center on user location function
-  const centerOnUser = () => {
+  const centerOnUser = useCallback(() => {
     if (map.current && userLocation) {
-      map.current.flyTo({
-        center: userLocation,
-        zoom: 15,
-        duration: 2000,
-      });
+      centerOnLocation(map.current, userLocation, 15);
     }
-  };
+  }, [centerOnLocation, userLocation]);
 
   // Map style options
   const mapStyles = [
@@ -646,6 +378,16 @@ export default function MapboxMap({
         </div>
       )}
 
+      {/* POI Search Loading Indicator */}
+      {isSearching && (
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg px-4 py-2 z-30">
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 border-2 border-coral-500 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-sm text-gray-700">POIを検索中...</span>
+          </div>
+        </div>
+      )}
+
       {/* Post Count */}
       <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg px-3 py-2 z-10">
         <div className="flex items-center space-x-2">
@@ -663,7 +405,7 @@ export default function MapboxMap({
       <div className="absolute bottom-4 right-4 bg-white rounded-lg shadow-lg px-3 py-2 z-10 max-w-xs">
         <div className="flex items-center space-x-2 mb-1">
           <MapPin className="w-4 h-4 text-coral-500" />
-          <span className="text-xs font-medium text-gray-700">
+          <span className="text-sm font-medium text-gray-700">
             スポット追加
           </span>
         </div>
@@ -678,6 +420,7 @@ export default function MapboxMap({
           <div>Token: {MAPBOX_TOKEN ? '✓' : '✗'}</div>
           <div>Loaded: {mapLoaded ? '✓' : '✗'}</div>
           <div>Posts: {posts.length}</div>
+          <div>Searching: {isSearching ? '✓' : '✗'}</div>
         </div>
       )}
     </div>
