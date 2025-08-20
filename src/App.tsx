@@ -20,7 +20,7 @@ import { validateConfig } from './lib/config';
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [currentView, setCurrentView] = useState<
-    'home' | 'map' | 'post' | 'inbox' | 'profile'
+    'home' | 'map' | 'inbox' | 'profile'
   >('home');
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [selectedInboxTab, setSelectedInboxTab] = useState<
@@ -28,6 +28,10 @@ export default function App() {
   >('notification');
   const [showAdminView, setShowAdminView] = useState(false);
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+  const [showPostForm, setShowPostForm] = useState(false);
+  const [selectedPostType, setSelectedPostType] = useState<
+    'post' | 'consultation' | 'transfer'
+  >('post');
   const { user, profile, loading, isAuthenticated, isApproved } = useAuth();
   const { ToastContainer } = useToast();
 
@@ -127,7 +131,7 @@ export default function App() {
     return (
       <Layout
         currentView="profile"
-        onViewChange={view => {
+        onViewChange={(view: 'home' | 'map' | 'inbox' | 'profile') => {
           setShowAdminDashboard(false);
           setCurrentView(view);
         }}
@@ -150,7 +154,7 @@ export default function App() {
     return (
       <Layout
         currentView="profile"
-        onViewChange={view => {
+        onViewChange={(view: 'home' | 'map' | 'inbox' | 'profile') => {
           setShowAdminView(false);
           setCurrentView(view);
         }}
@@ -168,15 +172,38 @@ export default function App() {
     );
   }
 
+  // Show post form
+  if (showPostForm) {
+    return (
+      <Layout
+        currentView="home"
+        onViewChange={(view: 'home' | 'map' | 'inbox' | 'profile') => {
+          setShowPostForm(false);
+          setCurrentView(view);
+        }}
+      >
+        <PostFormView
+          initialType={selectedPostType}
+          onBack={() => setShowPostForm(false)}
+        />
+      </Layout>
+    );
+  }
+
   // Render main app
   const renderCurrentView = () => {
     switch (currentView) {
       case 'home':
-        return <HomeView />;
+        return (
+          <HomeView
+            onShowPostForm={type => {
+              setSelectedPostType(type);
+              setShowPostForm(true);
+            }}
+          />
+        );
       case 'map':
         return <MapView />;
-      case 'post':
-        return <PostFormView />;
       case 'inbox':
         return selectedPostId ? (
           <PostDetailView
@@ -200,13 +227,25 @@ export default function App() {
           />
         );
       default:
-        return <HomeView />;
+        return (
+          <HomeView
+            onShowPostForm={type => {
+              setSelectedPostType(type);
+              setShowPostForm(true);
+            }}
+          />
+        );
     }
   };
 
   return (
     <ErrorBoundary>
-      <Layout currentView={currentView} onViewChange={setCurrentView}>
+      <Layout
+        currentView={currentView}
+        onViewChange={(view: 'home' | 'map' | 'inbox' | 'profile') =>
+          setCurrentView(view)
+        }
+      >
         {renderCurrentView()}
       </Layout>
       <ToastContainer />

@@ -1,10 +1,10 @@
 import React from 'react';
-import { MapPin, Plus, User, Home, Inbox } from 'lucide-react';
+import { MapPin, User, Home, Inbox } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
-  currentView: 'home' | 'map' | 'post' | 'inbox' | 'profile';
-  onViewChange: (view: 'home' | 'map' | 'post' | 'inbox' | 'profile') => void;
+  currentView: 'home' | 'map' | 'inbox' | 'profile';
+  onViewChange: (view: 'home' | 'map' | 'inbox' | 'profile') => void;
 }
 
 export default function Layout({
@@ -15,7 +15,6 @@ export default function Layout({
   const navItems = [
     { id: 'home' as const, icon: Home, label: 'ホーム' },
     { id: 'map' as const, icon: MapPin, label: 'マップ' },
-    { id: 'post' as const, icon: Plus, label: '投稿' },
     { id: 'inbox' as const, icon: Inbox, label: '受信トレイ' },
     { id: 'profile' as const, icon: User, label: 'プロフィール' },
   ];
