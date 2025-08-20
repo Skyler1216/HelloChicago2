@@ -1,24 +1,16 @@
 import React from 'react';
 import { MapPin, Plus, User, Home, Inbox } from 'lucide-react';
-import { signOut } from '../lib/supabase';
-import { Database } from '../types/database';
-
-type Profile = Database['public']['Tables']['profiles']['Row'];
 
 interface LayoutProps {
   children: React.ReactNode;
   currentView: 'home' | 'map' | 'post' | 'inbox' | 'profile';
   onViewChange: (view: 'home' | 'map' | 'post' | 'inbox' | 'profile') => void;
-  user: any; // eslint-disable-line @typescript-eslint/no-explicit-any
-  profile: Profile | null;
 }
 
 export default function Layout({
   children,
   currentView,
   onViewChange,
-  user,
-  profile,
 }: LayoutProps) {
   const navItems = [
     { id: 'home' as const, icon: Home, label: 'ホーム' },
@@ -28,38 +20,18 @@ export default function Layout({
     { id: 'profile' as const, icon: User, label: 'プロフィール' },
   ];
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-    } catch (error) {
-      console.error('Sign out error:', error);
-    } finally {
-      // Always reload to ensure clean state
-      setTimeout(() => {
-        window.location.reload();
-      }, 100);
-    }
-  };
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-40">
         <div className="max-w-md mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center">
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-gradient-to-r from-coral-500 to-coral-400 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">HC</span>
               </div>
               <h1 className="text-xl font-bold text-gray-900">HelloChicago</h1>
             </div>
-            <button
-              onClick={handleSignOut}
-              className="w-8 h-8 bg-gradient-to-r from-coral-500 to-coral-400 rounded-full flex items-center justify-center hover:from-coral-600 hover:to-coral-500 transition-colors"
-            >
-              <span className="text-white font-bold text-xs">
-                {profile?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
-              </span>
-            </button>
           </div>
         </div>
       </header>

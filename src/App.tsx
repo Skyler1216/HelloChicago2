@@ -131,8 +131,6 @@ export default function App() {
           setShowAdminDashboard(false);
           setCurrentView(view);
         }}
-        user={user}
-        profile={profile}
       >
         <div className="px-4 py-6">
           <button
@@ -156,8 +154,6 @@ export default function App() {
           setShowAdminView(false);
           setCurrentView(view);
         }}
-        user={user}
-        profile={profile}
       >
         <div className="px-4 py-6">
           <button
@@ -210,12 +206,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <Layout
-        currentView={currentView}
-        onViewChange={setCurrentView}
-        user={user}
-        profile={profile}
-      >
+      <Layout currentView={currentView} onViewChange={setCurrentView}>
         {renderCurrentView()}
       </Layout>
       <ToastContainer />
