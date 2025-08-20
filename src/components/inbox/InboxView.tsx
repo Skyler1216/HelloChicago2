@@ -173,7 +173,7 @@ export default function InboxView({ onNavigateToPost }: InboxViewProps) {
               <InboxItem
                 key={item.id}
                 item={item}
-                onAction={() => handleItemAction(item)}
+                onAction={item => handleItemAction(item)}
                 onMarkAsRead={() => handleMarkAsRead(item.id)}
               />
             ))}

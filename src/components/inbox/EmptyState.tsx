@@ -1,5 +1,5 @@
 import React from 'react';
-import { Inbox, Bell, MessageSquare } from 'lucide-react';
+import { Bell, MessageSquare } from 'lucide-react';
 
 interface EmptyStateProps {
   currentFilter: 'notification' | 'message';

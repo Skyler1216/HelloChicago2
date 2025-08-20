@@ -1,19 +1,21 @@
 import React from 'react';
 import { Bell, MessageSquare, Clock, Check } from 'lucide-react';
 
+type InboxItemData = {
+  id: string;
+  type: 'notification' | 'message';
+  title: string;
+  message: string;
+  timestamp: string;
+  isRead: boolean;
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  actionUrl?: string;
+  postId?: string;
+};
+
 interface InboxItemProps {
-  item: {
-    id: string;
-    type: 'notification' | 'message';
-    title: string;
-    message: string;
-    timestamp: string;
-    isRead: boolean;
-    priority?: 'low' | 'normal' | 'high' | 'urgent';
-    actionUrl?: string;
-    postId?: string;
-  };
-  onAction: () => void;
+  item: InboxItemData;
+  onAction: (item: InboxItemData) => void;
   onMarkAsRead: () => void;
 }
 
@@ -73,7 +75,7 @@ export default function InboxItem({
           ? 'border-gray-200 bg-gray-50 opacity-90'
           : 'border-coral-500 bg-coral-50'
       }`}
-      onClick={onAction}
+      onClick={() => onAction(item)}
     >
       <div className="flex items-start space-x-3">
         <div className="flex-shrink-0 mt-1">{getIcon()}</div>

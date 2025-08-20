@@ -25,19 +25,20 @@ type Post = Database['public']['Tables']['posts']['Row'] & {
   comments_count?: number;
 };
 
-type Comment = Database['public']['Tables']['comments']['Row'] & {
-  profiles: Database['public']['Tables']['profiles']['Row'];
-  replies?: Comment[];
+type CommentWithProfile = Database['public']['Tables']['comments']['Row'] & {
+  profiles: Database['public']['Tables']['profiles']['Row'] | null;
+  replies?: CommentWithProfile[];
 };
 
 interface PostDetailViewProps {
-  post: Post;
+  post?: Post;
+  postId?: string;
   onBack: () => void;
   onPostUpdate?: (updatedPost: Post) => void;
 }
 
 interface CommentItemProps {
-  comment: Comment;
+  comment: CommentWithProfile;
   onUpdate: (commentId: string, content: string) => Promise<void>;
   onDelete: (commentId: string) => Promise<void>;
   currentUserId?: string;
@@ -93,10 +94,10 @@ function CommentItem({
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
       <div className="flex items-start space-x-3">
         <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-          {comment.profiles.avatar_url ? (
+          {comment.profiles?.avatar_url ? (
             <img
-              src={comment.profiles.avatar_url}
-              alt={`${comment.profiles.name}のプロフィール画像`}
+              src={comment.profiles?.avatar_url || ''}
+              alt={`${comment.profiles?.name || 'ユーザー'}のプロフィール画像`}
               className="w-full h-full object-cover"
               onError={e => {
                 // 画像読み込みエラー時はイニシャルを表示
@@ -106,14 +107,16 @@ function CommentItem({
                 if (parent) {
                   const fallback = document.createElement('span');
                   fallback.className = 'text-xs font-medium text-gray-600';
-                  fallback.textContent = comment.profiles.name.charAt(0);
+                  fallback.textContent = (comment.profiles?.name || 'U').charAt(
+                    0
+                  );
                   parent.appendChild(fallback);
                 }
               }}
             />
           ) : (
             <span className="text-xs font-medium text-gray-600">
-              {comment.profiles.name.charAt(0)}
+              {(comment.profiles?.name || 'U').charAt(0)}
             </span>
           )}
         </div>
@@ -121,7 +124,7 @@ function CommentItem({
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center space-x-2">
               <span className="font-medium text-gray-900 text-sm">
-                {comment.profiles.name}
+                {comment.profiles?.name || 'ユーザー'}
               </span>
               <span className="text-xs text-gray-500">
                 {new Date(comment.created_at).toLocaleDateString('ja-JP')}
@@ -211,13 +214,41 @@ function CommentItem({
 
 export default function PostDetailView({
   post,
+  postId,
   onBack,
   onPostUpdate,
 }: PostDetailViewProps) {
   const { user } = useAuth();
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-  const [currentPost, setCurrentPost] = useState(post);
+  const [currentPost, setCurrentPost] = useState<Post | null>(post ?? null);
+  const [initialLoading, setInitialLoading] = useState<boolean>(!post);
   const { updatePostStatus } = usePosts();
+
+  // 初期データ取得（post が未提供で postId のみ渡された場合）
+  useEffect(() => {
+    const fetchPostById = async () => {
+      if (!post && postId) {
+        try {
+          const { data, error } = await supabase
+            .from('posts')
+            .select('*, profiles(*), categories(*)')
+            .eq('id', postId)
+            .single();
+          if (error) throw error;
+          if (data) {
+            setCurrentPost(data as unknown as Post);
+          }
+        } catch (err) {
+          console.error('Failed to fetch post by id:', err);
+        } finally {
+          setInitialLoading(false);
+        }
+      } else {
+        setInitialLoading(false);
+      }
+    };
+    fetchPostById();
+  }, [post, postId]);
 
   // ユーザーIDが有効かチェック（UUID形式も確認）
   const isValidUserId =
@@ -253,15 +284,12 @@ export default function PostDetailView({
 
   // 投稿のいいね数を取得（複数のソースから）
   const getInitialLikesCount = () => {
+    if (!currentPost) return 0;
     // 1. likes_countフィールド（usePostsで計算された値）
     if (currentPost.likes_count !== undefined) {
       return currentPost.likes_count;
     }
-    // 2. likesフィールド（データベースの値）
-    if (currentPost.likes !== undefined) {
-      return currentPost.likes;
-    }
-    // 3. デフォルト値
+    // デフォルト値
     return 0;
   };
 
@@ -270,16 +298,20 @@ export default function PostDetailView({
     likesCount,
     loading: likesLoading,
     toggleLike,
-  } = useLikes(currentPost.id, user?.id, getInitialLikesCount());
+  } = useLikes(
+    currentPost ? currentPost.id : '',
+    user?.id,
+    currentPost ? getInitialLikesCount() : 0
+  );
 
   const {
     comments,
     loading: commentsLoading,
-    addComment,
     updateComment,
     deleteComment,
     totalCount: commentsCount,
-  } = useComments(currentPost.id);
+    createComment,
+  } = useComments(currentPost ? currentPost.id : undefined);
   const [newComment, setNewComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -292,15 +324,22 @@ export default function PostDetailView({
 
     setIsSubmitting(true);
     try {
-      await addComment(newComment.trim(), user.id);
+      if (!currentPost) return;
+      await createComment({
+        post_id: currentPost.id,
+        author_id: user.id,
+        content: newComment.trim(),
+        parent_comment_id: null,
+        is_approved: true,
+      });
       setNewComment('');
 
       // 投稿データのコメント件数も更新
-      const updatedPost = {
+      const updatedPost: Post = {
         ...currentPost,
-        replies: (currentPost.replies || 0) + 1,
-      };
-      setCurrentPost(updatedPost);
+        comments_count: (currentPost.comments_count || 0) + 1,
+      } as Post;
+      setCurrentPost(updatedPost as Post);
 
       // 親コンポーネントに更新を通知
       if (onPostUpdate) {
@@ -328,10 +367,11 @@ export default function PostDetailView({
       await deleteComment(commentId);
 
       // 投稿データのコメント件数も更新
-      const updatedPost = {
+      if (!currentPost) return;
+      const updatedPost: Post = {
         ...currentPost,
-        replies: Math.max((currentPost.replies || 0) - 1, 0),
-      };
+        comments_count: Math.max((currentPost.comments_count || 0) - 1, 0),
+      } as Post;
       setCurrentPost(updatedPost);
 
       // 親コンポーネントに更新を通知
@@ -347,7 +387,7 @@ export default function PostDetailView({
   const handleUpdateStatus = async (
     newStatus: 'open' | 'in_progress' | 'closed'
   ) => {
-    if (!user || user.id !== currentPost.author_id) {
+    if (!currentPost || !user || user.id !== currentPost.author_id) {
       alert('投稿者以外はステータスを変更できません');
       return;
     }
@@ -358,10 +398,7 @@ export default function PostDetailView({
       await updatePostStatus(currentPost.id, newStatus);
 
       // ローカルステートも更新
-      const updatedPost = {
-        ...currentPost,
-        status: newStatus,
-      };
+      const updatedPost: Post = { ...currentPost, status: newStatus } as Post;
       setCurrentPost(updatedPost);
 
       // 親コンポーネントに更新を通知
@@ -381,10 +418,11 @@ export default function PostDetailView({
     likesCount !== undefined ? likesCount : getInitialLikesCount();
   const displayCommentsCount = commentsCount || 0;
 
-  // 投稿者が自分かどうかをチェック
-  const isOwnPost = user?.id === currentPost.author_id;
-  const isConsultationOrTransfer =
-    currentPost.type === 'consultation' || currentPost.type === 'transfer';
+  // 投稿者が自分かどうかをチェック（currentPostが確定してから使用する）
+  const isOwnPost = currentPost ? user?.id === currentPost.author_id : false;
+  const isConsultationOrTransfer = currentPost
+    ? currentPost.type === 'consultation' || currentPost.type === 'transfer'
+    : false;
 
   // ステータス表示用の関数
   const getStatusDisplay = (status: string | null) => {
@@ -399,6 +437,17 @@ export default function PostDetailView({
         return { text: '受付中', color: 'bg-green-100 text-green-800' };
     }
   };
+
+  if (initialLoading || !currentPost) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-coral-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">投稿を読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
 
   const currentStatus = getStatusDisplay(currentPost.status);
 
@@ -415,7 +464,7 @@ export default function PostDetailView({
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </button>
             <h1 className="text-lg font-semibold text-gray-900">
-              ホームに戻る
+              前のページに戻る
             </h1>
           </div>
         </div>
@@ -428,10 +477,10 @@ export default function PostDetailView({
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
-                {post.profiles.avatar_url ? (
+                {currentPost.profiles.avatar_url ? (
                   <img
-                    src={post.profiles.avatar_url}
-                    alt={`${post.profiles.name}のプロフィール画像`}
+                    src={currentPost.profiles.avatar_url}
+                    alt={`${currentPost.profiles.name}のプロフィール画像`}
                     className="w-full h-full object-cover"
                     onError={e => {
                       // 画像読み込みエラー時はイニシャルを表示
@@ -442,33 +491,36 @@ export default function PostDetailView({
                         const fallback = document.createElement('span');
                         fallback.className =
                           'text-sm font-medium text-gray-600';
-                        fallback.textContent = post.profiles.name.charAt(0);
+                        fallback.textContent =
+                          currentPost.profiles.name.charAt(0);
                         parent.appendChild(fallback);
                       }
                     }}
                   />
                 ) : (
                   <span className="text-sm font-medium text-gray-600">
-                    {post.profiles.name.charAt(0)}
+                    {currentPost.profiles.name.charAt(0)}
                   </span>
                 )}
               </div>
               <div>
                 <p className="font-medium text-gray-900">
-                  {post.profiles.name}
+                  {currentPost.profiles.name}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {new Date(post.created_at).toLocaleDateString('ja-JP')}
+                  {new Date(currentPost.created_at).toLocaleDateString('ja-JP')}
                 </p>
               </div>
             </div>
           </div>
 
           <h3 className="font-bold text-gray-900 mb-2 text-lg leading-tight">
-            {post.title}
+            {currentPost.title}
           </h3>
 
-          <p className="text-gray-700 mb-4 leading-relaxed">{post.content}</p>
+          <p className="text-gray-700 mb-4 leading-relaxed">
+            {currentPost.content}
+          </p>
 
           {/* Status Badge for consultations and transfers */}
           {isConsultationOrTransfer && currentPost.status && (
@@ -507,7 +559,7 @@ export default function PostDetailView({
           {/* Location */}
           <div className="flex items-center space-x-1 text-gray-500 mb-4">
             <MapPin className="w-4 h-4" />
-            <span className="text-sm">{post.location_address}</span>
+            <span className="text-sm">{currentPost.location_address}</span>
           </div>
 
           {/* Actions */}
