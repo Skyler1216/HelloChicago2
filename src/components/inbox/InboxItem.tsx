@@ -36,8 +36,8 @@ export default function InboxItem({
     // 管理者通知の場合は特別なアイコン
     if (isAdminNotification()) {
       return (
-        <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center shadow-sm">
-          <span className="text-white text-xs font-bold">⚡</span>
+        <div className="w-6 h-6 bg-gradient-to-r from-blue-600 to-teal-500 rounded-lg flex items-center justify-center shadow-sm">
+          <span className="text-white text-xs font-bold">📢</span>
         </div>
       );
     }
@@ -75,8 +75,8 @@ export default function InboxItem({
       className={`p-4 border-l-4 transition-all duration-200 hover:shadow-md cursor-pointer ${
         isAdminNotification()
           ? item.isRead
-            ? 'border-purple-300 bg-gradient-to-r from-purple-50 to-pink-50 opacity-90'
-            : 'border-purple-500 bg-gradient-to-r from-purple-50 to-pink-50 shadow-sm'
+            ? 'border-blue-300 bg-gradient-to-r from-blue-50 to-teal-50 opacity-90'
+            : 'border-blue-500 bg-gradient-to-r from-blue-50 to-teal-50 shadow-sm'
           : item.isRead
             ? 'border-gray-200 bg-gray-50 opacity-90'
             : 'border-coral-500 bg-coral-50'
@@ -98,7 +98,7 @@ export default function InboxItem({
                 {item.title}
               </h3>
               {isAdminNotification() && (
-                <span className="px-3 py-1.5 text-xs bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-semibold shadow-sm flex items-center space-x-1">
+                <span className="px-3 py-1.5 text-xs bg-gradient-to-r from-blue-600 to-teal-500 text-white rounded-full font-semibold shadow-sm flex items-center space-x-1">
                   <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
                   <span>管理者からのお知らせ</span>
                 </span>
@@ -157,8 +157,8 @@ export default function InboxItem({
             </div>
             {isAdminNotification() && (
               <div className="flex items-center space-x-1">
-                <span className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></span>
-                <span className="text-xs text-purple-600 font-medium">
+                <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
+                <span className="text-xs text-blue-600 font-medium">
                   システム通知
                 </span>
               </div>

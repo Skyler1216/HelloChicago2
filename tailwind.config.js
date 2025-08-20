@@ -41,6 +41,10 @@ export default {
           900: '#78350f',
         },
       },
+      zIndex: {
+        'modal-overlay': '99998',
+        'modal-content': '99999',
+      },
       fontFamily: {
         sans: [
           '-apple-system',
@@ -51,7 +55,37 @@ export default {
           'sans-serif',
         ],
       },
+      // スクロールバーのスタイリング
+      scrollbar: {
+        thin: '8px',
+        'thumb-gray-300': '#d1d5db',
+        'track-gray-100': '#f3f4f6',
+      },
     },
   },
-  plugins: [require('@tailwindcss/line-clamp')],
+  plugins: [
+    require('@tailwindcss/line-clamp'),
+    // カスタムスクロールバープラグイン
+    function ({ addUtilities }) {
+      const newUtilities = {
+        '.scrollbar-thin': {
+          'scrollbar-width': 'thin',
+          'scrollbar-color': '#d1d5db #f3f4f6',
+        },
+        '.scrollbar-thumb-gray-300': {
+          '&::-webkit-scrollbar-thumb': {
+            'background-color': '#d1d5db',
+            'border-radius': '4px',
+          },
+        },
+        '.scrollbar-track-gray-100': {
+          '&::-webkit-scrollbar-track': {
+            'background-color': '#f3f4f6',
+            'border-radius': '4px',
+          },
+        },
+      };
+      addUtilities(newUtilities);
+    },
+  ],
 };
