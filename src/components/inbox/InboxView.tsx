@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Inbox, Bell, MessageSquare, RefreshCw } from 'lucide-react';
 import { useInbox } from '../../hooks/useInbox';
 import { useAuth } from '../../hooks/useAuth';
@@ -7,9 +7,15 @@ import { InboxItem, EmptyState } from './';
 interface InboxViewProps {
   onNavigateToPost?: (postId: string) => void;
   onBack?: () => void;
+  onTabChange?: (tab: 'notification' | 'message') => void;
+  currentTab?: 'notification' | 'message';
 }
 
-export default function InboxView({ onNavigateToPost }: InboxViewProps) {
+export default function InboxView({
+  onNavigateToPost,
+  onTabChange,
+  currentTab,
+}: InboxViewProps) {
   const { user } = useAuth();
   const {
     inboxItems,
@@ -25,6 +31,13 @@ export default function InboxView({ onNavigateToPost }: InboxViewProps) {
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Set initial tab based on currentTab prop
+  useEffect(() => {
+    if (currentTab && currentTab !== currentFilter) {
+      filterByType(currentTab);
+    }
+  }, [currentTab, currentFilter, filterByType]);
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await refreshInbox();
@@ -39,8 +52,11 @@ export default function InboxView({ onNavigateToPost }: InboxViewProps) {
     type: 'notification' | 'message';
     postId?: string;
     actionUrl?: string;
+    id: string;
   }) => {
     if (item.type === 'message' && item.postId) {
+      // Mark message as read when navigating to post
+      markAsRead(item.id);
       onNavigateToPost?.(item.postId);
     } else if (item.type === 'notification' && item.actionUrl) {
       // Handle notification action (could be navigation or external link)
@@ -147,7 +163,10 @@ export default function InboxView({ onNavigateToPost }: InboxViewProps) {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => filterByType(tab.id)}
+                  onClick={() => {
+                    filterByType(tab.id);
+                    onTabChange?.(tab.id);
+                  }}
                   className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
                     isActive
                       ? 'text-coral-600 bg-coral-50 border-b-2 border-coral-500'
@@ -173,7 +192,7 @@ export default function InboxView({ onNavigateToPost }: InboxViewProps) {
               <InboxItem
                 key={item.id}
                 item={item}
-                onAction={item => handleItemAction(item)}
+                onAction={item => handleItemAction({ ...item, id: item.id })}
                 onMarkAsRead={() => handleMarkAsRead(item.id)}
               />
             ))}

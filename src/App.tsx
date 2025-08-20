@@ -23,6 +23,9 @@ export default function App() {
     'home' | 'map' | 'post' | 'inbox' | 'profile'
   >('home');
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [selectedInboxTab, setSelectedInboxTab] = useState<
+    'notification' | 'message'
+  >('notification');
   const [showAdminView, setShowAdminView] = useState(false);
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const { user, profile, loading, isAuthenticated, isApproved } = useAuth();
@@ -185,7 +188,11 @@ export default function App() {
             onBack={() => setSelectedPostId(null)}
           />
         ) : (
-          <InboxView onNavigateToPost={postId => setSelectedPostId(postId)} />
+          <InboxView
+            onNavigateToPost={postId => setSelectedPostId(postId)}
+            onTabChange={setSelectedInboxTab}
+            currentTab={selectedInboxTab}
+          />
         );
       case 'profile':
         return (
