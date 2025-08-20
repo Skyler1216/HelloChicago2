@@ -293,16 +293,36 @@ export default function PostDetailView({
     return 0;
   };
 
+  // 初期いいね数（post経由 or DBから算出）
+  const [initialLikesCount, setInitialLikesCount] = useState<number>(
+    currentPost ? getInitialLikesCount() : 0
+  );
+
+  // currentPostが確定したら、likes_countが無ければDBから件数を取得
+  useEffect(() => {
+    const ensureLikesCount = async () => {
+      if (!currentPost) return;
+      if (typeof currentPost.likes_count === 'number') {
+        setInitialLikesCount(currentPost.likes_count);
+        return;
+      }
+      const { count, error } = await supabase
+        .from('likes')
+        .select('id', { count: 'exact', head: true })
+        .eq('post_id', currentPost.id);
+      if (!error) {
+        setInitialLikesCount(count || 0);
+      }
+    };
+    ensureLikesCount();
+  }, [currentPost]);
+
   const {
     isLiked,
     likesCount,
     loading: likesLoading,
     toggleLike,
-  } = useLikes(
-    currentPost ? currentPost.id : '',
-    user?.id,
-    currentPost ? getInitialLikesCount() : 0
-  );
+  } = useLikes(currentPost ? currentPost.id : '', user?.id, initialLikesCount);
 
   const {
     comments,
