@@ -52,6 +52,54 @@ export default function MapboxMap({
     'idle' | 'requesting' | 'success' | 'error'
   >('idle');
   const [geolocateError, setGeolocateError] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(
+    null
+  );
+  const userLocationMarkerRef = useRef<mapboxgl.Marker | null>(null);
+
+  // 現在地マーカーを作成・更新する関数
+  const updateUserLocationMarker = useCallback(
+    (coords: [number, number] | null) => {
+      // 既存のマーカーを削除
+      if (userLocationMarkerRef.current) {
+        userLocationMarkerRef.current.remove();
+        userLocationMarkerRef.current = null;
+      }
+
+      if (coords && map.current) {
+        // 新しい現在地マーカーを作成
+        const markerElement = document.createElement('div');
+        markerElement.innerHTML = `
+        <div style="
+          width: 20px;
+          height: 20px;
+          background: #3B82F6;
+          border: 3px solid white;
+          border-radius: 50%;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          animation: pulse 2s infinite;
+        "></div>
+        <style>
+          @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+          }
+        </style>
+      `;
+
+        const marker = new mapboxgl.Marker(markerElement)
+          .setLngLat(coords)
+          .addTo(map.current);
+
+        userLocationMarkerRef.current = marker;
+        setUserLocation(coords);
+      } else {
+        setUserLocation(null);
+      }
+    },
+    []
+  );
 
   // カスタムフック
   const {
@@ -219,6 +267,8 @@ export default function MapboxMap({
                   centerOnLocation(map.current, coords, 15);
                   shouldCenterOnFixRef.current = false;
                 }
+                // 現在地マーカーを更新
+                updateUserLocationMarker(coords);
               },
               err => {
                 setGeolocateStatus('error');
@@ -279,6 +329,7 @@ export default function MapboxMap({
     showBuildings,
     updateBuildingVisibility,
     createClickMarker,
+    updateUserLocationMarker,
   ]);
 
   // Update map style
@@ -368,29 +419,43 @@ export default function MapboxMap({
   // Request and center on user location explicitly from UI
   const requestAndCenterOnUser = useCallback(() => {
     if (!map.current) return;
+    console.log('🗺️ 現在地ボタンがクリックされました');
     setGeolocateStatus('requesting');
     setGeolocateError(null);
     shouldCenterOnFixRef.current = true;
 
-    try {
-      geolocateControlRef.current?.trigger();
-      return;
-    } catch {
-      // fallthrough to browser API
+    // First try Mapbox geolocate control
+    if (geolocateControlRef.current) {
+      try {
+        console.log('🗺️ Mapbox geolocate controlを使用');
+        geolocateControlRef.current.trigger();
+        return;
+      } catch {
+        console.log('🗺️ Mapbox geolocate failed, falling back to browser API');
+      }
     }
 
+    // Fallback to browser geolocation API
     if ('geolocation' in navigator) {
+      console.log('🗺️ ブラウザの位置情報APIを使用');
       navigator.geolocation.getCurrentPosition(
-        pos => {
+        position => {
           const coords: [number, number] = [
-            pos.coords.longitude,
-            pos.coords.latitude,
+            position.coords.longitude,
+            position.coords.latitude,
           ];
+          console.log('🗺️ 位置情報取得成功:', coords);
           setGeolocateStatus('success');
-          centerOnLocation(map.current!, coords, 15);
+          setGeolocateError(null);
+          if (map.current) {
+            centerOnLocation(map.current, coords, 15);
+            // 現在地マーカーを更新
+            updateUserLocationMarker(coords);
+          }
           shouldCenterOnFixRef.current = false;
         },
         (err: GeolocationPositionError) => {
+          console.log('🗺️ 位置情報取得失敗:', err.message);
           setGeolocateStatus('error');
           setGeolocateError(
             err.code === err.PERMISSION_DENIED
@@ -404,11 +469,12 @@ export default function MapboxMap({
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
       );
     } else {
+      console.log('🗺️ ブラウザが位置情報に対応していません');
       setGeolocateStatus('error');
       setGeolocateError('ブラウザが位置情報に対応していません');
       shouldCenterOnFixRef.current = false;
     }
-  }, [centerOnLocation]);
+  }, [centerOnLocation, updateUserLocationMarker]);
 
   // Map style options
   const mapStyles = [
@@ -515,6 +581,14 @@ export default function MapboxMap({
           <MapPin className="w-4 h-4 text-coral-500" />
           <span>建物やランドマークをクリックするとスポットを追加できます</span>
         </div>
+        {userLocation && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl shadow px-3 py-2 text-xs text-blue-700 flex items-center gap-2">
+            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+            <span>
+              現在地: {userLocation[1].toFixed(4)}, {userLocation[0].toFixed(4)}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Debug Info removed per UI requirements */}
