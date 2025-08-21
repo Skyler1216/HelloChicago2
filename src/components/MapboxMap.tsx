@@ -43,9 +43,9 @@ export default function MapboxMap({
   const [showBuildings, setShowBuildings] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
   const lastPoiLayerClickTsRef = useRef<number>(0);
-  const poiClickHandlerRef = useRef<((e: mapboxgl.MapLayerMouseEvent) => void) | null>(
-    null
-  );
+  const poiClickHandlerRef = useRef<
+    ((e: mapboxgl.MapLayerMouseEvent) => void) | null
+  >(null);
   const poiMouseEnterHandlerRef = useRef<(() => void) | null>(null);
   const poiMouseLeaveHandlerRef = useRef<(() => void) | null>(null);
 
@@ -131,10 +131,18 @@ export default function MapboxMap({
           map.current.off('click', poiLayerId, poiClickHandlerRef.current);
         }
         if (poiMouseEnterHandlerRef.current) {
-          map.current.off('mouseenter', poiLayerId, poiMouseEnterHandlerRef.current);
+          map.current.off(
+            'mouseenter',
+            poiLayerId,
+            poiMouseEnterHandlerRef.current
+          );
         }
         if (poiMouseLeaveHandlerRef.current) {
-          map.current.off('mouseleave', poiLayerId, poiMouseLeaveHandlerRef.current);
+          map.current.off(
+            'mouseleave',
+            poiLayerId,
+            poiMouseLeaveHandlerRef.current
+          );
         }
 
         if (map.current.getLayer(poiLayerId)) {
