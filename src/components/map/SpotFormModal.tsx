@@ -17,9 +17,7 @@ export default function SpotFormModal({
   spot,
   location,
 }: SpotFormModalProps) {
-  // デバッグログを追加
-  console.log('SpotFormModal render:', { isOpen, location, spot });
-
+  // ログを最小限に削減
   const [formData, setFormData] = useState<CreateMapSpotData>({
     name: '',
     description: '',
@@ -55,7 +53,6 @@ export default function SpotFormModal({
         is_public: spot.is_public,
       });
     } else if (location) {
-      console.log('📍 Setting form data with location:', location);
       setFormData(prev => ({
         ...prev,
         location_lat: location.lat,
@@ -68,7 +65,6 @@ export default function SpotFormModal({
   // モーダルが開いた時の処理
   useEffect(() => {
     if (isOpen && location && !spot) {
-      console.log('🚀 Modal opened with location:', location);
       // 新規作成時は位置情報を初期化
       setFormData(prev => ({
         ...prev,
@@ -157,11 +153,8 @@ export default function SpotFormModal({
   };
 
   if (!isOpen) {
-    console.log('SpotFormModal: isOpen is false, not rendering');
     return null;
   }
-
-  console.log('SpotFormModal: isOpen is true, rendering modal');
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

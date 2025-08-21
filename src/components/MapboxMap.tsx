@@ -442,8 +442,8 @@ export default function MapboxMap({
             err.code === err.PERMISSION_DENIED
               ? '位置情報の権限が拒否されました'
               : err.code === err.POSITION_UNAVAILABLE
-              ? '位置情報を取得できませんでした'
-              : '位置情報の取得がタイムアウトしました'
+                ? '位置情報を取得できませんでした'
+                : '位置情報の取得がタイムアウトしました'
           );
           shouldCenterOnFixRef.current = false;
         },
@@ -583,9 +583,7 @@ export default function MapboxMap({
       {process.env.NODE_ENV === 'development' && (
         <div className="absolute top-4 right-4 bg-black bg-opacity-75 text-white text-xs p-2 rounded">
           <div>Token: {MAPBOX_TOKEN ? '✓' : '✗'}</div>
-          <div>Loaded: {mapLoaded ? '✓' : '✗'}</div>
           <div>Posts: {posts.length}</div>
-          <div>Geo: {geolocateStatus}</div>
         </div>
       )}
     </div>

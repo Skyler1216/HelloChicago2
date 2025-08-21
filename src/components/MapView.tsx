@@ -318,24 +318,12 @@ export default function MapView() {
               distanceFilter={distanceFilter}
               focusLocation={focusLocation}
               onLocationClick={location => {
-                console.log('🎯 Location clicked in MapView:', location);
-                console.log(
-                  '📝 Current clickedLocation state:',
-                  clickedLocation
-                );
-                console.log('🔧 Setting clickedLocation state to:', location);
                 setClickedLocation(location);
-                console.log(
-                  '✅ clickedLocation state should now be:',
-                  location
-                );
 
                 // POIクリック時に確実にモーダルを開く
                 if (location) {
-                  console.log('🚀 Opening modal with POI location:', location);
                   // showSpotFormもtrueにしてモーダルを確実に開く
                   setShowSpotForm(true);
-                  setFocusLocation(null);
                 }
               }}
             />
@@ -355,7 +343,6 @@ export default function MapView() {
       <SpotFormModal
         isOpen={isModalOpen}
         onClose={() => {
-          console.log('🔒 Closing SpotFormModal');
           setShowSpotForm(false);
           setClickedLocation(null);
         }}
@@ -366,16 +353,8 @@ export default function MapView() {
       {process.env.NODE_ENV === 'development' && (
         <div className="fixed top-20 right-4 bg-black bg-opacity-75 text-white text-xs p-2 rounded z-50">
           <div>🗺️ 地図状態:</div>
-          <div>POIモーダル: {clickedLocation ? '🚪 開く' : '🔒 閉じる'}</div>
-          <div>手動モーダル: {showSpotForm ? '🚪 開く' : '🔒 閉じる'}</div>
-          {clickedLocation && (
-            <div className="mt-1 text-coral-300">
-              📍 {clickedLocation.address || '座標のみ'}
-            </div>
-          )}
-          <div className="mt-1 text-xs text-gray-400">
-            💡 POIをクリックするとモーダルが開きます
-          </div>
+          <div>POIモーダル: {clickedLocation ? '🚪' : '🔒'}</div>
+          <div>手動モーダル: {showSpotForm ? '🚪' : '🔒'}</div>
         </div>
       )}
     </div>
