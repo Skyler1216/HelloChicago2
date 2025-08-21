@@ -32,6 +32,11 @@ export default function MapView() {
     lng: number;
     address?: string;
   } | null>(null);
+  const [focusLocation, setFocusLocation] = useState<{
+    lat: number;
+    lng: number;
+    zoom?: number;
+  } | null>(null);
 
   const { categories, loading: categoriesLoading } = useCategories();
   const { posts } = usePosts();
@@ -287,9 +292,11 @@ export default function MapView() {
         <div className="flex-1 overflow-y-auto">
           <PopularSpots
             spots={popularSpots}
-            onSpotSelect={() => {
+            onSpotSelect={spot => {
               setActiveTab('map');
-              // 地図でそのスポットを中心に表示する処理
+              if (spot?.lat && spot?.lng) {
+                setFocusLocation({ lat: spot.lat, lng: spot.lng, zoom: 16 });
+              }
             }}
           />
         </div>
@@ -309,6 +316,7 @@ export default function MapView() {
               onPostSelect={setSelectedPost}
               searchQuery={searchQuery}
               distanceFilter={distanceFilter}
+              focusLocation={focusLocation}
               onLocationClick={location => {
                 console.log('🎯 Location clicked in MapView:', location);
                 console.log(
@@ -327,6 +335,7 @@ export default function MapView() {
                   console.log('🚀 Opening modal with POI location:', location);
                   // showSpotFormもtrueにしてモーダルを確実に開く
                   setShowSpotForm(true);
+                  setFocusLocation(null);
                 }
               }}
             />

@@ -19,6 +19,7 @@ interface MapboxMapProps {
   onLocationClick?: (location: Location) => void;
   searchQuery?: string;
   distanceFilter?: number;
+  focusLocation?: { lat: number; lng: number; zoom?: number } | null;
 }
 
 export default function MapboxMap({
@@ -27,6 +28,7 @@ export default function MapboxMap({
   onPostSelect,
   onLocationClick,
   searchQuery,
+  focusLocation,
 }: MapboxMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -37,7 +39,8 @@ export default function MapboxMap({
     null
   );
   const [mapStyle, setMapStyle] = useState(
-    'mapbox://styles/mapbox/streets-v12'
+    (typeof window !== 'undefined' && localStorage.getItem('map.style')) ||
+      'mapbox://styles/mapbox/streets-v12'
   );
   const [showBuildings, setShowBuildings] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -47,6 +50,13 @@ export default function MapboxMap({
   >(null);
   const poiMouseEnterHandlerRef = useRef<(() => void) | null>(null);
   const poiMouseLeaveHandlerRef = useRef<(() => void) | null>(null);
+  const geolocateControlRef = useRef<mapboxgl.GeolocateControl | null>(null);
+  const geolocateRequestedRef = useRef<boolean>(false);
+  const shouldCenterOnFixRef = useRef<boolean>(false);
+  const [geolocateStatus, setGeolocateStatus] = useState<
+    'idle' | 'requesting' | 'success' | 'error'
+  >('idle');
+  const [geolocateError, setGeolocateError] = useState<string | null>(null);
 
   // カスタムフック
   const {
@@ -110,6 +120,7 @@ export default function MapboxMap({
       // Add controls
       addNavigationControl(map.current);
       const geolocate = addGeolocateControl(map.current, setUserLocation);
+      geolocateControlRef.current = geolocate;
 
       // Add building toggle control
       buildingToggleRef.current = addBuildingToggleControl(
@@ -204,6 +215,43 @@ export default function MapboxMap({
 
         // Attach POI click handlers for current style
         attachPoiClickHandlers();
+
+        // Try to request geolocation once on first load for better UX
+        if (!geolocateRequestedRef.current) {
+          geolocateRequestedRef.current = true;
+          setGeolocateStatus('requesting');
+          setGeolocateError(null);
+          shouldCenterOnFixRef.current = true;
+          try {
+            geolocateControlRef.current?.trigger();
+          } catch {
+            if ('geolocation' in navigator) {
+              navigator.geolocation.getCurrentPosition(
+                pos => {
+                  const coords: [number, number] = [
+                    pos.coords.longitude,
+                    pos.coords.latitude,
+                  ];
+                  setUserLocation(coords);
+                  setGeolocateStatus('success');
+                  if (map.current) {
+                    centerOnLocation(map.current, coords, 15);
+                  }
+                },
+                () => {
+                  setGeolocateStatus('error');
+                  setGeolocateError('位置情報の取得が許可されていません');
+                  shouldCenterOnFixRef.current = false;
+                },
+                { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+              );
+            } else {
+              setGeolocateStatus('error');
+              setGeolocateError('ブラウザが位置情報に対応していません');
+              shouldCenterOnFixRef.current = false;
+            }
+          }
+        }
       });
 
       // Re-attach handlers when style changes (e.g., user switches style)
@@ -217,7 +265,19 @@ export default function MapboxMap({
       geolocate.on(
         'geolocate',
         (e: { coords: { longitude: number; latitude: number } }) => {
-          setUserLocation([e.coords.longitude, e.coords.latitude]);
+          const coords: [number, number] = [
+            e.coords.longitude,
+            e.coords.latitude,
+          ];
+          setUserLocation(coords);
+          setGeolocateStatus('success');
+          setGeolocateError(null);
+          if (shouldCenterOnFixRef.current) {
+            if (map.current) {
+              centerOnLocation(map.current, coords, 15);
+            }
+            shouldCenterOnFixRef.current = false;
+          }
         }
       );
 
@@ -266,6 +326,11 @@ export default function MapboxMap({
     if (map.current && mapLoaded) {
       updateMapStyle(map.current, mapStyle);
     }
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('map.style', mapStyle);
+      }
+    } catch {}
   }, [mapStyle, mapLoaded, updateMapStyle]);
 
   // Update building visibility
@@ -335,12 +400,61 @@ export default function MapboxMap({
     }
   }, [centerOnLocation, chicagoCenter]);
 
-  // Center on user location function
-  const centerOnUser = useCallback(() => {
-    if (map.current && userLocation) {
-      centerOnLocation(map.current, userLocation, 15);
+  // Focus map externally when focusLocation changes
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !focusLocation) return;
+    centerOnLocation(
+      map.current,
+      [focusLocation.lng, focusLocation.lat],
+      focusLocation.zoom ?? 15
+    );
+  }, [focusLocation, mapLoaded, centerOnLocation]);
+
+  // Request and center on user location explicitly from UI
+  const requestAndCenterOnUser = useCallback(() => {
+    if (!map.current) return;
+    setGeolocateStatus('requesting');
+    setGeolocateError(null);
+    shouldCenterOnFixRef.current = true;
+
+    try {
+      geolocateControlRef.current?.trigger();
+      return;
+    } catch {
+      // fallthrough to browser API
     }
-  }, [centerOnLocation, userLocation]);
+
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          const coords: [number, number] = [
+            pos.coords.longitude,
+            pos.coords.latitude,
+          ];
+          setUserLocation(coords);
+          setGeolocateStatus('success');
+          centerOnLocation(map.current!, coords, 15);
+          shouldCenterOnFixRef.current = false;
+        },
+        (err: GeolocationPositionError) => {
+          setGeolocateStatus('error');
+          setGeolocateError(
+            err.code === err.PERMISSION_DENIED
+              ? '位置情報の権限が拒否されました'
+              : err.code === err.POSITION_UNAVAILABLE
+              ? '位置情報を取得できませんでした'
+              : '位置情報の取得がタイムアウトしました'
+          );
+          shouldCenterOnFixRef.current = false;
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      );
+    } else {
+      setGeolocateStatus('error');
+      setGeolocateError('ブラウザが位置情報に対応していません');
+      shouldCenterOnFixRef.current = false;
+    }
+  }, [centerOnLocation]);
 
   // Map style options
   const mapStyles = [
@@ -408,7 +522,7 @@ export default function MapboxMap({
             <span>シカゴ中心</span>
           </button>
           <button
-            onClick={centerOnUser}
+            onClick={requestAndCenterOnUser}
             className="w-full flex items-center space-x-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 rounded transition-colors"
           >
             <Navigation className="w-4 h-4" />
@@ -424,6 +538,18 @@ export default function MapboxMap({
             <div className="w-8 h-8 border-2 border-coral-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
             <p className="text-gray-600 text-sm">マップを読み込み中...</p>
           </div>
+        </div>
+      )}
+
+      {/* Geolocate status toasts */}
+      {geolocateStatus === 'requesting' && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white rounded-lg shadow px-3 py-2 z-30 text-xs text-gray-700">
+          現在地を取得中...
+        </div>
+      )}
+      {geolocateStatus === 'error' && geolocateError && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-50 border border-red-200 text-red-700 rounded-lg shadow px-3 py-2 z-30 text-xs">
+          {geolocateError}
         </div>
       )}
 
@@ -459,6 +585,7 @@ export default function MapboxMap({
           <div>Token: {MAPBOX_TOKEN ? '✓' : '✗'}</div>
           <div>Loaded: {mapLoaded ? '✓' : '✗'}</div>
           <div>Posts: {posts.length}</div>
+          <div>Geo: {geolocateStatus}</div>
         </div>
       )}
     </div>
