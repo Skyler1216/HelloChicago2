@@ -348,15 +348,6 @@ export default function MapView() {
         }}
         location={clickedLocation || undefined}
       />
-
-      {/* Debug info for modal state */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed top-20 right-4 bg-black bg-opacity-75 text-white text-xs p-2 rounded z-50">
-          <div>🗺️ 地図状態:</div>
-          <div>POIモーダル: {clickedLocation ? '🚪' : '🔒'}</div>
-          <div>手動モーダル: {showSpotForm ? '🚪' : '🔒'}</div>
-        </div>
-      )}
     </div>
   );
 }
