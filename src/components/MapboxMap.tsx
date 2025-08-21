@@ -48,6 +48,8 @@ export default function MapboxMap({
   const poiMouseLeaveHandlerRef = useRef<(() => void) | null>(null);
 
   const shouldCenterOnFixRef = useRef(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locateError, setLocateError] = useState<string | null>(null);
 
   // Geolocation status tracking - simplified since notifications are disabled
   const userLocationMarkerRef = useRef<mapboxgl.Marker | null>(null);
@@ -404,44 +406,41 @@ export default function MapboxMap({
   // Request and center on user location explicitly from UI
   const requestAndCenterOnUser = useCallback(() => {
     if (!map.current) return;
-
-    // First try Mapbox geolocate control
-    if (map.current) {
-      try {
-        // Disable automatic geolocation to prevent info icon display
-        // geolocateControlRef.current.trigger();
-        return;
-      } catch {
-        // Fallback to browser API if Mapbox control fails
-      }
+    if (!('geolocation' in navigator)) {
+      console.error('Browser does not support geolocation');
+      shouldCenterOnFixRef.current = false;
+      return;
     }
-
-    // Fallback to browser geolocation API
-    if (map.current) {
-      if (navigator.geolocation) {
-        shouldCenterOnFixRef.current = true;
-        navigator.geolocation.getCurrentPosition(
-          position => {
-            const coords: [number, number] = [
-              position.coords.longitude,
-              position.coords.latitude,
-            ];
-            if (map.current) {
-              centerOnLocation(map.current, coords, 15);
-              updateUserLocationMarker(coords);
-            }
-          },
-          err => {
-            console.error('Geolocation error:', err);
-            shouldCenterOnFixRef.current = false;
-          },
-          { timeout: 10000, enableHighAccuracy: true }
-        );
-      } else {
-        console.error('Browser does not support geolocation');
+    shouldCenterOnFixRef.current = true;
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      position => {
+        const coords: [number, number] = [
+          position.coords.longitude,
+          position.coords.latitude,
+        ];
+        if (map.current) {
+          centerOnLocation(map.current, coords, 15);
+          updateUserLocationMarker(coords);
+        }
         shouldCenterOnFixRef.current = false;
-      }
-    }
+        setIsLocating(false);
+      },
+      err => {
+        console.error('Geolocation error:', err);
+        shouldCenterOnFixRef.current = false;
+        setIsLocating(false);
+        setLocateError(
+          err.code === err.PERMISSION_DENIED
+            ? '位置情報の権限が拒否されました'
+            : err.code === err.POSITION_UNAVAILABLE
+              ? '位置情報を取得できませんでした'
+              : '位置情報の取得がタイムアウトしました'
+        );
+        setTimeout(() => setLocateError(null), 4000);
+      },
+      { timeout: 10000, enableHighAccuracy: true, maximumAge: 60000 }
+    );
   }, [centerOnLocation, updateUserLocationMarker]);
 
   // Map style options
@@ -498,12 +497,13 @@ export default function MapboxMap({
         <div className="bg-white rounded-lg shadow p-1 flex items-center">
           <button
             onClick={requestAndCenterOnUser}
-            className="flex items-center space-x-1 px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="flex items-center space-x-1 px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 rounded-lg disabled:opacity-50"
+            disabled={isLocating}
             aria-label="現在地"
             title="現在地"
           >
             <Navigation className="w-4 h-4" />
-            <span>現在地</span>
+            <span>{isLocating ? '取得中...' : '現在地'}</span>
           </button>
         </div>
       </div>
@@ -518,17 +518,12 @@ export default function MapboxMap({
         </div>
       )}
 
-      {/* Geolocate status toasts - Disabled to prevent unnecessary info icon display */}
-      {/* {geolocateStatus === 'requesting' && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white rounded-lg shadow px-3 py-2 z-30 text-xs text-gray-700">
-          現在地を取得中...
+      {/* Locate error toast */}
+      {locateError && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-50 border border-red-200 text-red-700 rounded-lg shadow px-3 py-2 z-30 text-xs">
+          {locateError}
         </div>
       )}
-      {geolocateStatus === 'error' && geolocateError && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-50 border border-red-200 text-red-700 rounded-lg shadow px-3 py-2 z-30 text-xs">
-          {geolocateError}
-        </div>
-      )} */}
 
       {/* Post Count removed and merged into bottom bar */}
 

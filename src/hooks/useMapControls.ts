@@ -3,9 +3,15 @@ import mapboxgl from 'mapbox-gl';
 
 export function useMapControls() {
   // Navigation/Geolocate controls are no longer used in UI
-  const addNavigationControl = useCallback((_: mapboxgl.Map) => {}, []);
+  const addNavigationControl = useCallback((_: mapboxgl.Map) => {
+    void _;
+  }, []);
   const addGeolocateControl = useCallback(
-    (_: mapboxgl.Map, __: (coords: [number, number]) => void) => null,
+    (_: mapboxgl.Map, __: (coords: [number, number]) => void) => {
+      void _;
+      void __;
+      return null;
+    },
     []
   );
 
@@ -15,7 +21,12 @@ export function useMapControls() {
       _map: mapboxgl.Map,
       _showBuildings: boolean,
       _onChange: (show: boolean) => void
-    ) => null,
+    ) => {
+      void _map;
+      void _showBuildings;
+      void _onChange;
+      return null;
+    },
     []
   );
 
