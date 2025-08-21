@@ -54,6 +54,12 @@ export default function MapboxMap({
   // Geolocation status tracking - simplified since notifications are disabled
   const userLocationMarkerRef = useRef<mapboxgl.Marker | null>(null);
 
+  // 初期センター制御：最初から現在地を表示（取得できない場合のみシカゴ）
+  const [initialCenter, setInitialCenter] = useState<[number, number] | null>(
+    null
+  );
+  const startedWithUserLocationRef = useRef(false);
+
   // 現在地マーカーを作成・更新する関数
   const updateUserLocationMarker = useCallback(
     (coords: [number, number] | null) => {
@@ -113,6 +119,29 @@ export default function MapboxMap({
     []
   );
 
+  // 初回マウント時に初期中心座標を決定（現在地優先）
+  useEffect(() => {
+    if (initialCenter !== null) return; // 既に決定済み
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          const coords: [number, number] = [
+            position.coords.longitude,
+            position.coords.latitude,
+          ];
+          startedWithUserLocationRef.current = true;
+          setInitialCenter(coords);
+        },
+        () => {
+          setInitialCenter(chicagoCenter);
+        },
+        { timeout: 8000, enableHighAccuracy: true, maximumAge: 60000 }
+      );
+    } else {
+      setInitialCenter(chicagoCenter);
+    }
+  }, [chicagoCenter, initialCenter]);
+
   // Get category information for posts
   const getCategoryInfo = useCallback((categoryId: string): CategoryInfo => {
     const defaultColors = [
@@ -131,7 +160,7 @@ export default function MapboxMap({
 
   // Initialize map
   useEffect(() => {
-    if (!mapContainer.current || map.current) return;
+    if (!mapContainer.current || map.current || !initialCenter) return;
 
     // Check if Mapbox token is available
     if (!MAPBOX_TOKEN) {
@@ -144,8 +173,8 @@ export default function MapboxMap({
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: mapStyle,
-        center: chicagoCenter,
-        zoom: 11,
+        center: initialCenter,
+        zoom: startedWithUserLocationRef.current ? 15 : 11,
         pitch: 0,
         bearing: 0,
         attributionControl: false,
@@ -239,37 +268,9 @@ export default function MapboxMap({
         // Attach POI click handlers for current style
         attachPoiClickHandlers();
 
-        // Try to request geolocation once on first load for better UX
-        shouldCenterOnFixRef.current = true;
-        if (map.current) {
-          try {
-            // Disable automatic geolocation to prevent info icon display
-            // geolocateControlRef.current.trigger();
-          } catch {
-            // fall through to browser geolocation
-          }
-        }
-        if (map.current) {
-          if ('geolocation' in navigator) {
-            navigator.geolocation.getCurrentPosition(
-              position => {
-                const coords: [number, number] = [
-                  position.coords.longitude,
-                  position.coords.latitude,
-                ];
-                if (shouldCenterOnFixRef.current && map.current) {
-                  centerOnLocation(map.current, coords, 15);
-                  shouldCenterOnFixRef.current = false;
-                }
-                // 現在地マーカーを更新
-                updateUserLocationMarker(coords);
-              },
-              err => {
-                console.error('Geolocation error:', err);
-              },
-              { timeout: 10000, enableHighAccuracy: true }
-            );
-          }
+        // 初期表示が現在地だった場合はマーカーだけ表示
+        if (startedWithUserLocationRef.current) {
+          updateUserLocationMarker(initialCenter);
         }
       });
 
@@ -317,6 +318,7 @@ export default function MapboxMap({
     createClickMarker,
     updateUserLocationMarker,
     centerOnLocation,
+    initialCenter,
   ]);
 
   // Update map style
