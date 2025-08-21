@@ -46,12 +46,10 @@ export default function MapboxMap({
   >(null);
   const poiMouseEnterHandlerRef = useRef<(() => void) | null>(null);
   const poiMouseLeaveHandlerRef = useRef<(() => void) | null>(null);
-  const geolocateControlRef = useRef<mapboxgl.GeolocateControl | null>(null);
+
   const shouldCenterOnFixRef = useRef(false);
-  const [geolocateStatus, setGeolocateStatus] = useState<
-    'idle' | 'requesting' | 'success' | 'error'
-  >('idle');
-  const [geolocateError, setGeolocateError] = useState<string | null>(null);
+
+  // Geolocation status tracking - simplified since notifications are disabled
   const userLocationMarkerRef = useRef<mapboxgl.Marker | null>(null);
 
   // 現在地マーカーを作成・更新する関数
@@ -148,6 +146,7 @@ export default function MapboxMap({
         zoom: 11,
         pitch: 0,
         bearing: 0,
+        attributionControl: false,
       });
 
       // No default Mapbox controls (UI minimized). We'll use our own button.
@@ -239,17 +238,16 @@ export default function MapboxMap({
         attachPoiClickHandlers();
 
         // Try to request geolocation once on first load for better UX
-        setGeolocateStatus('requesting');
-        setGeolocateError(null);
         shouldCenterOnFixRef.current = true;
-        if (geolocateControlRef.current) {
+        if (map.current) {
           try {
-            geolocateControlRef.current.trigger();
+            // Disable automatic geolocation to prevent info icon display
+            // geolocateControlRef.current.trigger();
           } catch {
             // fall through to browser geolocation
           }
         }
-        if (!geolocateControlRef.current) {
+        if (map.current) {
           if ('geolocation' in navigator) {
             navigator.geolocation.getCurrentPosition(
               position => {
@@ -257,8 +255,6 @@ export default function MapboxMap({
                   position.coords.longitude,
                   position.coords.latitude,
                 ];
-                setGeolocateStatus('success');
-                setGeolocateError(null);
                 if (shouldCenterOnFixRef.current && map.current) {
                   centerOnLocation(map.current, coords, 15);
                   shouldCenterOnFixRef.current = false;
@@ -267,15 +263,7 @@ export default function MapboxMap({
                 updateUserLocationMarker(coords);
               },
               err => {
-                setGeolocateStatus('error');
-                setGeolocateError(
-                  err.code === err.PERMISSION_DENIED
-                    ? '位置情報の権限が拒否されました'
-                    : err.code === err.POSITION_UNAVAILABLE
-                      ? '位置情報を取得できませんでした'
-                      : '位置情報の取得がタイムアウトしました'
-                );
-                shouldCenterOnFixRef.current = false;
+                console.error('Geolocation error:', err);
               },
               { timeout: 10000, enableHighAccuracy: true }
             );
@@ -326,6 +314,7 @@ export default function MapboxMap({
     updateBuildingVisibility,
     createClickMarker,
     updateUserLocationMarker,
+    centerOnLocation,
   ]);
 
   // Update map style
@@ -415,60 +404,43 @@ export default function MapboxMap({
   // Request and center on user location explicitly from UI
   const requestAndCenterOnUser = useCallback(() => {
     if (!map.current) return;
-    console.log('🗺️ 現在地ボタンがクリックされました');
-    setGeolocateStatus('requesting');
-    setGeolocateError(null);
-    shouldCenterOnFixRef.current = true;
 
     // First try Mapbox geolocate control
-    if (geolocateControlRef.current) {
+    if (map.current) {
       try {
-        console.log('🗺️ Mapbox geolocate controlを使用');
-        geolocateControlRef.current.trigger();
+        // Disable automatic geolocation to prevent info icon display
+        // geolocateControlRef.current.trigger();
         return;
       } catch {
-        console.log('🗺️ Mapbox geolocate failed, falling back to browser API');
+        // Fallback to browser API if Mapbox control fails
       }
     }
 
     // Fallback to browser geolocation API
-    if ('geolocation' in navigator) {
-      console.log('🗺️ ブラウザの位置情報APIを使用');
-      navigator.geolocation.getCurrentPosition(
-        position => {
-          const coords: [number, number] = [
-            position.coords.longitude,
-            position.coords.latitude,
-          ];
-          console.log('🗺️ 位置情報取得成功:', coords);
-          setGeolocateStatus('success');
-          setGeolocateError(null);
-          if (map.current) {
-            centerOnLocation(map.current, coords, 15);
-            // 現在地マーカーを更新
-            updateUserLocationMarker(coords);
-          }
-          shouldCenterOnFixRef.current = false;
-        },
-        (err: GeolocationPositionError) => {
-          console.log('🗺️ 位置情報取得失敗:', err.message);
-          setGeolocateStatus('error');
-          setGeolocateError(
-            err.code === err.PERMISSION_DENIED
-              ? '位置情報の権限が拒否されました'
-              : err.code === err.POSITION_UNAVAILABLE
-                ? '位置情報を取得できませんでした'
-                : '位置情報の取得がタイムアウトしました'
-          );
-          shouldCenterOnFixRef.current = false;
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-      );
-    } else {
-      console.log('🗺️ ブラウザが位置情報に対応していません');
-      setGeolocateStatus('error');
-      setGeolocateError('ブラウザが位置情報に対応していません');
-      shouldCenterOnFixRef.current = false;
+    if (map.current) {
+      if (navigator.geolocation) {
+        shouldCenterOnFixRef.current = true;
+        navigator.geolocation.getCurrentPosition(
+          position => {
+            const coords: [number, number] = [
+              position.coords.longitude,
+              position.coords.latitude,
+            ];
+            if (map.current) {
+              centerOnLocation(map.current, coords, 15);
+              updateUserLocationMarker(coords);
+            }
+          },
+          err => {
+            console.error('Geolocation error:', err);
+            shouldCenterOnFixRef.current = false;
+          },
+          { timeout: 10000, enableHighAccuracy: true }
+        );
+      } else {
+        console.error('Browser does not support geolocation');
+        shouldCenterOnFixRef.current = false;
+      }
     }
   }, [centerOnLocation, updateUserLocationMarker]);
 
@@ -546,8 +518,8 @@ export default function MapboxMap({
         </div>
       )}
 
-      {/* Geolocate status toasts */}
-      {geolocateStatus === 'requesting' && (
+      {/* Geolocate status toasts - Disabled to prevent unnecessary info icon display */}
+      {/* {geolocateStatus === 'requesting' && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white rounded-lg shadow px-3 py-2 z-30 text-xs text-gray-700">
           現在地を取得中...
         </div>
@@ -556,7 +528,7 @@ export default function MapboxMap({
         <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-50 border border-red-200 text-red-700 rounded-lg shadow px-3 py-2 z-30 text-xs">
           {geolocateError}
         </div>
-      )}
+      )} */}
 
       {/* Post Count removed and merged into bottom bar */}
 
