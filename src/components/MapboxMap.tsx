@@ -52,9 +52,6 @@ export default function MapboxMap({
     'idle' | 'requesting' | 'success' | 'error'
   >('idle');
   const [geolocateError, setGeolocateError] = useState<string | null>(null);
-  const [userLocation, setUserLocation] = useState<[number, number] | null>(
-    null
-  );
   const userLocationMarkerRef = useRef<mapboxgl.Marker | null>(null);
 
   // 現在地マーカーを作成・更新する関数
@@ -93,9 +90,8 @@ export default function MapboxMap({
           .addTo(map.current);
 
         userLocationMarkerRef.current = marker;
-        setUserLocation(coords);
       } else {
-        setUserLocation(null);
+        // setUserLocation(null); // This line was removed as per the edit hint
       }
     },
     []
@@ -509,8 +505,8 @@ export default function MapboxMap({
       <div ref={mapContainer} className="w-full h-full min-h-[400px]" />
 
       {/* Custom Toolbar */}
-      <div className="absolute top-3 left-3 right-3 z-10 flex items-center justify-between gap-2">
-        <div className="bg-white rounded-xl shadow p-2">
+      <div className="absolute top-2 left-2 right-2 z-10 flex items-center justify-between gap-2">
+        <div className="bg-white rounded-lg shadow p-2">
           <div className="flex items-center gap-2">
             <Layers className="w-4 h-4 text-gray-600" />
             <select
@@ -527,7 +523,7 @@ export default function MapboxMap({
             </select>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow p-1 flex items-center">
+        <div className="bg-white rounded-lg shadow p-1 flex items-center">
           <button
             onClick={requestAndCenterOnUser}
             className="flex items-center space-x-1 px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 rounded-lg"
@@ -565,30 +561,24 @@ export default function MapboxMap({
       {/* Post Count removed and merged into bottom bar */}
 
       {/* Bottom info bar */}
-      <div className="absolute left-3 right-3 bottom-3 z-10 flex flex-col sm:flex-row gap-2">
-        <div className="flex-1 bg-white/90 backdrop-blur rounded-xl shadow px-3 py-2">
-          <div className="flex items-center gap-2 text-xs text-gray-700">
+      <div className="absolute left-2 right-2 bottom-2 z-10 flex flex-col gap-2">
+        <div className="bg-white rounded-lg shadow-md px-3 py-2 border border-gray-100 w-fit">
+          <div className="flex items-center gap-2 text-xs text-gray-800 font-medium">
             <div className="w-2 h-2 bg-coral-500 rounded-full"></div>
             <span>
               {selectedCategory
                 ? posts.filter(p => p.category_id === selectedCategory).length
                 : posts.length}
-              件の投稿が表示中
+              件の投稿
             </span>
           </div>
         </div>
-        <div className="bg-white/90 backdrop-blur rounded-xl shadow px-3 py-2 text-xs text-gray-600 flex items-center gap-2">
-          <MapPin className="w-4 h-4 text-coral-500" />
-          <span>建物やランドマークをクリックするとスポットを追加できます</span>
+        <div className="bg-white rounded-lg shadow-md px-3 py-2 text-xs text-gray-800 flex items-center gap-2 w-fit border border-gray-100">
+          <MapPin className="w-4 h-4 text-coral-500 flex-shrink-0" />
+          <span className="leading-tight whitespace-nowrap">
+            建物やランドマークをクリックでスポット追加
+          </span>
         </div>
-        {userLocation && (
-          <div className="bg-blue-50 border border-blue-200 rounded-xl shadow px-3 py-2 text-xs text-blue-700 flex items-center gap-2">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            <span>
-              現在地: {userLocation[1].toFixed(4)}, {userLocation[0].toFixed(4)}
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Debug Info removed per UI requirements */}
