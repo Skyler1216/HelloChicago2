@@ -3,7 +3,6 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MapPin, Navigation, Layers } from 'lucide-react';
 import { Post, Location, CategoryInfo } from '../types/map';
-import { useMapPOI } from '../hooks/useMapPOI';
 import { useMapMarkers } from '../hooks/useMapMarkers';
 import { useMapControls } from '../hooks/useMapControls';
 
@@ -50,7 +49,6 @@ export default function MapboxMap({
   const poiMouseLeaveHandlerRef = useRef<(() => void) | null>(null);
 
   // カスタムフック
-  const { searchPOI, isSearching } = useMapPOI();
   const {
     clearAllMarkers,
     createPostMarker,
@@ -229,66 +227,12 @@ export default function MapboxMap({
         setMapError('地図の読み込みに失敗しました');
       });
 
-      // Handle generic map clicks for location selection (fallback when not clicking a POI label)
-      map.current.on('click', async e => {
-        if (!onLocationClick) return;
-
-        // If this click just came from POI layer handler, skip to prevent double open
-        if (Date.now() - lastPoiLayerClickTsRef.current < 50) {
-          return;
-        }
-
-        const { lng, lat } = e.lngLat;
-        console.log('🗺️ 地図クリック:', { lng, lat });
-
-        try {
-          const searchResult = await searchPOI({ lat, lng });
-
-          if (searchResult.poiFound) {
-            console.log('✅ POI発見、モーダルを開きます');
-
-            // POIマーカーを作成
-            createClickMarker(
-              {
-                lat: searchResult.coordinates[1],
-                lng: searchResult.coordinates[0],
-              },
-              true,
-              map.current!
-            );
-
-            // モーダルを開く
-            onLocationClick({
-              lat: searchResult.coordinates[1],
-              lng: searchResult.coordinates[0],
-              address: searchResult.poiAddress || searchResult.poiName,
-            });
-          } else {
-            console.log('❌ POIが見つかりませんでした');
-
-            // 一時的なマーカーのみ表示（モーダルは開かない）
-            createClickMarker(
-              {
-                lat: searchResult.coordinates[1],
-                lng: searchResult.coordinates[0],
-              },
-              false,
-              map.current!
-            );
-          }
-        } catch (error) {
-          console.error('❌ POI検索エラー:', error);
-
-          // エラー時は一時的なマーカーのみ表示
-          createClickMarker(
-            {
-              lat,
-              lng,
-            },
-            false,
-            map.current!
-          );
-        }
+      // Handle generic map clicks: do nothing when not clicking a POI label
+      map.current.on('click', () => {
+        // If this click just came from POI layer handler, skip
+        if (Date.now() - lastPoiLayerClickTsRef.current < 50) return;
+        // Intentionally no-op for non-POI clicks
+        // This prevents showing "POIを検索中" and avoids any unintended recentering
       });
 
       return () => {
@@ -314,7 +258,6 @@ export default function MapboxMap({
     addGeolocateControl,
     addBuildingToggleControl,
     updateBuildingVisibility,
-    searchPOI,
     createClickMarker,
   ]);
 
@@ -484,16 +427,6 @@ export default function MapboxMap({
         </div>
       )}
 
-      {/* POI Search Loading Indicator */}
-      {isSearching && (
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg px-4 py-2 z-30">
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 border-2 border-coral-500 border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-sm text-gray-700">POIを検索中...</span>
-          </div>
-        </div>
-      )}
-
       {/* Post Count */}
       <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg px-3 py-2 z-10">
         <div className="flex items-center space-x-2">
@@ -526,7 +459,6 @@ export default function MapboxMap({
           <div>Token: {MAPBOX_TOKEN ? '✓' : '✗'}</div>
           <div>Loaded: {mapLoaded ? '✓' : '✗'}</div>
           <div>Posts: {posts.length}</div>
-          <div>Searching: {isSearching ? '✓' : '✗'}</div>
         </div>
       )}
     </div>

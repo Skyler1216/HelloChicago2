@@ -102,23 +102,6 @@ export interface Location {
   address?: string;
 }
 
-export interface POIFeature {
-  text?: string;
-  text_ja?: string;
-  place_name?: string;
-  place_name_ja?: string;
-  relevance: number;
-  distance: number;
-  place_type: string[];
-}
-
-export interface POISearchResult {
-  poiFound: boolean;
-  poiName: string;
-  poiAddress: string;
-  coordinates: [number, number];
-}
-
 export interface MapConfig {
   center: [number, number];
   zoom: number;
