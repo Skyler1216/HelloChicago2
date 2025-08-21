@@ -37,6 +37,9 @@ export default function MapView() {
   const { posts } = usePosts();
   const { spots: mapSpots, loading: mapSpotsLoading } = useMapSpots();
 
+  // モーダルの表示状態を管理
+  const isModalOpen = showSpotForm || !!clickedLocation;
+
   const tabs = [
     { id: 'map' as const, label: 'マップ', icon: MapIcon },
     { id: 'spots' as const, label: 'お気に入りスポット', icon: TrendingUp },
@@ -307,10 +310,24 @@ export default function MapView() {
               searchQuery={searchQuery}
               distanceFilter={distanceFilter}
               onLocationClick={location => {
-                console.log('Location clicked in MapView:', location); // デバッグログ
-                console.log('Setting clickedLocation state:', location); // 追加デバッグログ
+                console.log('🎯 Location clicked in MapView:', location);
+                console.log(
+                  '📝 Current clickedLocation state:',
+                  clickedLocation
+                );
+                console.log('🔧 Setting clickedLocation state to:', location);
                 setClickedLocation(location);
-                console.log('clickedLocation state after set:', location); // 状態更新後のログ
+                console.log(
+                  '✅ clickedLocation state should now be:',
+                  location
+                );
+
+                // POIクリック時に確実にモーダルを開く
+                if (location) {
+                  console.log('🚀 Opening modal with POI location:', location);
+                  // showSpotFormもtrueにしてモーダルを確実に開く
+                  setShowSpotForm(true);
+                }
               }}
             />
           )}
@@ -327,9 +344,9 @@ export default function MapView() {
 
       {/* Spot Form Modal */}
       <SpotFormModal
-        isOpen={showSpotForm || !!clickedLocation}
+        isOpen={isModalOpen}
         onClose={() => {
-          console.log('Closing SpotFormModal'); // デバッグログ
+          console.log('🔒 Closing SpotFormModal');
           setShowSpotForm(false);
           setClickedLocation(null);
         }}
@@ -339,10 +356,16 @@ export default function MapView() {
       {/* Debug info for modal state */}
       {process.env.NODE_ENV === 'development' && (
         <div className="fixed top-20 right-4 bg-black bg-opacity-75 text-white text-xs p-2 rounded z-50">
-          <div>showSpotForm: {showSpotForm ? 'true' : 'false'}</div>
-          <div>clickedLocation: {clickedLocation ? 'set' : 'null'}</div>
-          <div>
-            Modal isOpen: {showSpotForm || !!clickedLocation ? 'true' : 'false'}
+          <div>🗺️ 地図状態:</div>
+          <div>POIモーダル: {clickedLocation ? '🚪 開く' : '🔒 閉じる'}</div>
+          <div>手動モーダル: {showSpotForm ? '🚪 開く' : '🔒 閉じる'}</div>
+          {clickedLocation && (
+            <div className="mt-1 text-coral-300">
+              📍 {clickedLocation.address || '座標のみ'}
+            </div>
+          )}
+          <div className="mt-1 text-xs text-gray-400">
+            💡 POIをクリックするとモーダルが開きます
           </div>
         </div>
       )}

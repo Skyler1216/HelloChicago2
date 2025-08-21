@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { POIFeature, POISearchResult, Location } from '../types/map';
+import { POISearchResult, Location } from '../types/map';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
@@ -22,8 +22,8 @@ export function useMapPOI() {
       const validLng = Math.max(-180, Math.min(180, lng));
       const validLat = Math.max(-90, Math.min(90, lat));
 
-      // POIタイプのみを検索（建物、ランドマーク、お店など）
-      const poiSearchUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${validLng},${validLat}.json?access_token=${MAPBOX_TOKEN}&types=poi&language=ja&limit=1&radius=50`;
+      // GoogleマップライクなPOI検索 - シンプルで確実
+      const poiSearchUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${validLng},${validLat}.json?access_token=${MAPBOX_TOKEN}&types=poi&language=ja&limit=5`;
 
       const response = await fetch(poiSearchUrl);
 
@@ -33,41 +33,44 @@ export function useMapPOI() {
 
       const data = await response.json();
 
-      if (!data.features || data.features.length === 0) {
-        return {
-          poiFound: false,
-          poiName: '',
-          poiAddress: '',
-          coordinates: [validLng, validLat],
-        };
-      }
+      console.log('🔍 POI検索結果:', data.features.length, '件');
 
-      const feature: POIFeature = data.features[0];
-      const relevance = feature.relevance || 0;
-      const distance = feature.distance || 0;
-
-      // より厳しい条件でPOIを有効とする
-      if (relevance > 0.7 && distance < 100) {
-        const poiName = feature.text_ja || feature.text || '';
-        const poiAddress = feature.place_name_ja || feature.place_name || '';
+      // 最も関連性の高いPOIを選択
+      if (data.features.length > 0) {
+        const bestFeature = data.features[0];
+        const poiName = bestFeature.text_ja || bestFeature.text || '';
+        const poiAddress = bestFeature.place_name_ja || bestFeature.place_name || '';
+        // use actual feature coordinates if provided
+        let lngOut = validLng;
+        let latOut = validLat;
+        if (
+          bestFeature.geometry &&
+          bestFeature.geometry.type === 'Point' &&
+          Array.isArray(bestFeature.geometry.coordinates)
+        ) {
+          lngOut = Number(bestFeature.geometry.coordinates[0]);
+          latOut = Number(bestFeature.geometry.coordinates[1]);
+        }
 
         const result: POISearchResult = {
           poiFound: true,
           poiName,
           poiAddress,
-          coordinates: [validLng, validLat],
+          coordinates: [lngOut, latOut],
         };
 
+        console.log('✅ POI発見:', result);
         setLastSearchResult(result);
         return result;
-      } else {
-        return {
-          poiFound: false,
-          poiName: '',
-          poiAddress: '',
-          coordinates: [validLng, validLat],
-        };
       }
+
+      console.log('❌ POIが見つかりませんでした');
+      return {
+        poiFound: false,
+        poiName: '',
+        poiAddress: '',
+        coordinates: [validLng, validLat],
+      };
     } catch (error) {
       console.error('POI検索エラー:', error);
       throw error;

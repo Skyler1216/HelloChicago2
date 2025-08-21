@@ -55,6 +55,7 @@ export default function SpotFormModal({
         is_public: spot.is_public,
       });
     } else if (location) {
+      console.log('📍 Setting form data with location:', location);
       setFormData(prev => ({
         ...prev,
         location_lat: location.lat,
@@ -63,6 +64,24 @@ export default function SpotFormModal({
       }));
     }
   }, [spot, location]);
+
+  // モーダルが開いた時の処理
+  useEffect(() => {
+    if (isOpen && location && !spot) {
+      console.log('🚀 Modal opened with location:', location);
+      // 新規作成時は位置情報を初期化
+      setFormData(prev => ({
+        ...prev,
+        name: '',
+        description: '',
+        category_id: '',
+        location_lat: location.lat,
+        location_lng: location.lng,
+        location_address: location.address || '',
+        is_public: true,
+      }));
+    }
+  }, [isOpen, location, spot]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -230,8 +249,14 @@ export default function SpotFormModal({
                     {formData.location_address || '住所が設定されていません'}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {formData.location_lat}, {formData.location_lng}
+                    {formData.location_lat.toFixed(6)},{' '}
+                    {formData.location_lng.toFixed(6)}
                   </p>
+                  {location && (
+                    <p className="text-xs text-coral-600 mt-1">
+                      📍 POIから取得した位置情報
+                    </p>
+                  )}
                 </div>
               </div>
               {errors.location && (

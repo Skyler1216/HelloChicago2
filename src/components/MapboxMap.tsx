@@ -42,6 +42,12 @@ export default function MapboxMap({
   );
   const [showBuildings, setShowBuildings] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
+  const lastPoiLayerClickTsRef = useRef<number>(0);
+  const poiClickHandlerRef = useRef<((e: mapboxgl.MapLayerMouseEvent) => void) | null>(
+    null
+  );
+  const poiMouseEnterHandlerRef = useRef<(() => void) | null>(null);
+  const poiMouseLeaveHandlerRef = useRef<(() => void) | null>(null);
 
   // カスタムフック
   const { searchPOI, isSearching } = useMapPOI();
@@ -115,6 +121,73 @@ export default function MapboxMap({
       );
       mapContainer.current.appendChild(buildingToggleRef.current);
 
+      // A helper to attach POI layer click handlers (Google Maps-like)
+      const attachPoiClickHandlers = () => {
+        if (!map.current) return;
+
+        const poiLayerId = 'poi-label';
+        // Guard: remove existing handlers to avoid duplicates when style reloads
+        if (poiClickHandlerRef.current) {
+          map.current.off('click', poiLayerId, poiClickHandlerRef.current);
+        }
+        if (poiMouseEnterHandlerRef.current) {
+          map.current.off('mouseenter', poiLayerId, poiMouseEnterHandlerRef.current);
+        }
+        if (poiMouseLeaveHandlerRef.current) {
+          map.current.off('mouseleave', poiLayerId, poiMouseLeaveHandlerRef.current);
+        }
+
+        if (map.current.getLayer(poiLayerId)) {
+          const handlePoiClick = (e: mapboxgl.MapLayerMouseEvent) => {
+            if (!onLocationClick) return;
+            if (!e.features || e.features.length === 0) return;
+
+            const feature = e.features[0] as mapboxgl.MapboxGeoJSONFeature;
+            // Try to get name from multilingual properties
+            const props = (feature.properties || {}) as Record<string, unknown>;
+            const name =
+              (props['name_ja'] as string) ||
+              (props['name'] as string) ||
+              (props['name_en'] as string) ||
+              '';
+
+            // Coordinates: prefer geometry point, fallback to event lngLat
+            let lng = e.lngLat.lng;
+            let lat = e.lngLat.lat;
+            if (
+              feature.geometry &&
+              feature.geometry.type === 'Point' &&
+              Array.isArray((feature.geometry as GeoJSON.Point).coordinates)
+            ) {
+              const coords = (feature.geometry as GeoJSON.Point).coordinates;
+              lng = Number(coords[0]);
+              lat = Number(coords[1]);
+            }
+
+            // Mark that this click came from POI layer to avoid duplicate handling
+            lastPoiLayerClickTsRef.current = Date.now();
+
+            // Create a highlighted click marker and open modal
+            createClickMarker({ lat, lng }, true, map.current!);
+            onLocationClick({ lat, lng, address: name });
+          };
+          poiClickHandlerRef.current = handlePoiClick;
+          map.current.on('click', poiLayerId, handlePoiClick);
+
+          // Cursor feedback
+          const handleMouseEnter = () => {
+            map.current!.getCanvas().style.cursor = 'pointer';
+          };
+          const handleMouseLeave = () => {
+            map.current!.getCanvas().style.cursor = '';
+          };
+          poiMouseEnterHandlerRef.current = handleMouseEnter;
+          poiMouseLeaveHandlerRef.current = handleMouseLeave;
+          map.current.on('mouseenter', poiLayerId, handleMouseEnter);
+          map.current.on('mouseleave', poiLayerId, handleMouseLeave);
+        }
+      };
+
       // Handle map load
       map.current.on('load', () => {
         setMapLoaded(true);
@@ -122,6 +195,16 @@ export default function MapboxMap({
 
         // Initialize building layer
         updateBuildingVisibility(map.current!, showBuildings);
+
+        // Attach POI click handlers for current style
+        attachPoiClickHandlers();
+      });
+
+      // Re-attach handlers when style changes (e.g., user switches style)
+      map.current.on('style.load', () => {
+        if (!map.current) return;
+        updateBuildingVisibility(map.current, showBuildings);
+        attachPoiClickHandlers();
       });
 
       // Handle geolocate
@@ -138,20 +221,25 @@ export default function MapboxMap({
         setMapError('地図の読み込みに失敗しました');
       });
 
-      // Handle map clicks for location selection
+      // Handle generic map clicks for location selection (fallback when not clicking a POI label)
       map.current.on('click', async e => {
         if (!onLocationClick) return;
 
+        // If this click just came from POI layer handler, skip to prevent double open
+        if (Date.now() - lastPoiLayerClickTsRef.current < 50) {
+          return;
+        }
+
         const { lng, lat } = e.lngLat;
-        console.log('Map clicked at:', { lng, lat });
+        console.log('🗺️ 地図クリック:', { lng, lat });
 
         try {
           const searchResult = await searchPOI({ lat, lng });
 
           if (searchResult.poiFound) {
-            console.log('✅ Valid POI found, opening modal');
+            console.log('✅ POI発見、モーダルを開きます');
 
-            // Create click marker for POI
+            // POIマーカーを作成
             createClickMarker(
               {
                 lat: searchResult.coordinates[1],
@@ -161,16 +249,16 @@ export default function MapboxMap({
               map.current!
             );
 
-            // Open modal
+            // モーダルを開く
             onLocationClick({
               lat: searchResult.coordinates[1],
               lng: searchResult.coordinates[0],
               address: searchResult.poiAddress || searchResult.poiName,
             });
           } else {
-            console.log('❌ No valid POI, showing temporary marker');
+            console.log('❌ POIが見つかりませんでした');
 
-            // Create temporary marker
+            // 一時的なマーカーのみ表示（モーダルは開かない）
             createClickMarker(
               {
                 lat: searchResult.coordinates[1],
@@ -181,7 +269,17 @@ export default function MapboxMap({
             );
           }
         } catch (error) {
-          console.error('POI search error:', error);
+          console.error('❌ POI検索エラー:', error);
+
+          // エラー時は一時的なマーカーのみ表示
+          createClickMarker(
+            {
+              lat,
+              lng,
+            },
+            false,
+            map.current!
+          );
         }
       });
 

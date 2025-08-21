@@ -128,20 +128,43 @@ export function useMapMarkers() {
       </style>
     `;
 
+      // POIでない場合はツールチップ付きのポップアップを作成
+      let popup: mapboxgl.Popup | null = null;
+      if (!isPOI) {
+        popup = new mapboxgl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+          maxWidth: '150px',
+          className: 'temporary-marker-popup',
+        }).setHTML(`
+          <div style="padding: 6px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            <p style="margin: 0; font-size: 11px; color: #6b7280;">
+              📍 POIが見つかりませんでした
+            </p>
+          </div>
+        `);
+      }
+
       const marker = new mapboxgl.Marker(markerElement)
         .setLngLat([location.lng, location.lat])
         .addTo(map);
 
+      // POIでない場合はポップアップを表示
+      if (popup) {
+        marker.setPopup(popup);
+        popup.addTo(map);
+      }
+
       clickMarker.current = marker;
 
-      // POIでない場合は一時的に表示
+      // POIでない場合は一時的に表示（Googleマップライク）
       if (!isPOI) {
         setTimeout(() => {
           marker.remove();
           if (clickMarker.current === marker) {
             clickMarker.current = null;
           }
-        }, 2000);
+        }, 1500); // 1.5秒間表示（Googleマップと同じくらい）
       }
 
       return marker;
