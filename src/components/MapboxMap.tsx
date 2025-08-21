@@ -35,14 +35,10 @@ export default function MapboxMap({
   const buildingToggleRef = useRef<HTMLDivElement | null>(null);
 
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [userLocation, setUserLocation] = useState<[number, number] | null>(
-    null
-  );
   const [mapStyle, setMapStyle] = useState(
-    (typeof window !== 'undefined' && localStorage.getItem('map.style')) ||
-      'mapbox://styles/mapbox/streets-v12'
+    'mapbox://styles/mapbox/streets-v12'
   );
-  const [showBuildings, setShowBuildings] = useState(true);
+  const [showBuildings] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
   const lastPoiLayerClickTsRef = useRef<number>(0);
   const poiClickHandlerRef = useRef<
@@ -51,8 +47,7 @@ export default function MapboxMap({
   const poiMouseEnterHandlerRef = useRef<(() => void) | null>(null);
   const poiMouseLeaveHandlerRef = useRef<(() => void) | null>(null);
   const geolocateControlRef = useRef<mapboxgl.GeolocateControl | null>(null);
-  const geolocateRequestedRef = useRef<boolean>(false);
-  const shouldCenterOnFixRef = useRef<boolean>(false);
+  const shouldCenterOnFixRef = useRef(false);
   const [geolocateStatus, setGeolocateStatus] = useState<
     'idle' | 'requesting' | 'success' | 'error'
   >('idle');
@@ -65,14 +60,8 @@ export default function MapboxMap({
     createClickMarker,
     addGlobalSelectPostFunction,
   } = useMapMarkers();
-  const {
-    addNavigationControl,
-    addGeolocateControl,
-    addBuildingToggleControl,
-    centerOnLocation,
-    updateMapStyle,
-    updateBuildingVisibility,
-  } = useMapControls();
+  const { centerOnLocation, updateMapStyle, updateBuildingVisibility } =
+    useMapControls();
 
   // Chicago coordinates
   const chicagoCenter: [number, number] = useMemo(
@@ -117,18 +106,7 @@ export default function MapboxMap({
         bearing: 0,
       });
 
-      // Add controls
-      addNavigationControl(map.current);
-      const geolocate = addGeolocateControl(map.current, setUserLocation);
-      geolocateControlRef.current = geolocate;
-
-      // Add building toggle control
-      buildingToggleRef.current = addBuildingToggleControl(
-        map.current,
-        showBuildings,
-        setShowBuildings
-      );
-      mapContainer.current.appendChild(buildingToggleRef.current);
+      // No default Mapbox controls (UI minimized). We'll use our own button.
 
       // A helper to attach POI layer click handlers (Google Maps-like)
       const attachPoiClickHandlers = () => {
@@ -217,39 +195,44 @@ export default function MapboxMap({
         attachPoiClickHandlers();
 
         // Try to request geolocation once on first load for better UX
-        if (!geolocateRequestedRef.current) {
-          geolocateRequestedRef.current = true;
-          setGeolocateStatus('requesting');
-          setGeolocateError(null);
-          shouldCenterOnFixRef.current = true;
+        setGeolocateStatus('requesting');
+        setGeolocateError(null);
+        shouldCenterOnFixRef.current = true;
+        if (geolocateControlRef.current) {
           try {
-            geolocateControlRef.current?.trigger();
+            geolocateControlRef.current.trigger();
           } catch {
-            if ('geolocation' in navigator) {
-              navigator.geolocation.getCurrentPosition(
-                pos => {
-                  const coords: [number, number] = [
-                    pos.coords.longitude,
-                    pos.coords.latitude,
-                  ];
-                  setUserLocation(coords);
-                  setGeolocateStatus('success');
-                  if (map.current) {
-                    centerOnLocation(map.current, coords, 15);
-                  }
-                },
-                () => {
-                  setGeolocateStatus('error');
-                  setGeolocateError('位置情報の取得が許可されていません');
+            // fall through to browser geolocation
+          }
+        }
+        if (!geolocateControlRef.current) {
+          if ('geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(
+              position => {
+                const coords: [number, number] = [
+                  position.coords.longitude,
+                  position.coords.latitude,
+                ];
+                setGeolocateStatus('success');
+                setGeolocateError(null);
+                if (shouldCenterOnFixRef.current && map.current) {
+                  centerOnLocation(map.current, coords, 15);
                   shouldCenterOnFixRef.current = false;
-                },
-                { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
-              );
-            } else {
-              setGeolocateStatus('error');
-              setGeolocateError('ブラウザが位置情報に対応していません');
-              shouldCenterOnFixRef.current = false;
-            }
+                }
+              },
+              err => {
+                setGeolocateStatus('error');
+                setGeolocateError(
+                  err.code === err.PERMISSION_DENIED
+                    ? '位置情報の権限が拒否されました'
+                    : err.code === err.POSITION_UNAVAILABLE
+                      ? '位置情報を取得できませんでした'
+                      : '位置情報の取得がタイムアウトしました'
+                );
+                shouldCenterOnFixRef.current = false;
+              },
+              { timeout: 10000, enableHighAccuracy: true }
+            );
           }
         }
       });
@@ -260,26 +243,6 @@ export default function MapboxMap({
         updateBuildingVisibility(map.current, showBuildings);
         attachPoiClickHandlers();
       });
-
-      // Handle geolocate
-      geolocate.on(
-        'geolocate',
-        (e: { coords: { longitude: number; latitude: number } }) => {
-          const coords: [number, number] = [
-            e.coords.longitude,
-            e.coords.latitude,
-          ];
-          setUserLocation(coords);
-          setGeolocateStatus('success');
-          setGeolocateError(null);
-          if (shouldCenterOnFixRef.current) {
-            if (map.current) {
-              centerOnLocation(map.current, coords, 15);
-            }
-            shouldCenterOnFixRef.current = false;
-          }
-        }
-      );
 
       // Handle map errors
       map.current.on('error', e => {
@@ -314,9 +277,6 @@ export default function MapboxMap({
     chicagoCenter,
     mapStyle,
     showBuildings,
-    addNavigationControl,
-    addGeolocateControl,
-    addBuildingToggleControl,
     updateBuildingVisibility,
     createClickMarker,
   ]);
@@ -330,7 +290,9 @@ export default function MapboxMap({
       if (typeof window !== 'undefined') {
         localStorage.setItem('map.style', mapStyle);
       }
-    } catch {}
+    } catch {
+      // Ignore localStorage errors
+    }
   }, [mapStyle, mapLoaded, updateMapStyle]);
 
   // Update building visibility
@@ -393,13 +355,6 @@ export default function MapboxMap({
     getCategoryInfo,
   ]);
 
-  // Center on Chicago function
-  const centerOnChicago = useCallback(() => {
-    if (map.current) {
-      centerOnLocation(map.current, chicagoCenter, 11);
-    }
-  }, [centerOnLocation, chicagoCenter]);
-
   // Focus map externally when focusLocation changes
   useEffect(() => {
     if (!map.current || !mapLoaded || !focusLocation) return;
@@ -431,7 +386,6 @@ export default function MapboxMap({
             pos.coords.longitude,
             pos.coords.latitude,
           ];
-          setUserLocation(coords);
           setGeolocateStatus('success');
           centerOnLocation(map.current!, coords, 15);
           shouldCenterOnFixRef.current = false;
@@ -458,13 +412,9 @@ export default function MapboxMap({
 
   // Map style options
   const mapStyles = [
-    { id: 'mapbox://styles/mapbox/streets-v12', name: 'Streets', icon: '🏙️' },
-    { id: 'mapbox://styles/mapbox/outdoors-v12', name: 'Outdoors', icon: '🏔️' },
-    {
-      id: 'mapbox://styles/mapbox/satellite-v9',
-      name: 'Satellite',
-      icon: '🛰️',
-    },
+    { id: 'mapbox://styles/mapbox/streets-v12', name: '標準', icon: '🏙️' },
+    { id: 'mapbox://styles/mapbox/outdoors-v12', name: '地形', icon: '🏔️' },
+    { id: 'mapbox://styles/mapbox/satellite-v9', name: '衛星', icon: '🛰️' },
   ];
 
   if (mapError) {
@@ -492,16 +442,16 @@ export default function MapboxMap({
       {/* Map Container */}
       <div ref={mapContainer} className="w-full h-full min-h-[400px]" />
 
-      {/* Map Controls */}
-      <div className="absolute top-4 left-4 z-10 space-y-2">
-        {/* Style Selector */}
-        <div className="bg-white rounded-lg shadow-lg p-2">
-          <div className="flex items-center space-x-1">
+      {/* Custom Toolbar */}
+      <div className="absolute top-3 left-3 right-3 z-10 flex items-center justify-between gap-2">
+        <div className="bg-white rounded-xl shadow p-2">
+          <div className="flex items-center gap-2">
             <Layers className="w-4 h-4 text-gray-600" />
             <select
               value={mapStyle}
               onChange={e => setMapStyle(e.target.value)}
               className="text-xs border-none bg-transparent focus:outline-none"
+              aria-label="地図スタイル"
             >
               {mapStyles.map(style => (
                 <option key={style.id} value={style.id}>
@@ -511,19 +461,12 @@ export default function MapboxMap({
             </select>
           </div>
         </div>
-
-        {/* Quick Actions */}
-        <div className="bg-white rounded-lg shadow-lg p-2 space-y-1">
-          <button
-            onClick={centerOnChicago}
-            className="w-full flex items-center space-x-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 rounded transition-colors"
-          >
-            <MapPin className="w-4 h-4" />
-            <span>シカゴ中心</span>
-          </button>
+        <div className="bg-white rounded-xl shadow p-1 flex items-center">
           <button
             onClick={requestAndCenterOnUser}
-            className="w-full flex items-center space-x-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 rounded transition-colors"
+            className="flex items-center space-x-1 px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 rounded-lg"
+            aria-label="現在地"
+            title="現在地"
           >
             <Navigation className="w-4 h-4" />
             <span>現在地</span>
@@ -553,39 +496,28 @@ export default function MapboxMap({
         </div>
       )}
 
-      {/* Post Count */}
-      <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg px-3 py-2 z-10">
-        <div className="flex items-center space-x-2">
-          <div className="w-2 h-2 bg-coral-500 rounded-full"></div>
-          <span className="text-xs text-gray-700">
-            {selectedCategory
-              ? posts.filter(p => p.category_id === selectedCategory).length
-              : posts.length}
-            件の投稿
-          </span>
-        </div>
-      </div>
+      {/* Post Count removed and merged into bottom bar */}
 
-      {/* POI Click Help */}
-      <div className="absolute bottom-4 right-4 bg-white rounded-lg shadow-lg px-3 py-2 z-10 max-w-xs">
-        <div className="flex items-center space-x-2 mb-1">
+      {/* Bottom info bar */}
+      <div className="absolute left-3 right-3 bottom-3 z-10 flex flex-col sm:flex-row gap-2">
+        <div className="flex-1 bg-white/90 backdrop-blur rounded-xl shadow px-3 py-2">
+          <div className="flex items-center gap-2 text-xs text-gray-700">
+            <div className="w-2 h-2 bg-coral-500 rounded-full"></div>
+            <span>
+              {selectedCategory
+                ? posts.filter(p => p.category_id === selectedCategory).length
+                : posts.length}
+              件の投稿が表示中
+            </span>
+          </div>
+        </div>
+        <div className="bg-white/90 backdrop-blur rounded-xl shadow px-3 py-2 text-xs text-gray-600 flex items-center gap-2">
           <MapPin className="w-4 h-4 text-coral-500" />
-          <span className="text-sm font-medium text-gray-700">
-            スポット追加
-          </span>
+          <span>建物やランドマークをクリックするとスポットを追加できます</span>
         </div>
-        <p className="text-xs text-gray-600 leading-tight">
-          建物、ランドマーク、お店などをクリックしてスポットを追加できます
-        </p>
       </div>
 
-      {/* Debug Info */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="absolute top-4 right-4 bg-black bg-opacity-75 text-white text-xs p-2 rounded">
-          <div>Token: {MAPBOX_TOKEN ? '✓' : '✗'}</div>
-          <div>Posts: {posts.length}</div>
-        </div>
-      )}
+      {/* Debug Info removed per UI requirements */}
     </div>
   );
 }

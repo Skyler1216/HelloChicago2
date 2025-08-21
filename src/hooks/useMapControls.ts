@@ -2,70 +2,20 @@ import { useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 
 export function useMapControls() {
-  const addNavigationControl = useCallback((map: mapboxgl.Map) => {
-    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
-  }, []);
-
+  // Navigation/Geolocate controls are no longer used in UI
+  const addNavigationControl = useCallback((_: mapboxgl.Map) => {}, []);
   const addGeolocateControl = useCallback(
-    (map: mapboxgl.Map, onGeolocate: (coords: [number, number]) => void) => {
-      const geolocate = new mapboxgl.GeolocateControl({
-        positionOptions: {
-          enableHighAccuracy: true,
-        },
-        trackUserLocation: true,
-        showUserHeading: true,
-      });
-
-      geolocate.on(
-        'geolocate',
-        (e: { coords: { longitude: number; latitude: number } }) => {
-          onGeolocate([e.coords.longitude, e.coords.latitude]);
-        }
-      );
-
-      map.addControl(geolocate, 'top-right');
-      return geolocate;
-    },
+    (_: mapboxgl.Map, __: (coords: [number, number]) => void) => null,
     []
   );
 
+  // Custom building toggle control no longer injected; visibility is handled programmatically
   const addBuildingToggleControl = useCallback(
     (
-      map: mapboxgl.Map,
-      showBuildings: boolean,
-      onBuildingToggleChange: (show: boolean) => void
-    ) => {
-      const buildingToggle = document.createElement('div');
-      buildingToggle.className = 'mapboxgl-ctrl mapboxgl-ctrl-group';
-      buildingToggle.style.cssText = `
-      position: absolute;
-      top: 120px;
-      right: 10px;
-      background: white;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      padding: 8px;
-      cursor: pointer;
-      font-size: 12px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    `;
-
-      buildingToggle.innerHTML = `
-      <div style="display: flex; align-items: center; gap: 4px;">
-        <input type="checkbox" id="building-toggle" ${showBuildings ? 'checked' : ''} style="margin: 0;">
-        <label for="building-toggle" style="margin: 0; cursor: pointer;">建物</label>
-      </div>
-    `;
-
-      buildingToggle
-        .querySelector('#building-toggle')
-        ?.addEventListener('change', e => {
-          const target = e.target as HTMLInputElement;
-          onBuildingToggleChange(target.checked);
-        });
-
-      return buildingToggle;
-    },
+      _map: mapboxgl.Map,
+      _showBuildings: boolean,
+      _onChange: (show: boolean) => void
+    ) => null,
     []
   );
 
