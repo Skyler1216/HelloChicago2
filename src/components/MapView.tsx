@@ -12,6 +12,7 @@ import MapboxMap from './MapboxMap';
 // SpotFormModalはページ遷移化に伴い未使用
 import { useCategories } from '../hooks/useCategories';
 import { useMapSpots } from '../hooks/useMapSpots';
+import SpotBottomSheet from './map/SpotBottomSheet';
 
 interface MapViewProps {
   onRequestCreateSpotAt?: (location: {
@@ -31,7 +32,14 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
   const [sortBy, setSortBy] = useState<'recent' | 'popular' | 'rating'>(
     'recent'
   );
-  // クリック位置は親に委譲するため内部保持しない
+  // POIクリックで表示するアクションモーダルの状態
+  const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
+  const [actionsLocation, setActionsLocation] = useState<{
+    lat: number;
+    lng: number;
+    address?: string;
+  } | null>(null);
+  const [tempRating, setTempRating] = useState(0);
   const [focusLocation, setFocusLocation] = useState<{
     lat: number;
     lng: number;
@@ -297,16 +305,34 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
               distanceFilter={distanceFilter}
               focusLocation={focusLocation}
               onLocationClick={location => {
-                if (onRequestCreateSpotAt && location) {
-                  onRequestCreateSpotAt(location);
-                }
+                // まずアクションモーダルを表示
+                setActionsLocation(location);
+                setTempRating(0);
+                setBottomSheetOpen(true);
               }}
             />
           )}
         </div>
       )}
 
-      {/* Spot Form Modal はページ遷移化のため削除 */}
+      {/* Spot Bottom Sheet */}
+      <SpotBottomSheet
+        open={bottomSheetOpen}
+        location={actionsLocation}
+        rating={tempRating}
+        onChangeRating={setTempRating}
+        onClose={() => setBottomSheetOpen(false)}
+        onClickViewReviews={() => {
+          setBottomSheetOpen(false);
+          // TODO: 口コミ一覧ページへ遷移（未実装）
+        }}
+        onClickPostReview={() => {
+          setBottomSheetOpen(false);
+          if (onRequestCreateSpotAt && actionsLocation) {
+            onRequestCreateSpotAt(actionsLocation);
+          }
+        }}
+      />
     </div>
   );
 }

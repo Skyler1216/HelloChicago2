@@ -77,7 +77,7 @@ export default function SpotFormView({
           <span>戻る</span>
         </button>
         <h1 className="text-lg font-semibold text-gray-900">
-          新しいスポットを追加
+          口コミを投稿する
         </h1>
         <div className="w-10" />
       </div>
@@ -206,7 +206,7 @@ export default function SpotFormView({
             ) : (
               <>
                 <Send className="w-5 h-5" />
-                <span>作成する</span>
+                <span>投稿する</span>
               </>
             )}
           </button>
