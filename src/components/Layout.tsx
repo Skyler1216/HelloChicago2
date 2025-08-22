@@ -50,7 +50,7 @@ export default function Layout({
                 <button
                   key={item.id}
                   onClick={() => onViewChange(item.id)}
-                  className={`flex-1 flex flex-col items-center space-y-1 sm:space-y-1.5 px-2 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-all duration-200 min-w-0 ${
+                  className={`flex-1 flex flex-col items-center space-y-1 sm:space-y-1.5 px-1.5 sm:px-2 py-2 sm:py-2.5 rounded-lg transition-all duration-200 min-w-0 ${
                     isActive
                       ? 'text-coral-600 bg-coral-50 scale-105'
                       : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
@@ -60,7 +60,7 @@ export default function Layout({
                     className={`w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0 ${isActive ? 'text-coral-600' : ''}`}
                   />
                   <span
-                    className={`text-xs sm:text-sm font-medium leading-tight text-center truncate w-full ${isActive ? 'text-coral-600' : ''}`}
+                    className={`text-[11px] sm:text-xs font-medium leading-tight text-center truncate w-full ${isActive ? 'text-coral-600' : ''}`}
                   >
                     {item.label}
                   </span>
