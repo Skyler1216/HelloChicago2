@@ -161,6 +161,7 @@ export default function InboxView({
           filterByType(tabId as 'notification' | 'message');
           onTabChange?.(tabId as 'notification' | 'message');
         }}
+        className="sticky top-16 z-30"
       />
 
       {/* Content Area */}
