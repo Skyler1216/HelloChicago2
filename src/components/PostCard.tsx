@@ -1,5 +1,13 @@
 import React, { memo } from 'react';
-import { Heart, MessageCircle, MapPin, HelpCircle, Gift, Edit, Trash2 } from 'lucide-react';
+import {
+  Heart,
+  MessageCircle,
+  MapPin,
+  HelpCircle,
+  Gift,
+  Edit,
+  Trash2,
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Database } from '../types/database';
 import { useLikes } from '../hooks/useLikes';
@@ -82,6 +90,11 @@ function PostCard({ post, onClick, onEdit, onDelete }: PostCardProps) {
 
   const postTypeInfo = getPostTypeInfo();
   const PostTypeIcon = postTypeInfo.icon;
+  const previewText =
+    post.summary && post.summary.trim().length > 0
+      ? post.summary
+      : post.content;
+  const shouldShowReadMore = previewText.trim().length > 90;
 
   return (
     <div
@@ -210,21 +223,21 @@ function PostCard({ post, onClick, onEdit, onDelete }: PostCardProps) {
       {/* Content preview */}
       <div className="bg-gray-50 rounded-lg p-3 mb-3">
         <p className="text-sm text-gray-700 leading-relaxed line-clamp-3">
-          {post.summary && post.summary.trim().length > 0
-            ? post.summary
-            : post.content}
+          {previewText}
         </p>
-        <div className="mt-2 flex justify-end">
-          <button
-            onClick={e => {
-              e.stopPropagation();
-              onClick?.();
-            }}
-            className="text-xs font-medium text-coral-600 hover:text-coral-700"
-          >
-            続きを読む
-          </button>
-        </div>
+        {shouldShowReadMore && (
+          <div className="mt-2 flex justify-end">
+            <button
+              onClick={e => {
+                e.stopPropagation();
+                onClick?.();
+              }}
+              className="text-xs font-medium text-coral-600 hover:text-coral-700"
+            >
+              続きを読む
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Location */}
