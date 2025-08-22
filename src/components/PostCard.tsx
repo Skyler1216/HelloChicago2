@@ -207,14 +207,25 @@ function PostCard({ post, onClick, onEdit, onDelete }: PostCardProps) {
         </div>
       )}
 
-      {/* Content/Summary */}
-      {post.summary && (
-        <div className="bg-gray-50 rounded-lg p-3 mb-3">
-          <p className="text-sm text-gray-700 leading-relaxed">
-            {post.summary}
-          </p>
+      {/* Content preview */}
+      <div className="bg-gray-50 rounded-lg p-3 mb-3">
+        <p className="text-sm text-gray-700 leading-relaxed line-clamp-3">
+          {post.summary && post.summary.trim().length > 0
+            ? post.summary
+            : post.content}
+        </p>
+        <div className="mt-2 flex justify-end">
+          <button
+            onClick={e => {
+              e.stopPropagation();
+              onClick?.();
+            }}
+            className="text-xs font-medium text-coral-600 hover:text-coral-700"
+          >
+            続きを読む
+          </button>
         </div>
-      )}
+      </div>
 
       {/* Location */}
       <div className="flex items-center space-x-1 text-gray-500 mb-3">
