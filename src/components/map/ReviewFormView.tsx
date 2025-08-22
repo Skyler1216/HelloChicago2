@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Send, Star } from 'lucide-react';
 import { useMapSpots } from '../../hooks/useMapSpots';
 import { useSpotReviews } from '../../hooks/useSpotReviews';
+import { useAuth } from '../../hooks/useAuth';
 
 interface ReviewFormViewProps {
   initialLocation?: { lat: number; lng: number; address?: string } | null;
@@ -32,6 +33,7 @@ export default function ReviewFormView({
   onBack,
 }: ReviewFormViewProps) {
   const { spots, createSpot, rateSpot, loading } = useMapSpots();
+  const { user } = useAuth();
 
   const [rating, setRating] = useState<number>(0);
   const [comment, setComment] = useState<string>('');
@@ -41,6 +43,31 @@ export default function ReviewFormView({
 
   // Fetch existing reviews for nearest spot if available
   const { reviews, loading: loadingReviews } = useSpotReviews(targetSpotId);
+
+  // Determine if user already rated this spot (from aggregated spots data)
+  const myExistingRating = useMemo(() => {
+    if (!targetSpotId) return null;
+    const s = spots.find(sp => sp.id === targetSpotId);
+    return typeof s?.user_rating === 'number' ? s.user_rating : null;
+  }, [spots, targetSpotId]);
+
+  useEffect(() => {
+    // If user has an existing rating, prefill the stars for edit UX
+    if (myExistingRating && rating === 0) {
+      setRating(myExistingRating);
+    }
+  }, [myExistingRating, rating]);
+
+  // Prefill existing comment if present
+  const myExistingReview = useMemo(
+    () => reviews.find(r => r.user_id === user?.id) || null,
+    [reviews, user?.id]
+  );
+  useEffect(() => {
+    if (myExistingReview && comment.length === 0) {
+      setComment(myExistingReview.comment ?? '');
+    }
+  }, [myExistingReview, comment]);
 
   const nearestSpot = useMemo(() => {
     if (!initialLocation) return null;
@@ -119,7 +146,7 @@ export default function ReviewFormView({
           <span>戻る</span>
         </button>
         <h1 className="text-lg font-semibold text-gray-900">
-          口コミを投稿する
+          {myExistingReview ? '口コミを編集する' : '口コミを投稿する'}
         </h1>
         <div className="w-10" />
       </div>
@@ -137,8 +164,15 @@ export default function ReviewFormView({
               </div>
               {/* 口コミ件数のみ表示 */}
               <div className="text-xs text-gray-500 mt-1">
-                {loadingReviews ? '口コミ 読み込み中…' : `口コミ ${reviews.length}件`}
+                {loadingReviews
+                  ? '口コミ 読み込み中…'
+                  : `口コミ ${reviews.length}件`}
               </div>
+              {myExistingRating && (
+                <div className="mt-1 text-xs text-coral-700 bg-coral-50 border border-coral-200 inline-block px-2 py-0.5 rounded">
+                  既に投稿済みのため、編集として更新されます
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -204,12 +238,12 @@ export default function ReviewFormView({
             {isSubmitting || loading ? (
               <>
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>投稿中...</span>
+                <span>{myExistingRating ? '更新中...' : '投稿中...'}</span>
               </>
             ) : (
               <>
                 <Send className="w-5 h-5" />
-                <span>投稿する</span>
+                <span>{myExistingRating ? '更新する' : '投稿する'}</span>
               </>
             )}
           </button>

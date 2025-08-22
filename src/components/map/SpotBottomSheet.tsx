@@ -23,9 +23,6 @@ export default function SpotBottomSheet({
   onClickPostReview,
   onClickViewReviews,
 }: SpotBottomSheetProps) {
-  // Early return if not open or no location - no hooks called after this point
-  if (!open || !location) return null;
-
   const sheetRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -158,6 +155,16 @@ export default function SpotBottomSheet({
 
   const targetSpotId = nearestSpot ? nearestSpot.id : null;
   const { reviews, loading: reviewsLoading } = useSpotReviews(targetSpotId);
+  const nearestSpotObj = useMemo(
+    () => spots.find(s => s.id === targetSpotId) || null,
+    [spots, targetSpotId]
+  );
+  const myExistingRating = useMemo(() => {
+    const v = nearestSpotObj?.user_rating;
+    return typeof v === 'number' ? v : null;
+  }, [nearestSpotObj]);
+
+  if (!open || !location) return null;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 pointer-events-none select-none">
@@ -212,30 +219,30 @@ export default function SpotBottomSheet({
             <div className="text-sm font-medium text-gray-700 mb-2">
               評価（平均）
             </div>
-            {(location?.average_rating ?? 0) > 0 ? (
-              <div className="flex items-center gap-2">
-                <div className="flex items-center">
-                  {[1, 2, 3, 4, 5].map(star => (
-                    <Star
-                      key={star}
-                      className={`w-5 h-5 ${
-                        star <=
-                        Math.round((location?.average_rating || 0) * 2) / 2
-                          ? 'text-yellow-400 fill-current'
-                          : 'text-gray-300'
-                      }`}
-                    />
-                  ))}
-                </div>
-                <span className="text-sm text-gray-700">
-                  {(location?.average_rating ?? 0).toFixed(1)} / 5.0
-                </span>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center">
+                {[1, 2, 3, 4, 5].map(star => (
+                  <Star
+                    key={star}
+                    className={`w-5 h-5 ${
+                      star <=
+                      Math.round((location?.average_rating || 0) * 2) / 2
+                        ? 'text-yellow-400 fill-current'
+                        : 'text-gray-300'
+                    }`}
+                  />
+                ))}
               </div>
-            ) : (
-              <div className="text-sm text-gray-500">
-                口コミはまだありません
-              </div>
-            )}
+              <span className="text-sm text-gray-700">
+                {(location?.average_rating ?? 0).toFixed(1)} / 5.0
+              </span>
+              <span className="text-xs text-gray-500">
+                ・{' '}
+                {reviewsLoading
+                  ? '口コミ 読み込み中…'
+                  : `口コミ ${reviews.length}件`}
+              </span>
+            </div>
           </div>
 
           {/* actions */}
@@ -252,7 +259,9 @@ export default function SpotBottomSheet({
               className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-coral-500 text-white hover:bg-coral-600"
             >
               <MessageSquarePlus className="w-5 h-5" />
-              <span>口コミを投稿する</span>
+              <span>
+                {myExistingRating ? '口コミを編集する' : '口コミを投稿する'}
+              </span>
             </button>
           </div>
 

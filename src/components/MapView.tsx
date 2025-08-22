@@ -105,7 +105,7 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
         }
 
         const within = nearest && nearest.dist <= 50;
-        const avg = within ? nearest.avg : 0;
+        const avg = within && nearest ? nearest.avg : 0;
 
         setActionsLocation(prev => {
           const same =

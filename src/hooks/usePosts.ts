@@ -240,7 +240,9 @@ export function usePosts(
 
       // Update local state with the full updated record
       setPosts(prev =>
-        prev.map(post => (post.id === postId ? (data as unknown as Post) : post))
+        prev.map(post =>
+          post.id === postId ? (data as unknown as Post) : post
+        )
       );
 
       return data as unknown as Post;
