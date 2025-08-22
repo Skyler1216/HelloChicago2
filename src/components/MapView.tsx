@@ -41,6 +41,7 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
     lng: number;
     address?: string;
     average_rating?: number;
+    category_hints?: string[];
   } | null>(null);
   // const [actionsSpotId, setActionsSpotId] = useState<string | null>(null);
   // const [reviewsSheetOpen, setReviewsSheetOpen] = useState(false);
@@ -82,7 +83,12 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
   }, [mapSpots, selectedCategory, searchQuery]);
 
   const handleLocationClick = useCallback(
-    (location: { lat: number; lng: number; address?: string }) => {
+    (location: {
+      lat: number;
+      lng: number;
+      address?: string;
+      category_hints?: string[];
+    }) => {
       try {
         // 近接スポットを検索（50m以内）
         let nearest: { id: string; avg: number; dist: number } | null = null;

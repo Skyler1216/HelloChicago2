@@ -32,7 +32,6 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
     posts,
     loading: postsLoading,
     refetch,
-    updatePost,
     deletePost,
   } = usePosts(selectedPostType);
 
@@ -74,7 +73,7 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
       await deletePost(post.id);
       await refetch();
       alert('投稿を削除しました');
-    } catch (e) {
+    } catch {
       alert('削除に失敗しました');
     }
   };

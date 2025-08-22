@@ -3,9 +3,15 @@ import { ArrowLeft, Send, Star } from 'lucide-react';
 import { useMapSpots } from '../../hooks/useMapSpots';
 import { useSpotReviews } from '../../hooks/useSpotReviews';
 import { useAuth } from '../../hooks/useAuth';
+import { useCategories } from '../../hooks/useCategories';
 
 interface ReviewFormViewProps {
-  initialLocation?: { lat: number; lng: number; address?: string } | null;
+  initialLocation?: {
+    lat: number;
+    lng: number;
+    address?: string;
+    category_hints?: string[];
+  } | null;
   onBack: () => void;
 }
 
@@ -34,6 +40,7 @@ export default function ReviewFormView({
 }: ReviewFormViewProps) {
   const { spots, createSpot, rateSpot, loading } = useMapSpots();
   const { user } = useAuth();
+  const { categories } = useCategories();
 
   const [rating, setRating] = useState<number>(0);
   const [comment, setComment] = useState<string>('');
@@ -82,6 +89,153 @@ export default function ReviewFormView({
     return best;
   }, [spots, initialLocation]);
 
+  // Category inference from hints/name
+  function inferCategoryId(
+    name: string | undefined,
+    hints: string[],
+    available: { id: string; key: string; icon: string }[]
+  ): string | null {
+    const text = (name || '').toLowerCase();
+    const allHints = hints.map(h => h.toLowerCase());
+    const score: Record<string, number> = {};
+
+    const addScore = (catId: string, s: number) => {
+      score[catId] = (score[catId] || 0) + s;
+    };
+
+    // Simple dictionary mapping
+    const dict: Array<{
+      keywords: string[];
+      weight: number;
+      match: (s: string) => boolean;
+    }> = [
+      {
+        keywords: ['cafe', 'coffee', '喫茶', 'カフェ'],
+        weight: 3,
+        match: s =>
+          s.includes('cafe') ||
+          s.includes('coffee') ||
+          s.includes('喫茶') ||
+          s.includes('カフェ'),
+      },
+      {
+        keywords: [
+          'restaurant',
+          'food',
+          'diner',
+          '居酒屋',
+          'レストラン',
+          '寿司',
+          'ラーメン',
+        ],
+        weight: 3,
+        match: s =>
+          /restaurant|food|diner|居酒屋|レストラン|寿司|らーめん|ラーメン/.test(
+            s
+          ),
+      },
+      {
+        keywords: ['school', 'university', 'college', '学校', '幼稚園', '大学'],
+        weight: 3,
+        match: s => /school|university|college|学校|幼稚園|大学/.test(s),
+      },
+      {
+        keywords: [
+          'hospital',
+          'clinic',
+          'dentist',
+          'pharmacy',
+          '病院',
+          'クリニック',
+          '歯科',
+          '薬局',
+        ],
+        weight: 3,
+        match: s =>
+          /hospital|clinic|dentist|pharmacy|病院|クリニック|歯科|薬局/.test(s),
+      },
+      {
+        keywords: ['park', 'playground', '公園'],
+        weight: 3,
+        match: s => /park|playground|公園/.test(s),
+      },
+      {
+        keywords: [
+          'supermarket',
+          'grocery',
+          'convenience',
+          'market',
+          'スーパー',
+          'コンビニ',
+        ],
+        weight: 2,
+        match: s =>
+          /supermarket|grocery|convenience|market|スーパー|コンビニ/.test(s),
+      },
+      {
+        keywords: ['post_office', '郵便局'],
+        weight: 2,
+        match: s => /post_office|郵便局/.test(s),
+      },
+      {
+        keywords: ['station', 'bus', 'バス', '駅'],
+        weight: 2,
+        match: s => /station|bus|バス|駅/.test(s),
+      },
+      {
+        keywords: ['library', '図書館'],
+        weight: 2,
+        match: s => /library|図書館/.test(s),
+      },
+    ];
+
+    // Score from name text
+    for (const entry of dict) {
+      if (entry.match(text)) {
+        for (const c of available) addScore(c.id, 0); // ensure key exists
+      }
+    }
+
+    // Score from hints
+    const hintText = allHints.join(' ');
+    for (const entry of dict) {
+      if (entry.match(hintText)) {
+        for (const c of available) addScore(c.id, 0);
+      }
+    }
+
+    // Map hints to category IDs by icon/name heuristics
+    for (const c of available) {
+      const key = (c.key || '').toLowerCase();
+      const icon = (c.icon || '').toLowerCase();
+      const hay = `${key} ${icon} ${text} ${hintText}`;
+      if (/cafe|coffee|喫茶|カフェ/.test(hay)) addScore(c.id, 10);
+      if (/restaurant|food|居酒屋|レストラン|寿司|ラーメン|らーめん/.test(hay))
+        addScore(c.id, 9);
+      if (/school|大学|学校|幼稚園|college|university/.test(hay))
+        addScore(c.id, 8);
+      if (
+        /hospital|clinic|dentist|pharmacy|病院|クリニック|歯科|薬局/.test(hay)
+      )
+        addScore(c.id, 8);
+      if (/park|公園|playground/.test(hay)) addScore(c.id, 7);
+      if (/supermarket|コンビニ|grocery|market/.test(hay)) addScore(c.id, 6);
+      if (/post_office|郵便局/.test(hay)) addScore(c.id, 5);
+      if (/station|駅|bus|バス/.test(hay)) addScore(c.id, 5);
+      if (/library|図書館/.test(hay)) addScore(c.id, 4);
+    }
+
+    let bestId: string | null = null;
+    let bestScore = -Infinity;
+    for (const [id, s] of Object.entries(score)) {
+      if (s > bestScore) {
+        bestId = id;
+        bestScore = s;
+      }
+    }
+    return bestScore > 0 ? bestId : null;
+  }
+
   useEffect(() => {
     if (!initialLocation) return;
     if (nearestSpot && nearestSpot.dist <= 50) {
@@ -103,11 +257,18 @@ export default function ReviewFormView({
     try {
       let spotId = targetSpotId;
       if (!spotId) {
+        // Auto-categorize using hints and heuristics
+        const categoryId = inferCategoryId(
+          initialLocation.address,
+          initialLocation.category_hints || [],
+          categories.map(c => ({ id: c.id, key: c.name_ja, icon: c.icon }))
+        );
         const created = await createSpot({
           name: initialLocation.address || 'スポット',
           location_lat: initialLocation.lat,
           location_lng: initialLocation.lng,
           location_address: initialLocation.address || '',
+          category_id: categoryId || undefined,
           is_public: true,
         });
         if (!created) {

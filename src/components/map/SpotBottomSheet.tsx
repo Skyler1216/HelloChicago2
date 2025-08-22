@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Star, Eye, MessageSquarePlus, X } from 'lucide-react';
 import { useMapSpots } from '../../hooks/useMapSpots';
 import { useSpotReviews } from '../../hooks/useSpotReviews';
+import { useCategories } from '../../hooks/useCategories';
 
 interface SpotBottomSheetProps {
   open: boolean;
@@ -11,6 +12,7 @@ interface SpotBottomSheetProps {
     lng: number;
     address?: string;
     average_rating?: number;
+    category_hints?: string[];
   } | null;
   onClickPostReview: () => void;
   onClickViewReviews: () => void;
@@ -128,6 +130,7 @@ export default function SpotBottomSheet({
 
   // Determine nearest existing spot within 50m to show review count
   const { spots } = useMapSpots();
+  const { categories } = useCategories();
   const nearestSpot = useMemo(() => {
     try {
       if (!location) return null;
@@ -163,6 +166,190 @@ export default function SpotBottomSheet({
     const v = nearestSpotObj?.user_rating;
     return typeof v === 'number' ? v : null;
   }, [nearestSpotObj]);
+
+  // Provider-based categories via Mapbox Geocoding for better accuracy
+  const [providerCategories, setProviderCategories] = useState<string[] | null>(
+    null
+  );
+  const [providerLoading, setProviderLoading] = useState(false);
+  useEffect(() => {
+    const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN as
+      | string
+      | undefined;
+    if (!open || !location || !token) {
+      setProviderCategories(null);
+      return;
+    }
+    const controller = new AbortController();
+    const fetchCategories = async () => {
+      try {
+        setProviderLoading(true);
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${location.lng},${location.lat}.json?types=poi&limit=1&language=ja&access_token=${encodeURIComponent(
+          token
+        )}`;
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) throw new Error(`Geocoding failed: ${res.status}`);
+        const json = await res.json();
+        const feature = json?.features?.[0];
+        const props = (feature?.properties || {}) as Record<string, unknown>;
+        const list: string[] = [];
+        const addFrom = (v: unknown) => {
+          if (!v) return;
+          if (Array.isArray(v)) {
+            for (const x of v) if (x) list.push(String(x));
+          } else if (typeof v === 'string') {
+            v.split(',')
+              .map(s => s.trim())
+              .filter(Boolean)
+              .forEach(s => list.push(s));
+          }
+        };
+        addFrom(props['category']);
+        // Some tiles expose additional arrays
+        addFrom((props as never)['poi_category']);
+        addFrom((props as never)['poi_category_ids']);
+        if (props['maki']) list.push(String(props['maki']));
+        setProviderCategories(list.length > 0 ? list : null);
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') setProviderCategories(null);
+      } finally {
+        setProviderLoading(false);
+      }
+    };
+    fetchCategories();
+    return () => controller.abort();
+  }, [open, location?.lat, location?.lng]);
+
+  // Strict mapping: provider categories and hints only, precedence by rule
+  const suggestedCategoryId = useMemo(() => {
+    if (categories.length === 0) return null;
+    const tokens = [
+      ...(providerCategories || []),
+      ...(location?.category_hints || []),
+      location?.address || '',
+    ]
+      .filter(Boolean)
+      .map(v => String(v).toLowerCase());
+
+    const hasAny = (arr: string[]) =>
+      arr.some(k => tokens.some(t => t.includes(k)));
+
+    const findById = (id: string) =>
+      categories.find(c => c.id === id)?.id || null;
+    const findByName = (ja: string) =>
+      categories.find(c => (c.name_ja || '').includes(ja))?.id || null;
+    const pick = (id: string, jaFallback: string) =>
+      findById(id) || findByName(jaFallback);
+
+    // Precedence to avoid common misclassifications
+    // 1) Hotels/Lodging -> Other
+    if (
+      hasAny(['hotel', 'lodging', '旅館', 'ホテル', 'inn', 'hostel', 'motel'])
+    ) {
+      return pick('other', 'その他');
+    }
+    // 2) Parks (公園) before sports
+    if (hasAny(['park', '公園'])) {
+      return pick('park', '公園');
+    }
+    // 3) Sports/Gym
+    if (
+      hasAny([
+        'gym',
+        'fitness',
+        'スポーツ',
+        '運動',
+        'ジム',
+        'フィットネス',
+        'ヨガ',
+        'stadium',
+        'arena',
+        'tennis',
+        'soccer',
+        'basketball',
+      ])
+    ) {
+      return pick('sports', 'スポーツ');
+    }
+    // 4) School/Education
+    if (hasAny(['school', '大学', '学校', '幼稚園', 'college', 'university'])) {
+      return pick('school', '学校');
+    }
+    // 5) Children (nursery etc.)
+    if (hasAny(['nursery', 'kindergarten', '保育', '子ども', '子供', 'kids'])) {
+      return pick('children', '子ども');
+    }
+    // 6) Medical
+    if (
+      hasAny([
+        'hospital',
+        'clinic',
+        'dentist',
+        'pharmacy',
+        '病院',
+        'クリニック',
+        '歯科',
+        '薬局',
+      ])
+    ) {
+      return pick('hospital', '病院');
+    }
+    // 7) Restaurant/Cafe (lower priority)
+    if (
+      hasAny([
+        'restaurant',
+        'cafe',
+        'coffee',
+        '喫茶',
+        'レストラン',
+        '居酒屋',
+        '寿司',
+        'ラーメン',
+        'bar',
+        'bakery',
+      ])
+    ) {
+      return pick('restaurant', 'レストラン');
+    }
+    // 8) Shopping
+    if (
+      hasAny([
+        'supermarket',
+        'grocery',
+        'convenience',
+        'market',
+        'shopping',
+        'store',
+        'mall',
+        'コンビニ',
+        'スーパー',
+      ])
+    ) {
+      return pick('shopping', '買い物');
+    }
+    // 9) Beauty
+    if (
+      hasAny(['beauty', 'salon', 'hair', 'barber', '美容', '美容院', 'サロン'])
+    ) {
+      return pick('beauty', '美容');
+    }
+    // 10) Library
+    if (hasAny(['library', '図書館'])) {
+      return pick('library', '図書館');
+    }
+    return null;
+  }, [
+    providerCategories,
+    location?.category_hints,
+    location?.address,
+    categories,
+  ]);
+
+  const displayCategoryName = useMemo(() => {
+    const id = nearestSpotObj?.category_id || suggestedCategoryId;
+    if (!id) return null;
+    return categories.find(c => c.id === id)?.name_ja || null;
+  }, [nearestSpotObj?.category_id, suggestedCategoryId, categories]);
 
   if (!open || !location) return null;
 
@@ -212,6 +399,12 @@ export default function SpotBottomSheet({
                 ? '口コミ 読み込み中…'
                 : `口コミ ${reviews.length}件`}
             </div>
+            {displayCategoryName && (
+              <div className="mt-1 text-xs text-gray-700">
+                カテゴリ: {displayCategoryName}
+                {!nearestSpotObj?.category_id && '（候補）'}
+              </div>
+            )}
           </div>
 
           {/* rating (average) */}
@@ -242,6 +435,11 @@ export default function SpotBottomSheet({
                   ? '口コミ 読み込み中…'
                   : `口コミ ${reviews.length}件`}
               </span>
+              {providerLoading && (
+                <span className="text-xs text-gray-400">
+                  ・ カテゴリ解析中…
+                </span>
+              )}
             </div>
           </div>
 

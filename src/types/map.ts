@@ -100,6 +100,8 @@ export interface Location {
   lat: number;
   lng: number;
   address?: string;
+  // Optional category hints from map provider (e.g., Mapbox feature properties)
+  category_hints?: string[];
 }
 
 export interface MapConfig {

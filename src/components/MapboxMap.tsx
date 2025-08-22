@@ -281,10 +281,21 @@ function MapboxMapComponent({
             // クリック時は現在地取得を抑制（ボタンの即時発火を防ぐ）
             suppressLocateRef.current = true;
             // マップ自体は一切再センターしない。通知のみ
+            // Try to grab category-like hints from feature properties
+            const hints: string[] = [];
+            const rawClass = (props['class'] as string) || '';
+            const rawCategory = (props['category'] as string) || '';
+            const rawMaki = (props['maki'] as string) || '';
+            const rawType = (props['type'] as string) || '';
+            [rawClass, rawCategory, rawMaki, rawType]
+              .filter(Boolean)
+              .forEach(v => hints.push(String(v)));
+
             onLocationClick({
               lat,
               lng,
               address: name,
+              category_hints: hints,
             });
           };
           poiClickHandlerRef.current = handlePoiClick;
