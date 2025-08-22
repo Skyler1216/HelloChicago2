@@ -13,6 +13,7 @@ import MapboxMap from './MapboxMap';
 import { useCategories } from '../hooks/useCategories';
 import { useMapSpots } from '../hooks/useMapSpots';
 import SpotBottomSheet from './map/SpotBottomSheet';
+import TabNavigation, { TabItem } from './common/TabNavigation';
 // import ReviewsBottomSheet from './map/ReviewsBottomSheet';
 
 interface MapViewProps {
@@ -55,9 +56,9 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
 
   // モーダルは廃止（ページ遷移に変更）
 
-  const tabs = [
-    { id: 'map' as const, label: 'マップ', icon: MapIcon },
-    { id: 'spots' as const, label: '人気スポット', icon: TrendingUp },
+  const tabs: TabItem[] = [
+    { id: 'map', label: 'マップ', icon: MapIcon },
+    { id: 'spots', label: '人気スポット', icon: TrendingUp },
   ];
 
   // フィルタリングされたマップスポットを取得
@@ -292,31 +293,13 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
       </div>
 
       {/* Tab Navigation */}
-      <div className="px-3 sm:px-4 py-1 sm:py-1.5 bg-white border-b border-gray-100 flex-shrink-0">
-        <div className="flex space-x-1">
-          {tabs.map(tab => {
-            const IconComponent = tab.icon;
-            const isActive = activeTab === tab.id;
-
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex items-center justify-center space-x-1 sm:space-x-2 py-1 sm:py-1.5 px-2 sm:px-4 rounded-md sm:rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 ${
-                  isActive
-                    ? 'bg-coral-100 text-coral-700 border-2 border-coral-200'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <IconComponent
-                  className={`w-3 h-3 sm:w-4 sm:h-4 ${isActive ? 'text-coral-700' : 'text-gray-500'}`}
-                />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <TabNavigation
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={tabId => setActiveTab(tabId as 'map' | 'spots')}
+        variant="compact"
+        className="flex-shrink-0"
+      />
 
       {/* Content based on active tab */}
       {activeTab === 'spots' ? (

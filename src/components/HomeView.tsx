@@ -6,6 +6,7 @@ import { usePosts } from '../hooks/usePosts';
 import { Database } from '../types/database';
 import PostDetailView from './PostDetailView';
 import PostEditModal from './PostEditModal';
+import TabNavigation, { TabItem } from './common/TabNavigation';
 
 type Post = Database['public']['Tables']['posts']['Row'] & {
   profiles: Database['public']['Tables']['profiles']['Row'];
@@ -27,27 +28,29 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
   const [showPostModal, setShowPostModal] = useState(false);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
 
-  const { posts, loading: postsLoading, refetch, updatePost, deletePost } =
-    usePosts(selectedPostType);
+  const {
+    posts,
+    loading: postsLoading,
+    refetch,
+    updatePost,
+    deletePost,
+  } = usePosts(selectedPostType);
 
-  const postTypeTabs = [
+  const postTypeTabs: TabItem[] = [
     {
-      id: 'post' as const,
+      id: 'post',
       label: '体験',
       icon: Camera,
-      color: 'text-blue-600',
     },
     {
-      id: 'consultation' as const,
+      id: 'consultation',
       label: '相談',
       icon: HelpCircle,
-      color: 'text-teal-600',
     },
     {
-      id: 'transfer' as const,
+      id: 'transfer',
       label: '譲渡',
       icon: Gift,
-      color: 'text-coral-600',
     },
   ];
 
@@ -96,46 +99,13 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
   return (
     <div className="pb-6 relative">
       {/* Post Type Tabs */}
-      <div className="px-4 py-4 bg-white border-b border-gray-100">
-        <div className="flex space-x-1">
-          {postTypeTabs.map(tab => {
-            const IconComponent = tab.icon;
-            const isActive = selectedPostType === tab.id;
-
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setSelectedPostType(tab.id)}
-                className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-lg font-medium text-sm transition-all duration-200 ${
-                  isActive
-                    ? 'bg-gray-100 text-gray-900'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <IconComponent
-                  className={`w-4 h-4 ${isActive ? 'text-gray-900' : tab.color}`}
-                />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-        {/* Active tab indicator */}
-        <div className="flex mt-2">
-          {postTypeTabs.map((tab, index) => (
-            <div
-              key={tab.id}
-              className={`flex-1 h-0.5 ${
-                selectedPostType === tab.id ? 'bg-teal-500' : 'bg-transparent'
-              } transition-colors duration-200`}
-              style={{
-                marginLeft: index === 0 ? '0' : '4px',
-                marginRight: index === postTypeTabs.length - 1 ? '0' : '4px',
-              }}
-            />
-          ))}
-        </div>
-      </div>
+      <TabNavigation
+        tabs={postTypeTabs}
+        activeTab={selectedPostType}
+        onTabChange={tabId =>
+          setSelectedPostType(tabId as 'post' | 'consultation' | 'transfer')
+        }
+      />
 
       <div className="px-4">
         <h2 className="text-lg font-bold text-gray-900 mb-4">

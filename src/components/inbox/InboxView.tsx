@@ -3,6 +3,7 @@ import { Inbox, Bell, MessageSquare, RefreshCw } from 'lucide-react';
 import { useInbox } from '../../hooks/useInbox';
 import { useAuth } from '../../hooks/useAuth';
 import { InboxItem, EmptyState } from './';
+import TabNavigation, { TabItem } from '../common/TabNavigation';
 
 interface InboxViewProps {
   onNavigateToPost?: (postId: string) => void;
@@ -68,9 +69,9 @@ export default function InboxView({
     await markAsRead(id);
   };
 
-  const tabs = [
-    { id: 'notification' as const, label: '通知', icon: Bell },
-    { id: 'message' as const, label: 'メッセージ', icon: MessageSquare },
+  const tabs: TabItem[] = [
+    { id: 'notification', label: '通知', icon: Bell },
+    { id: 'message', label: 'メッセージ', icon: MessageSquare },
   ];
 
   if (loading && inboxItems.length === 0) {
@@ -153,34 +154,14 @@ export default function InboxView({
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-white border-b border-gray-100">
-        <div className="max-w-md mx-auto px-4">
-          <div className="flex space-x-1">
-            {tabs.map(tab => {
-              const IconComponent = tab.icon;
-              const isActive = currentFilter === tab.id;
-
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    filterByType(tab.id);
-                    onTabChange?.(tab.id);
-                  }}
-                  className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                    isActive
-                      ? 'text-coral-600 bg-coral-50 border-b-2 border-coral-500'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  <IconComponent className="w-4 h-4" />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      <TabNavigation
+        tabs={tabs}
+        activeTab={currentFilter}
+        onTabChange={tabId => {
+          filterByType(tabId as 'notification' | 'message');
+          onTabChange?.(tabId as 'notification' | 'message');
+        }}
+      />
 
       {/* Content Area */}
       <div className="max-w-md mx-auto">
