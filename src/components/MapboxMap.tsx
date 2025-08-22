@@ -579,7 +579,7 @@ export default function MapboxMap({
         <div className="bg-white rounded-lg shadow-md px-3 py-2 text-xs text-gray-800 flex items-center gap-2 w-fit border border-gray-100">
           <MapPin className="w-4 h-4 text-coral-500 flex-shrink-0" />
           <span className="leading-tight whitespace-nowrap">
-            建物やランドマークをクリックでスポット追加
+            クリックでスポット追加
           </span>
         </div>
       </div>
