@@ -187,7 +187,7 @@ function CommentItem({
               </div>
             </div>
           ) : (
-            <p className="text-gray-700 text-sm leading-relaxed">
+            <p className="text-gray-700 text-sm leading-relaxed break-words overflow-hidden whitespace-pre-wrap">
               {comment.content}
             </p>
           )}
@@ -523,8 +523,8 @@ export default function PostDetailView({
                   </span>
                 )}
               </div>
-              <div>
-                <p className="font-medium text-gray-900">
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-gray-900 truncate">
                   {currentPost.profiles.name}
                 </p>
                 <p className="text-xs text-gray-500">
@@ -534,11 +534,11 @@ export default function PostDetailView({
             </div>
           </div>
 
-          <h3 className="font-bold text-gray-900 mb-2 text-lg leading-tight">
+          <h3 className="font-bold text-gray-900 mb-2 text-lg leading-tight break-words overflow-hidden">
             {currentPost.title}
           </h3>
 
-          <p className="text-gray-700 mb-4 leading-relaxed">
+          <p className="text-gray-700 mb-4 leading-relaxed break-words overflow-hidden whitespace-pre-wrap">
             {currentPost.content}
           </p>
 
@@ -578,8 +578,10 @@ export default function PostDetailView({
 
           {/* Location */}
           <div className="flex items-center space-x-1 text-gray-500 mb-4">
-            <MapPin className="w-4 h-4" />
-            <span className="text-sm">{currentPost.location_address}</span>
+            <MapPin className="w-4 h-4 flex-shrink-0" />
+            <span className="text-sm break-words overflow-hidden">
+              {currentPost.location_address}
+            </span>
           </div>
 
           {/* Actions */}
