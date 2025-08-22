@@ -37,7 +37,12 @@ export function useSpotReviews(spotId: string | null) {
     try {
       setLoading(true);
       setError(null);
-      let { data, error } = await supabase
+
+      let data: ReviewRow[] | null = null;
+      let lastError: unknown = null;
+
+      // primary query
+      const primary = await supabase
         .from('spot_ratings')
         .select(
           `id, user_id, rating, comment, created_at, profiles:user_id ( name, avatar_url )`
@@ -45,26 +50,39 @@ export function useSpotReviews(spotId: string | null) {
         .eq('spot_id', spotId)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        // fallback: singular table name
-        const res = await supabase
+      if (primary.error) {
+        lastError = primary.error;
+      } else {
+        data = (primary.data as unknown as ReviewRow[]) ?? null;
+        lastError = null;
+      }
+
+      // fallback query (legacy singular table name) if needed
+      if (!data) {
+        const fallback = await supabase
           .from('spot_rating')
           .select(
             `id, user_id, rating, comment, created_at, profiles:user_id ( name, avatar_url )`
           )
           .eq('spot_id', spotId)
           .order('created_at', { ascending: false });
-        data = (res.data as unknown as ReviewRow[]) ?? null;
-        error = res.error;
+
+        if (fallback.error) {
+          lastError = fallback.error;
+        } else {
+          data = (fallback.data as unknown as ReviewRow[]) ?? null;
+          lastError = null;
+        }
       }
 
-      if (error) throw error;
+      if (lastError) throw lastError as Error;
 
-      const mapped: SpotReviewItem[] = (data || []).map((row: ReviewRow) => ({
+      const rows: ReviewRow[] = data ?? [];
+      const mapped: SpotReviewItem[] = rows.map((row: ReviewRow) => ({
         id: row.id,
         user_id: row.user_id,
         rating: row.rating,
-        comment: row.comment,
+        comment: row.comment ?? null,
         created_at: row.created_at,
         user_name: row.profiles?.name ?? null,
         user_avatar_url: row.profiles?.avatar_url ?? null,
