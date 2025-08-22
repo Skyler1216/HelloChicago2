@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Star, Eye, MessageSquarePlus, X } from 'lucide-react';
 
 interface SpotBottomSheetProps {
