@@ -30,8 +30,8 @@ export function useMapSpots() {
           category:categories(*),
           favorites:spot_favorites(count),
           ratings:spot_ratings(rating),
-          user_rating:spot_ratings!inner(rating),
-          user_favorite:spot_favorites!inner(id)
+          user_rating:spot_ratings(rating),
+          user_favorite:spot_favorites(id)
         `
         )
         .eq('is_public', true)
@@ -40,34 +40,52 @@ export function useMapSpots() {
       if (fetchError) throw fetchError;
 
       // データを整形
-      const formattedSpots: MapSpotWithDetails[] = (data || []).map(spot => ({
-        ...spot,
-        favorites_count: spot.favorites?.[0]?.count || 0,
-        average_rating:
-          spot.ratings?.length > 0
-            ? spot.ratings.reduce(
-                (sum: number, r: { rating: number }) => sum + r.rating,
+      const formattedSpots: MapSpotWithDetails[] = (data || []).map(spot => {
+        const ratingsArray = Array.isArray(spot.ratings) ? spot.ratings : [];
+        const avg =
+          ratingsArray.length > 0
+            ? ratingsArray.reduce(
+                (sum: number, r: { rating: number }) => sum + (r?.rating ?? 0),
                 0
-              ) / spot.ratings.length
-            : 0,
-        user_rating: spot.user_rating?.[0]?.rating,
-        user_favorite: !!spot.user_favorite?.length,
-      }));
+              ) / ratingsArray.length
+            : 0;
+        const userRatingArr = Array.isArray(spot.user_rating)
+          ? spot.user_rating
+          : [];
+        const userFavoriteArr = Array.isArray(spot.user_favorite)
+          ? spot.user_favorite
+          : [];
 
-      // 非破壊更新（同一配列インスタンスならReactは再描画をスキップしやすい）
+        return {
+          ...spot,
+          favorites_count: spot.favorites?.[0]?.count || 0,
+          average_rating: avg,
+          user_rating: userRatingArr?.[0]?.rating,
+          user_favorite: !!userFavoriteArr?.length,
+        } as MapSpotWithDetails;
+      });
+
+      // 更新の抑制はしすぎない。ID順が同じでも内容が変わる（average_rating 等）ので差分比較
       setSpots(prev => {
-        const sameLength = prev.length === formattedSpots.length;
-        if (sameLength) {
-          let allEqual = true;
-          for (let i = 0; i < prev.length; i++) {
-            if (prev[i].id !== formattedSpots[i].id) {
-              allEqual = false;
-              break;
-            }
+        if (prev.length !== formattedSpots.length) return formattedSpots;
+        for (let i = 0; i < prev.length; i++) {
+          const a = prev[i];
+          const b = formattedSpots[i];
+          if (
+            a.id !== b.id ||
+            a.average_rating !== b.average_rating ||
+            a.favorites_count !== b.favorites_count ||
+            a.user_rating !== b.user_rating ||
+            a.user_favorite !== b.user_favorite ||
+            a.location_lat !== b.location_lat ||
+            a.location_lng !== b.location_lng ||
+            a.name !== b.name ||
+            a.description !== b.description
+          ) {
+            return formattedSpots;
           }
-          if (allEqual) return prev;
         }
-        return formattedSpots;
+        return prev; // 実質変化なし
       });
     } catch (err) {
       setError(
@@ -99,7 +117,7 @@ export function useMapSpots() {
 
       if (createError) throw createError;
 
-      // スポット一覧を更新
+      // スポット一覧を即時更新（再取得）
       await fetchSpots();
       return data;
     } catch (err) {
@@ -129,7 +147,7 @@ export function useMapSpots() {
 
       if (updateError) throw updateError;
 
-      // スポット一覧を更新
+      // スポット一覧を即時更新
       await fetchSpots();
       return true;
     } catch (err) {
@@ -156,7 +174,7 @@ export function useMapSpots() {
 
       if (deleteError) throw deleteError;
 
-      // スポット一覧を更新
+      // スポット一覧を即時更新
       await fetchSpots();
       return true;
     } catch (err) {
@@ -203,7 +221,7 @@ export function useMapSpots() {
         if (insertError) throw insertError;
       }
 
-      // スポット一覧を更新
+      // スポット一覧を即時更新（平均値等が変わる）
       await fetchSpots();
       return true;
     } catch (err) {

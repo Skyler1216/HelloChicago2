@@ -13,6 +13,7 @@ import MapboxMap from './MapboxMap';
 import { useCategories } from '../hooks/useCategories';
 import { useMapSpots } from '../hooks/useMapSpots';
 import SpotBottomSheet from './map/SpotBottomSheet';
+// import ReviewsBottomSheet from './map/ReviewsBottomSheet';
 
 interface MapViewProps {
   onRequestCreateSpotAt?: (location: {
@@ -40,6 +41,8 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
     address?: string;
     average_rating?: number;
   } | null>(null);
+  // const [actionsSpotId, setActionsSpotId] = useState<string | null>(null);
+  // const [reviewsSheetOpen, setReviewsSheetOpen] = useState(false);
   // 旧: 自己評価入力用の一時ratingは廃止（平均表示のみ）
   const [focusLocation, setFocusLocation] = useState<{
     lat: number;
@@ -79,18 +82,44 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
 
   const handleLocationClick = useCallback(
     (location: { lat: number; lng: number; address?: string }) => {
+      // 近接スポットを検索（50m以内）
+      let nearest: { id: string; avg: number; dist: number } | null = null;
+      // フィルタに関係なく、全スポットから近接判定する
+      for (const s of mapSpots) {
+        const toRad = (v: number) => (v * Math.PI) / 180;
+        const R = 6371000;
+        const dLat = toRad(s.location_lat - location.lat);
+        const dLng = toRad(s.location_lng - location.lng);
+        const lat1 = toRad(location.lat);
+        const lat2 = toRad(s.location_lat);
+        const a =
+          Math.sin(dLat / 2) ** 2 +
+          Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const dist = R * c;
+        if (!nearest || dist < nearest.dist) {
+          nearest = { id: s.id, avg: s.average_rating ?? 0, dist };
+        }
+      }
+
+      const within = nearest && nearest.dist <= 50;
+      // setActionsSpotId(within ? nearest!.id : null);
+      const avg = within ? nearest!.avg : 0;
+
       setActionsLocation(prev => {
         const same =
           prev &&
           prev.lat === location.lat &&
           prev.lng === location.lng &&
           prev.address === location.address;
-        if (!same) return location;
-        return prev;
+        if (!same) return { ...location, average_rating: avg };
+        return prev
+          ? { ...prev, average_rating: avg }
+          : { ...location, average_rating: avg };
       });
       setBottomSheetOpen(true);
     },
-    []
+    [mapSpots]
   );
 
   // 人気スポットを取得（マップスポットのみ）
@@ -331,8 +360,7 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
         location={actionsLocation}
         onClose={() => setBottomSheetOpen(false)}
         onClickViewReviews={() => {
-          setBottomSheetOpen(false);
-          // TODO: 口コミ一覧ページへ遷移（未実装）
+          // 旧: 口コミ一覧シートは一旦停止
         }}
         onClickPostReview={() => {
           setBottomSheetOpen(false);
@@ -341,6 +369,8 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
           }
         }}
       />
+
+      {/* Reviews Bottom Sheet - disabled in rollback */}
     </div>
   );
 }

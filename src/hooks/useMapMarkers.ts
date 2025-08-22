@@ -27,6 +27,7 @@ export function useMapMarkers() {
         category_id: string;
         location_lat: number;
         location_lng: number;
+        average_rating?: number;
       },
       categoryInfo: CategoryInfo,
       isHighlighted: boolean,
@@ -37,6 +38,7 @@ export function useMapMarkers() {
         category_id: string;
         location_lat: number;
         location_lng: number;
+        average_rating?: number;
       }) => void,
       map: mapboxgl.Map
     ) => {
@@ -45,18 +47,48 @@ export function useMapMarkers() {
 
       const markerColor = categoryInfo.color;
 
+      const hasReviews =
+        typeof spot.average_rating === 'number' && spot.average_rating > 0;
       markerElement.innerHTML = `
-      <div style="
-        width: 24px; 
-        height: 24px; 
-        background: ${markerColor}; 
-        border: 3px solid white; 
-        border-radius: 50%; 
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        cursor: pointer;
-        transition: all 0.2s ease;
-        ${isHighlighted ? 'transform: scale(1.2); box-shadow: 0 4px 16px rgba(0,0,0,0.4);' : ''}
-      "></div>
+      <div style="position: relative; width: 28px; height: 28px;">
+        <div style="
+          position: absolute;
+          left: 2px;
+          top: 2px;
+          width: 24px; 
+          height: 24px; 
+          background: ${markerColor}; 
+          border: 3px solid white; 
+          border-radius: 50%; 
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          cursor: pointer;
+          transition: all 0.2s ease;
+          ${isHighlighted ? 'transform: scale(1.2); box-shadow: 0 4px 16px rgba(0,0,0,0.4);' : ''}
+        "></div>
+        ${
+          hasReviews
+            ? `
+          <div style="
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 14px;
+            height: 14px;
+            background: #FBBF24; /* amber-400 */
+            color: #FFF;
+            border: 2px solid #FFF;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            line-height: 1;
+          " title="口コミあり">★</div>
+        `
+            : ''
+        }
+      </div>
     `;
 
       const popup = new mapboxgl.Popup({

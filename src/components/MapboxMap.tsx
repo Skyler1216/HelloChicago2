@@ -46,6 +46,7 @@ function MapboxMapComponent({
   >(null);
   const poiMouseEnterHandlerRef = useRef<(() => void) | null>(null);
   const poiMouseLeaveHandlerRef = useRef<(() => void) | null>(null);
+  const lastAppliedStyleRef = useRef<string | null>(null);
 
   const shouldCenterOnFixRef = useRef(false);
   const [isLocating, setIsLocating] = useState(false);
@@ -154,20 +155,25 @@ function MapboxMapComponent({
   }, [chicagoCenter, initialCenter]);
 
   // Get category information for posts
-  const getCategoryInfo = useCallback((categoryId: string): CategoryInfo => {
-    const defaultColors = [
-      '#FF6B6B',
-      '#4ECDC4',
-      '#45B7D1',
-      '#96CEB4',
-      '#FFEAA7',
-    ];
-    const colorIndex = categoryId.charCodeAt(0) % defaultColors.length;
-    return {
-      color: defaultColors[colorIndex],
-      name_ja: categoryId,
-    };
-  }, []);
+  const getCategoryInfo = useCallback(
+    (categoryId: string | null | undefined): CategoryInfo => {
+      const defaultColors = [
+        '#FF6B6B',
+        '#4ECDC4',
+        '#45B7D1',
+        '#96CEB4',
+        '#FFEAA7',
+      ];
+      const idString = typeof categoryId === 'string' ? categoryId : '';
+      const code = idString.length > 0 ? idString.charCodeAt(0) : 0;
+      const colorIndex = code % defaultColors.length;
+      return {
+        color: defaultColors[colorIndex],
+        name_ja: idString || 'その他',
+      };
+    },
+    []
+  );
 
   // Initialize map
   useEffect(() => {
@@ -190,6 +196,7 @@ function MapboxMapComponent({
         bearing: 0,
         attributionControl: false,
       });
+      lastAppliedStyleRef.current = mapStyle;
 
       // 地図コンテナのサイズを確実に設定
       setTimeout(() => {
@@ -253,7 +260,7 @@ function MapboxMapComponent({
               (props['name_en'] as string) ||
               '';
             // 平均評価（将来POIから取れればここに）
-            const averageRating = 0;
+            // const averageRating = 0;
 
             // Coordinates: prefer geometry point, fallback to event lngLat
             let lng = e.lngLat.lng;
@@ -278,7 +285,6 @@ function MapboxMapComponent({
               lat,
               lng,
               address: name,
-              average_rating: averageRating,
             });
           };
           poiClickHandlerRef.current = handlePoiClick;
@@ -367,7 +373,10 @@ function MapboxMapComponent({
   // Update map style
   useEffect(() => {
     if (map.current && mapLoaded) {
-      updateMapStyle(map.current, mapStyle);
+      if (lastAppliedStyleRef.current !== mapStyle) {
+        updateMapStyle(map.current, mapStyle);
+        lastAppliedStyleRef.current = mapStyle;
+      }
     }
     try {
       if (typeof window !== 'undefined') {
@@ -397,15 +406,13 @@ function MapboxMapComponent({
       if (selectedCategory && spot.category_id !== selectedCategory) {
         return false;
       }
-      if (
-        searchQuery &&
-        !spot.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !(
-          spot.description &&
-          spot.description.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-      ) {
-        return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const name = (spot.name ?? '').toString().toLowerCase();
+        const desc = (spot.description ?? '').toString().toLowerCase();
+        if (!name.includes(q) && !desc.includes(q)) {
+          return false;
+        }
       }
       return true;
     });
@@ -415,11 +422,14 @@ function MapboxMapComponent({
       const categoryInfo = getCategoryInfo(spot.category_id);
       const isHighlighted =
         !!searchQuery &&
-        (spot.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (spot.description &&
-            spot.description
-              .toLowerCase()
-              .includes(searchQuery.toLowerCase())));
+        ((spot.name ?? '')
+          .toString()
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+          (spot.description ?? '')
+            .toString()
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()));
 
       createPostMarker(
         spot,
