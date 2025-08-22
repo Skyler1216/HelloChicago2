@@ -9,11 +9,19 @@ import {
 import CategoryFilter from './CategoryFilter';
 import PopularSpots from './PopularSpots';
 import MapboxMap from './MapboxMap';
-import SpotFormModal from './map/SpotFormModal';
+// SpotFormModalはページ遷移化に伴い未使用
 import { useCategories } from '../hooks/useCategories';
 import { useMapSpots } from '../hooks/useMapSpots';
 
-export default function MapView() {
+interface MapViewProps {
+  onRequestCreateSpotAt?: (location: {
+    lat: number;
+    lng: number;
+    address?: string;
+  }) => void;
+}
+
+export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSpot, setSelectedSpot] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
   const [activeTab, setActiveTab] = useState<'map' | 'spots'>('map');
@@ -23,12 +31,7 @@ export default function MapView() {
   const [sortBy, setSortBy] = useState<'recent' | 'popular' | 'rating'>(
     'recent'
   );
-  const [showSpotForm, setShowSpotForm] = useState(false);
-  const [clickedLocation, setClickedLocation] = useState<{
-    lat: number;
-    lng: number;
-    address?: string;
-  } | null>(null);
+  // クリック位置は親に委譲するため内部保持しない
   const [focusLocation, setFocusLocation] = useState<{
     lat: number;
     lng: number;
@@ -38,8 +41,7 @@ export default function MapView() {
   const { categories, loading: categoriesLoading } = useCategories();
   const { spots: mapSpots, loading: mapSpotsLoading } = useMapSpots();
 
-  // モーダルの表示状態を管理
-  const isModalOpen = showSpotForm || !!clickedLocation;
+  // モーダルは廃止（ページ遷移に変更）
 
   const tabs = [
     { id: 'map' as const, label: 'マップ', icon: MapIcon },
@@ -295,12 +297,8 @@ export default function MapView() {
               distanceFilter={distanceFilter}
               focusLocation={focusLocation}
               onLocationClick={location => {
-                setClickedLocation(location);
-
-                // POIクリック時に確実にモーダルを開く
-                if (location) {
-                  // showSpotFormもtrueにしてモーダルを確実に開く
-                  setShowSpotForm(true);
+                if (onRequestCreateSpotAt && location) {
+                  onRequestCreateSpotAt(location);
                 }
               }}
             />
@@ -308,15 +306,7 @@ export default function MapView() {
         </div>
       )}
 
-      {/* Spot Form Modal */}
-      <SpotFormModal
-        isOpen={isModalOpen}
-        onClose={() => {
-          setShowSpotForm(false);
-          setClickedLocation(null);
-        }}
-        location={clickedLocation || undefined}
-      />
+      {/* Spot Form Modal はページ遷移化のため削除 */}
     </div>
   );
 }
