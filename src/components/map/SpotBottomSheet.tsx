@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Star, Eye, MessageSquarePlus, X } from 'lucide-react';
+import { useMapSpots } from '../../hooks/useMapSpots';
+import { useSpotReviews } from '../../hooks/useSpotReviews';
 
 interface SpotBottomSheetProps {
   open: boolean;
@@ -126,6 +128,31 @@ export default function SpotBottomSheet({
 
   if (!location) return null;
 
+  // Determine nearest existing spot within 50m to show review count
+  const { spots } = useMapSpots();
+  const nearestSpot = useMemo(() => {
+    if (!location) return null;
+    let best: { id: string; dist: number } | null = null;
+    const toRad = (v: number) => (v * Math.PI) / 180;
+    const R = 6371000;
+    for (const s of spots) {
+      const dLat = toRad(s.location_lat - location.lat);
+      const dLng = toRad(s.location_lng - location.lng);
+      const lat1 = toRad(location.lat);
+      const lat2 = toRad(s.location_lat);
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const dist = R * c;
+      if (!best || dist < best.dist) best = { id: s.id, dist };
+    }
+    return best && best.dist <= 50 ? best : null;
+  }, [spots, location]);
+
+  const targetSpotId = nearestSpot ? nearestSpot.id : null;
+  const { reviews, loading: reviewsLoading } = useSpotReviews(targetSpotId);
+
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 pointer-events-none select-none">
       <div
@@ -166,12 +193,10 @@ export default function SpotBottomSheet({
             <div className="text-base font-semibold text-gray-900">
               {location.address || '未設定の場所'}
             </div>
-            {!location.address && (
-              <div className="text-xs text-gray-500 mt-0.5">
-                緯度: {location.lat.toFixed(5)} / 経度:{' '}
-                {location.lng.toFixed(5)}
-              </div>
-            )}
+            {/* 緯度経度は非表示 */}
+            <div className="text-xs text-gray-500 mt-0.5">
+              {reviewsLoading ? '口コミ 読み込み中…' : `口コミ ${reviews.length}件`}
+            </div>
           </div>
 
           {/* rating (average) */}

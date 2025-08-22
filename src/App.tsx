@@ -6,7 +6,7 @@ import LoadingScreen from './components/LoadingScreen';
 import Layout from './components/Layout';
 import HomeView from './components/HomeView';
 import MapView from './components/MapView';
-import SpotFormView from './components/map/SpotFormView';
+import ReviewFormView from './components/map/ReviewFormView';
 import PostFormView from './components/PostFormView';
 import InboxView from './components/inbox/InboxView';
 import PostDetailView from './components/PostDetailView';
@@ -30,8 +30,8 @@ export default function App() {
   const [showAdminView, setShowAdminView] = useState(false);
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const [showPostForm, setShowPostForm] = useState(false);
-  const [showSpotFormView, setShowSpotFormView] = useState(false);
-  const [spotFormInitialLocation, setSpotFormInitialLocation] = useState<{
+  const [showReviewFormView, setShowReviewFormView] = useState(false);
+  const [reviewFormInitialLocation, setReviewFormInitialLocation] = useState<{
     lat: number;
     lng: number;
     address?: string;
@@ -197,19 +197,19 @@ export default function App() {
     );
   }
 
-  // Show spot form view (from POI click)
-  if (showSpotFormView) {
+  // Show review form view (from POI click)
+  if (showReviewFormView) {
     return (
       <Layout
         currentView="map"
         onViewChange={(view: 'home' | 'map' | 'inbox' | 'profile') => {
-          setShowSpotFormView(false);
+          setShowReviewFormView(false);
           setCurrentView(view);
         }}
       >
-        <SpotFormView
-          initialLocation={spotFormInitialLocation}
-          onBack={() => setShowSpotFormView(false)}
+        <ReviewFormView
+          initialLocation={reviewFormInitialLocation}
+          onBack={() => setShowReviewFormView(false)}
         />
       </Layout>
     );
@@ -231,8 +231,8 @@ export default function App() {
         return (
           <MapView
             onRequestCreateSpotAt={loc => {
-              setSpotFormInitialLocation(loc);
-              setShowSpotFormView(true);
+              setReviewFormInitialLocation(loc);
+              setShowReviewFormView(true);
             }}
           />
         );

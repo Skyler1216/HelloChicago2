@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Send, Star } from 'lucide-react';
 import { useMapSpots } from '../../hooks/useMapSpots';
+import { useSpotReviews } from '../../hooks/useSpotReviews';
 
 interface ReviewFormViewProps {
   initialLocation?: { lat: number; lng: number; address?: string } | null;
@@ -37,6 +38,9 @@ export default function ReviewFormView({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [targetSpotId, setTargetSpotId] = useState<string | null>(null);
+
+  // Fetch existing reviews for nearest spot if available
+  const { reviews, loading: loadingReviews } = useSpotReviews(targetSpotId);
 
   const nearestSpot = useMemo(() => {
     if (!initialLocation) return null;
@@ -131,15 +135,10 @@ export default function ReviewFormView({
               <div className="text-sm text-gray-700 font-medium truncate">
                 {initialLocation?.address || '名称未設定の場所'}
               </div>
+              {/* 口コミ件数のみ表示 */}
               <div className="text-xs text-gray-500 mt-1">
-                緯度: {initialLocation?.lat.toFixed(5)} / 経度:{' '}
-                {initialLocation?.lng.toFixed(5)}
+                {loadingReviews ? '口コミ 読み込み中…' : `口コミ ${reviews.length}件`}
               </div>
-              {nearestSpot && nearestSpot.dist <= 50 && (
-                <div className="mt-1 inline-flex items-center text-xs text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded">
-                  既存スポットに紐付け（{Math.round(nearestSpot.dist)}m）
-                </div>
-              )}
             </div>
           </div>
         </div>

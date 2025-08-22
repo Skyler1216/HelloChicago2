@@ -105,6 +105,7 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
         onTabChange={tabId =>
           setSelectedPostType(tabId as 'post' | 'consultation' | 'transfer')
         }
+        className="sticky top-16 z-30"
       />
 
       <div className="px-4">
