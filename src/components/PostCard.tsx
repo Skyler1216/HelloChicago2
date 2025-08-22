@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Heart, MessageCircle, MapPin, HelpCircle, Gift } from 'lucide-react';
+import { Heart, MessageCircle, MapPin, HelpCircle, Gift, Edit, Trash2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Database } from '../types/database';
 import { useLikes } from '../hooks/useLikes';
@@ -15,9 +15,11 @@ type Post = Database['public']['Tables']['posts']['Row'] & {
 interface PostCardProps {
   post: Post;
   onClick?: () => void;
+  onEdit?: (post: Post) => void;
+  onDelete?: (post: Post) => void;
 }
 
-function PostCard({ post, onClick }: PostCardProps) {
+function PostCard({ post, onClick, onEdit, onDelete }: PostCardProps) {
   const { user } = useAuth();
   const {
     isLiked,
@@ -141,6 +143,31 @@ function PostCard({ post, onClick }: PostCardProps) {
               React.createElement(IconComponent, { className: 'w-4 h-4' })}
             <span>{post.categories.name_ja}</span>
           </div>
+          {/* Owner actions */}
+          {user?.id === post.author_id && (
+            <div className="flex items-center space-x-1 ml-1">
+              <button
+                onClick={e => {
+                  e.stopPropagation();
+                  onEdit?.(post);
+                }}
+                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                title="編集"
+              >
+                <Edit className="w-4 h-4" />
+              </button>
+              <button
+                onClick={e => {
+                  e.stopPropagation();
+                  onDelete?.(post);
+                }}
+                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                title="削除"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

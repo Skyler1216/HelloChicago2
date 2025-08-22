@@ -205,12 +205,71 @@ export function usePosts(
     }
   };
 
+  const updatePost = async (
+    postId: string,
+    updates: Database['public']['Tables']['posts']['Update']
+  ) => {
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', postId)
+        .select(
+          `
+          *,
+          profiles (
+            id,
+            name,
+            avatar_url
+          ),
+          categories (
+            id,
+            name,
+            name_ja,
+            icon,
+            color
+          )
+        `
+        )
+        .single();
+
+      if (error) throw error;
+
+      // Update local state with the full updated record
+      setPosts(prev =>
+        prev.map(post => (post.id === postId ? (data as unknown as Post) : post))
+      );
+
+      return data as unknown as Post;
+    } catch (err) {
+      throw err instanceof Error ? err : new Error('Failed to update post');
+    }
+  };
+
+  const deletePost = async (postId: string) => {
+    try {
+      const { error } = await supabase.from('posts').delete().eq('id', postId);
+      if (error) throw error;
+
+      // Remove from local state
+      setPosts(prev => prev.filter(post => post.id !== postId));
+      return true;
+    } catch (err) {
+      throw err instanceof Error ? err : new Error('Failed to delete post');
+    }
+  };
+
   return {
     posts,
     loading,
     error,
     createPost,
     updatePostStatus,
+    updatePost,
+    deletePost,
     refetch: loadPosts,
   };
 }

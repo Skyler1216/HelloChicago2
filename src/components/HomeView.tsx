@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Camera, HelpCircle, Gift, Plus, X } from 'lucide-react';
 import PostCard from './PostCard';
-import PostDetailView from './PostDetailView';
+import { useAuth } from '../hooks/useAuth';
 import { usePosts } from '../hooks/usePosts';
 import { Database } from '../types/database';
+import PostDetailView from './PostDetailView';
+import PostEditModal from './PostEditModal';
 
 type Post = Database['public']['Tables']['posts']['Row'] & {
   profiles: Database['public']['Tables']['profiles']['Row'];
@@ -17,13 +19,16 @@ interface HomeViewProps {
 }
 
 export default function HomeView({ onShowPostForm }: HomeViewProps) {
+  const { user } = useAuth();
   const [selectedPostType, setSelectedPostType] = useState<
     'post' | 'consultation' | 'transfer'
   >('post');
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [showPostModal, setShowPostModal] = useState(false);
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
 
-  const { posts, loading: postsLoading, refetch } = usePosts(selectedPostType);
+  const { posts, loading: postsLoading, refetch, updatePost, deletePost } =
+    usePosts(selectedPostType);
 
   const postTypeTabs = [
     {
@@ -52,6 +57,23 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
 
     // 投稿リストも更新するためにrefetchを実行
     refetch();
+  };
+
+  const handleEditPost = (post: Post) => {
+    if (!user || user.id !== post.author_id) return;
+    setEditingPost(post);
+  };
+
+  const handleDeletePost = async (post: Post) => {
+    if (!user || user.id !== post.author_id) return;
+    if (!confirm('この投稿を削除しますか？')) return;
+    try {
+      await deletePost(post.id);
+      await refetch();
+      alert('投稿を削除しました');
+    } catch (e) {
+      alert('削除に失敗しました');
+    }
   };
 
   const handlePostTypeSelect = (type: 'post' | 'consultation' | 'transfer') => {
@@ -133,6 +155,8 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
                 key={post.id}
                 post={post}
                 onClick={() => setSelectedPost(post)}
+                onEdit={handleEditPost}
+                onDelete={handleDeletePost}
               />
             ))
           ) : (
@@ -211,6 +235,17 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
           />
         </div>
       )}
+
+      {/* Edit Modal */}
+      <PostEditModal
+        isOpen={!!editingPost}
+        post={editingPost}
+        onClose={() => setEditingPost(null)}
+        onSaved={updated => {
+          handlePostUpdate(updated);
+          setEditingPost(null);
+        }}
+      />
     </div>
   );
 }
