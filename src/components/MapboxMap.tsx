@@ -180,6 +180,20 @@ export default function MapboxMap({
         attributionControl: false,
       });
 
+      // 地図コンテナのサイズを確実に設定
+      setTimeout(() => {
+        if (map.current) {
+          map.current.resize();
+        }
+      }, 200);
+
+      // さらに確実にするため、少し遅れて再度リサイズ
+      setTimeout(() => {
+        if (map.current) {
+          map.current.resize();
+        }
+      }, 500);
+
       // No default Mapbox controls (UI minimized). We'll use our own button.
 
       // A helper to attach POI layer click handlers (Google Maps-like)
@@ -481,7 +495,10 @@ export default function MapboxMap({
   return (
     <div className="flex-1 relative">
       {/* Map Container */}
-      <div ref={mapContainer} className="w-full h-full min-h-[400px]" />
+      <div
+        ref={mapContainer}
+        className="w-full h-full min-h-[600px] bg-gray-100"
+      />
 
       {/* Custom Toolbar */}
       <div className="absolute top-2 left-2 right-2 z-10 flex items-center justify-between gap-2">

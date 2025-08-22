@@ -5,7 +5,6 @@ import {
   Search,
   Filter,
   MapPin,
-  Plus,
 } from 'lucide-react';
 import CategoryFilter from './CategoryFilter';
 import PopularSpots from './PopularSpots';
@@ -306,14 +305,6 @@ export default function MapView() {
           )}
         </div>
       )}
-
-      {/* Quick Actions Floating Button */}
-      <button
-        onClick={() => setShowSpotForm(true)}
-        className="fixed bottom-24 right-4 w-12 h-12 bg-coral-500 hover:bg-coral-600 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 z-50"
-      >
-        <Plus className="w-5 h-5" />
-      </button>
 
       {/* Spot Form Modal */}
       <SpotFormModal
