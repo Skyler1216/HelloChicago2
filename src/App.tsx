@@ -6,7 +6,7 @@ import LoadingScreen from './components/LoadingScreen';
 import Layout from './components/Layout';
 import HomeView from './components/HomeView';
 import MapView from './components/MapView';
-import SpotFormView from './components/map/SpotFormView';
+import ReviewFormView from './components/map/ReviewFormView';
 import PostFormView from './components/PostFormView';
 import InboxView from './components/inbox/InboxView';
 import PostDetailView from './components/PostDetailView';
@@ -207,7 +207,7 @@ export default function App() {
           setCurrentView(view);
         }}
       >
-        <SpotFormView
+        <ReviewFormView
           initialLocation={spotFormInitialLocation}
           onBack={() => setShowSpotFormView(false)}
         />
