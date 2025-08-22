@@ -83,42 +83,48 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
 
   const handleLocationClick = useCallback(
     (location: { lat: number; lng: number; address?: string }) => {
-      // 近接スポットを検索（50m以内）
-      let nearest: { id: string; avg: number; dist: number } | null = null;
-      // フィルタに関係なく、全スポットから近接判定する
-      for (const s of mapSpots) {
-        const toRad = (v: number) => (v * Math.PI) / 180;
-        const R = 6371000;
-        const dLat = toRad(s.location_lat - location.lat);
-        const dLng = toRad(s.location_lng - location.lng);
-        const lat1 = toRad(location.lat);
-        const lat2 = toRad(s.location_lat);
-        const a =
-          Math.sin(dLat / 2) ** 2 +
-          Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const dist = R * c;
-        if (!nearest || dist < nearest.dist) {
-          nearest = { id: s.id, avg: s.average_rating ?? 0, dist };
+      try {
+        // 近接スポットを検索（50m以内）
+        let nearest: { id: string; avg: number; dist: number } | null = null;
+        // フィルタに関係なく、全スポットから近接判定する
+        for (const s of mapSpots) {
+          const toRad = (v: number) => (v * Math.PI) / 180;
+          const R = 6371000;
+          const dLat = toRad(s.location_lat - location.lat);
+          const dLng = toRad(s.location_lng - location.lng);
+          const lat1 = toRad(location.lat);
+          const lat2 = toRad(s.location_lat);
+          const a =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          const dist = R * c;
+          if (!nearest || dist < nearest.dist) {
+            nearest = { id: s.id, avg: s.average_rating ?? 0, dist };
+          }
         }
+
+        const within = nearest && nearest.dist <= 50;
+        const avg = within ? nearest.avg : 0;
+
+        setActionsLocation(prev => {
+          const same =
+            prev &&
+            prev.lat === location.lat &&
+            prev.lng === location.lng &&
+            prev.address === location.address;
+          if (!same) return { ...location, average_rating: avg };
+          return prev
+            ? { ...prev, average_rating: avg }
+            : { ...location, average_rating: avg };
+        });
+        setBottomSheetOpen(true);
+      } catch (error) {
+        console.error('Error handling location click:', error);
+        // エラーが発生しても基本的な情報でボトムシートを開く
+        setActionsLocation({ ...location, average_rating: 0 });
+        setBottomSheetOpen(true);
       }
-
-      const within = nearest && nearest.dist <= 50;
-      // setActionsSpotId(within ? nearest!.id : null);
-      const avg = within ? nearest!.avg : 0;
-
-      setActionsLocation(prev => {
-        const same =
-          prev &&
-          prev.lat === location.lat &&
-          prev.lng === location.lng &&
-          prev.address === location.address;
-        if (!same) return { ...location, average_rating: avg };
-        return prev
-          ? { ...prev, average_rating: avg }
-          : { ...location, average_rating: avg };
-      });
-      setBottomSheetOpen(true);
     },
     [mapSpots]
   );

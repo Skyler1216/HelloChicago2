@@ -23,6 +23,9 @@ export default function SpotBottomSheet({
   onClickPostReview,
   onClickViewReviews,
 }: SpotBottomSheetProps) {
+  // Early return if not open or no location - no hooks called after this point
+  if (!open || !location) return null;
+
   const sheetRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -126,28 +129,31 @@ export default function SpotBottomSheet({
     };
   }, [open, height, SNAP_PEEK, SNAP_MID, SNAP_FULL, onClose]);
 
-  if (!location) return null;
-
   // Determine nearest existing spot within 50m to show review count
   const { spots } = useMapSpots();
   const nearestSpot = useMemo(() => {
-    if (!location) return null;
-    let best: { id: string; dist: number } | null = null;
-    const toRad = (v: number) => (v * Math.PI) / 180;
-    const R = 6371000;
-    for (const s of spots) {
-      const dLat = toRad(s.location_lat - location.lat);
-      const dLng = toRad(s.location_lng - location.lng);
-      const lat1 = toRad(location.lat);
-      const lat2 = toRad(s.location_lat);
-      const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      const dist = R * c;
-      if (!best || dist < best.dist) best = { id: s.id, dist };
+    try {
+      if (!location) return null;
+      let best: { id: string; dist: number } | null = null;
+      const toRad = (v: number) => (v * Math.PI) / 180;
+      const R = 6371000;
+      for (const s of spots) {
+        const dLat = toRad(s.location_lat - location.lat);
+        const dLng = toRad(s.location_lng - location.lng);
+        const lat1 = toRad(location.lat);
+        const lat2 = toRad(s.location_lat);
+        const a =
+          Math.sin(dLat / 2) ** 2 +
+          Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const dist = R * c;
+        if (!best || dist < best.dist) best = { id: s.id, dist };
+      }
+      return best && best.dist <= 50 ? best : null;
+    } catch (error) {
+      console.error('Error calculating nearest spot:', error);
+      return null;
     }
-    return best && best.dist <= 50 ? best : null;
   }, [spots, location]);
 
   const targetSpotId = nearestSpot ? nearestSpot.id : null;
@@ -195,7 +201,9 @@ export default function SpotBottomSheet({
             </div>
             {/* 緯度経度は非表示 */}
             <div className="text-xs text-gray-500 mt-0.5">
-              {reviewsLoading ? '口コミ 読み込み中…' : `口コミ ${reviews.length}件`}
+              {reviewsLoading
+                ? '口コミ 読み込み中…'
+                : `口コミ ${reviews.length}件`}
             </div>
           </div>
 
