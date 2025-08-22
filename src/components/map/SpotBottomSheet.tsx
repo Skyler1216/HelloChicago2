@@ -179,24 +179,30 @@ export default function SpotBottomSheet({
             <div className="text-sm font-medium text-gray-700 mb-2">
               評価（平均）
             </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center">
-                {[1, 2, 3, 4, 5].map(star => (
-                  <Star
-                    key={star}
-                    className={`w-5 h-5 ${
-                      star <=
-                      Math.round((location?.average_rating || 0) * 2) / 2
-                        ? 'text-yellow-400 fill-current'
-                        : 'text-gray-300'
-                    }`}
-                  />
-                ))}
+            {(location?.average_rating ?? 0) > 0 ? (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center">
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <Star
+                      key={star}
+                      className={`w-5 h-5 ${
+                        star <=
+                        Math.round((location?.average_rating || 0) * 2) / 2
+                          ? 'text-yellow-400 fill-current'
+                          : 'text-gray-300'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span className="text-sm text-gray-700">
+                  {(location?.average_rating ?? 0).toFixed(1)} / 5.0
+                </span>
               </div>
-              <span className="text-sm text-gray-700">
-                {(location?.average_rating ?? 0).toFixed(1)} / 5.0
-              </span>
-            </div>
+            ) : (
+              <div className="text-sm text-gray-500">
+                口コミはまだありません
+              </div>
+            )}
           </div>
 
           {/* actions */}
