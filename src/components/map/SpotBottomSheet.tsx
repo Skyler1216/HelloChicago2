@@ -44,6 +44,7 @@ export default function SpotBottomSheet({
 
   useEffect(() => {
     if (open) setHeight(SNAP_PEEK);
+    else setHeight(0);
   }, [open, SNAP_PEEK]);
 
   useEffect(() => {
@@ -117,7 +118,7 @@ export default function SpotBottomSheet({
     };
   }, [open, height, SNAP_PEEK, SNAP_MID, SNAP_FULL, onClose]);
 
-  if (!open || !location) return null;
+  if (!location) return null;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 pointer-events-none select-none">
@@ -125,11 +126,12 @@ export default function SpotBottomSheet({
         ref={sheetRef}
         className="mx-auto max-w-md pointer-events-auto bg-white rounded-t-2xl shadow-2xl border-t border-gray-200 relative"
         style={{
-          height: `${height}px`,
+          height: `${open ? height : 0}px`,
           transition: isDragging
             ? 'none'
             : 'height 220ms cubic-bezier(0.2, 0.8, 0.2, 1)',
           touchAction: 'none',
+          overflow: 'hidden',
         }}
         aria-live="polite"
         aria-label="場所の詳細"

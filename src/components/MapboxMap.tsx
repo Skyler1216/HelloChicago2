@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useMemo, useCallback } from 'react';
+import { useRef, useEffect, useState, useMemo, useCallback, memo } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MapPin, Navigation, Layers } from 'lucide-react';
@@ -22,7 +22,7 @@ interface MapboxMapProps {
   focusLocation?: { lat: number; lng: number; zoom?: number } | null;
 }
 
-export default function MapboxMap({
+function MapboxMapComponent({
   spots,
   selectedCategory,
   onSpotSelect,
@@ -50,6 +50,7 @@ export default function MapboxMap({
   const shouldCenterOnFixRef = useRef(false);
   const [isLocating, setIsLocating] = useState(false);
   const [locateError, setLocateError] = useState<string | null>(null);
+  const suppressLocateRef = useRef(false);
 
   // Geolocation status tracking - simplified since notifications are disabled
   const userLocationMarkerRef = useRef<mapboxgl.Marker | null>(null);
@@ -268,8 +269,9 @@ export default function MapboxMap({
             // Mark that this click came from POI layer to avoid duplicate handling
             lastPoiLayerClickTsRef.current = Date.now();
 
-            // Create a highlighted click marker and open modal
-            createClickMarker({ lat, lng }, true, map.current!);
+            // クリック時は現在地取得を抑制（ボタンの即時発火を防ぐ）
+            suppressLocateRef.current = true;
+            // マップ自体は一切再センターしない。通知のみ
             onLocationClick({ lat, lng, address: name });
           };
           poiClickHandlerRef.current = handlePoiClick;
@@ -454,6 +456,7 @@ export default function MapboxMap({
       shouldCenterOnFixRef.current = false;
       return;
     }
+    if (suppressLocateRef.current) return; // POIクリック直後は抑制
     shouldCenterOnFixRef.current = true;
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
@@ -486,6 +489,15 @@ export default function MapboxMap({
       { timeout: 10000, enableHighAccuracy: true, maximumAge: 60000 }
     );
   }, [centerOnLocation, updateUserLocationMarker, getInitialZoom]);
+
+  // ボトムシート操作等の直後に現在地ボタンが暴発しないよう抑制を解除
+  useEffect(() => {
+    if (!suppressLocateRef.current) return;
+    const t = setTimeout(() => {
+      suppressLocateRef.current = false;
+    }, 500);
+    return () => clearTimeout(t);
+  });
 
   // Map style options
   const mapStyles = [
@@ -588,3 +600,5 @@ export default function MapboxMap({
     </div>
   );
 }
+
+export default memo(MapboxMapComponent);

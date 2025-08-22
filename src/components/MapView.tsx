@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   TrendingUp,
   Map as MapIcon,
@@ -53,30 +53,45 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
 
   const tabs = [
     { id: 'map' as const, label: 'マップ', icon: MapIcon },
-    { id: 'spots' as const, label: 'お気に入りスポット', icon: TrendingUp },
+    { id: 'spots' as const, label: '人気スポット', icon: TrendingUp },
   ];
 
   // フィルタリングされたマップスポットを取得
-  const filteredMapSpots = mapSpots.filter(spot => {
-    // カテゴリフィルター
-    if (selectedCategory && spot.category_id !== selectedCategory) {
-      return false;
-    }
+  const filteredMapSpots = useMemo(() => {
+    return mapSpots.filter(spot => {
+      if (selectedCategory && spot.category_id !== selectedCategory) {
+        return false;
+      }
+      if (
+        searchQuery &&
+        !spot.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !(
+          spot.description &&
+          spot.description.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [mapSpots, selectedCategory, searchQuery]);
 
-    // 検索クエリフィルター
-    if (
-      searchQuery &&
-      !spot.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !(
-        spot.description &&
-        spot.description.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    ) {
-      return false;
-    }
-
-    return true;
-  });
+  const handleLocationClick = useCallback(
+    (location: { lat: number; lng: number; address?: string }) => {
+      setTempRating(0);
+      setActionsLocation(prev => {
+        const same =
+          prev &&
+          prev.lat === location.lat &&
+          prev.lng === location.lng &&
+          prev.address === location.address;
+        if (!same) return location;
+        return prev;
+      });
+      setBottomSheetOpen(true);
+    },
+    []
+  );
 
   // 人気スポットを取得（マップスポットのみ）
   const popularSpots = React.useMemo(() => {
@@ -289,28 +304,23 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
         </div>
       ) : (
         <div className="flex-1 relative min-h-0">
-          {mapSpotsLoading ? (
-            <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-10">
+          <MapboxMap
+            spots={filteredMapSpots}
+            selectedCategory={selectedCategory}
+            onSpotSelect={setSelectedSpot}
+            searchQuery={searchQuery}
+            distanceFilter={distanceFilter}
+            focusLocation={focusLocation}
+            onLocationClick={handleLocationClick}
+          />
+
+          {mapSpotsLoading && (
+            <div className="absolute inset-0 bg-white/90 flex items-center justify-center z-10">
               <div className="text-center">
                 <div className="w-8 h-8 border-2 border-coral-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
                 <p className="text-gray-500">地図を読み込み中...</p>
               </div>
             </div>
-          ) : (
-            <MapboxMap
-              spots={filteredMapSpots}
-              selectedCategory={selectedCategory}
-              onSpotSelect={setSelectedSpot}
-              searchQuery={searchQuery}
-              distanceFilter={distanceFilter}
-              focusLocation={focusLocation}
-              onLocationClick={location => {
-                // まずアクションモーダルを表示
-                setActionsLocation(location);
-                setTempRating(0);
-                setBottomSheetOpen(true);
-              }}
-            />
           )}
         </div>
       )}

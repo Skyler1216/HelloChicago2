@@ -54,7 +54,21 @@ export function useMapSpots() {
         user_favorite: !!spot.user_favorite?.length,
       }));
 
-      setSpots(formattedSpots);
+      // 非破壊更新（同一配列インスタンスならReactは再描画をスキップしやすい）
+      setSpots(prev => {
+        const sameLength = prev.length === formattedSpots.length;
+        if (sameLength) {
+          let allEqual = true;
+          for (let i = 0; i < prev.length; i++) {
+            if (prev[i].id !== formattedSpots[i].id) {
+              allEqual = false;
+              break;
+            }
+          }
+          if (allEqual) return prev;
+        }
+        return formattedSpots;
+      });
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'スポットの取得に失敗しました'
