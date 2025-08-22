@@ -60,6 +60,16 @@ export default function MapboxMap({
   );
   const startedWithUserLocationRef = useRef(false);
 
+  // 画面サイズに応じたズームレベルを取得
+  const getInitialZoom = useCallback(() => {
+    if (typeof window === 'undefined') return 11;
+
+    const width = window.innerWidth;
+    if (width < 640) return 13; // スマホ
+    if (width < 768) return 12; // タブレット
+    return 11; // デスクトップ
+  }, []);
+
   // 現在地マーカーを作成・更新する関数
   const updateUserLocationMarker = useCallback(
     (coords: [number, number] | null) => {
@@ -174,7 +184,7 @@ export default function MapboxMap({
         container: mapContainer.current,
         style: mapStyle,
         center: initialCenter,
-        zoom: startedWithUserLocationRef.current ? 15 : 11,
+        zoom: startedWithUserLocationRef.current ? getInitialZoom() : 11,
         pitch: 0,
         bearing: 0,
         attributionControl: false,
@@ -193,6 +203,14 @@ export default function MapboxMap({
           map.current.resize();
         }
       }, 500);
+
+      // ウィンドウリサイズ時の処理を追加
+      const handleResize = () => {
+        if (map.current) {
+          map.current.resize();
+        }
+      };
+      window.addEventListener('resize', handleResize);
 
       // No default Mapbox controls (UI minimized). We'll use our own button.
 
@@ -318,6 +336,7 @@ export default function MapboxMap({
           buildingToggleRef.current.remove();
           buildingToggleRef.current = null;
         }
+        window.removeEventListener('resize', handleResize);
       };
     } catch (error) {
       console.error('Map initialization error:', error);
@@ -333,6 +352,7 @@ export default function MapboxMap({
     updateUserLocationMarker,
     centerOnLocation,
     initialCenter,
+    getInitialZoom,
   ]);
 
   // Update map style
@@ -418,12 +438,13 @@ export default function MapboxMap({
   // Focus map externally when focusLocation changes
   useEffect(() => {
     if (!map.current || !mapLoaded || !focusLocation) return;
+    const zoomLevel = focusLocation.zoom ?? getInitialZoom();
     centerOnLocation(
       map.current,
       [focusLocation.lng, focusLocation.lat],
-      focusLocation.zoom ?? 15
+      zoomLevel
     );
-  }, [focusLocation, mapLoaded, centerOnLocation]);
+  }, [focusLocation, mapLoaded, centerOnLocation, getInitialZoom]);
 
   // Request and center on user location explicitly from UI
   const requestAndCenterOnUser = useCallback(() => {
@@ -442,7 +463,8 @@ export default function MapboxMap({
           position.coords.latitude,
         ];
         if (map.current) {
-          centerOnLocation(map.current, coords, 15);
+          const zoomLevel = getInitialZoom();
+          centerOnLocation(map.current, coords, zoomLevel);
           updateUserLocationMarker(coords);
         }
         shouldCenterOnFixRef.current = false;
@@ -463,7 +485,7 @@ export default function MapboxMap({
       },
       { timeout: 10000, enableHighAccuracy: true, maximumAge: 60000 }
     );
-  }, [centerOnLocation, updateUserLocationMarker]);
+  }, [centerOnLocation, updateUserLocationMarker, getInitialZoom]);
 
   // Map style options
   const mapStyles = [
@@ -497,7 +519,7 @@ export default function MapboxMap({
       {/* Map Container */}
       <div
         ref={mapContainer}
-        className="w-full h-full min-h-[600px] bg-gray-100"
+        className="w-full h-full min-h-[calc(100vh-400px)] sm:min-h-[500px] md:min-h-[600px] bg-gray-100"
       />
 
       {/* Custom Toolbar */}

@@ -141,7 +141,7 @@ export default function MapView() {
   return (
     <div className="h-full flex flex-col bg-gray-50">
       {/* Header with Search and Filters */}
-      <div className="bg-white border-b border-gray-100 sticky top-0 z-10">
+      <div className="bg-white border-b border-gray-100 sticky top-0 z-10 flex-shrink-0">
         <div className="px-4 py-4">
           {/* Search Bar */}
           <div className="relative mb-3">
@@ -236,7 +236,7 @@ export default function MapView() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="px-4 py-3 bg-white border-b border-gray-100">
+      <div className="px-4 py-3 bg-white border-b border-gray-100 flex-shrink-0">
         <div className="flex space-x-1">
           {tabs.map(tab => {
             const IconComponent = tab.icon;
@@ -276,7 +276,7 @@ export default function MapView() {
           />
         </div>
       ) : (
-        <div className="flex-1 relative">
+        <div className="flex-1 relative min-h-0">
           {mapSpotsLoading ? (
             <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-10">
               <div className="text-center">
