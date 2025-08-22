@@ -129,8 +129,10 @@ function PostCard({ post, onClick, onEdit, onDelete }: PostCardProps) {
               </span>
             )}
           </div>
-          <div>
-            <p className="font-medium text-gray-900">{post.profiles.name}</p>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-gray-900 truncate">
+              {post.profiles.name}
+            </p>
             <p className="text-xs text-gray-500">
               {new Date(post.created_at).toLocaleDateString('ja-JP')}
             </p>
@@ -205,7 +207,7 @@ function PostCard({ post, onClick, onEdit, onDelete }: PostCardProps) {
         )}
 
       {/* Title */}
-      <h3 className="font-bold text-gray-900 mb-2 text-lg leading-tight">
+      <h3 className="font-bold text-gray-900 mb-2 text-lg leading-tight break-words overflow-hidden">
         {post.title}
       </h3>
 
@@ -222,8 +224,10 @@ function PostCard({ post, onClick, onEdit, onDelete }: PostCardProps) {
 
       {/* Content preview */}
       <div className="bg-gray-50 rounded-lg p-3 mb-3">
-        <p className="text-sm text-gray-700 leading-relaxed line-clamp-3">
-          {previewText}
+        <p className="text-sm text-gray-700 leading-relaxed break-words overflow-hidden">
+          {shouldShowReadMore
+            ? `${previewText.substring(0, 90)}...`
+            : previewText}
         </p>
         {shouldShowReadMore && (
           <div className="mt-2 flex justify-end">
@@ -242,8 +246,10 @@ function PostCard({ post, onClick, onEdit, onDelete }: PostCardProps) {
 
       {/* Location */}
       <div className="flex items-center space-x-1 text-gray-500 mb-3">
-        <MapPin className="w-4 h-4" />
-        <span className="text-sm">{post.location_address}</span>
+        <MapPin className="w-4 h-4 flex-shrink-0" />
+        <span className="text-sm break-words overflow-hidden">
+          {post.location_address}
+        </span>
       </div>
 
       {/* Actions */}

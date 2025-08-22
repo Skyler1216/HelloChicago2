@@ -224,14 +224,21 @@ export default function PostFormView({
               className="block text-sm font-medium text-gray-700 mb-2"
             >
               タイトル
+              <span className="text-xs text-gray-500 ml-2">
+                ({formData.title.length}/30)
+              </span>
             </label>
             <input
               type="text"
               id="title"
               value={formData.title}
-              onChange={e =>
-                setFormData(prev => ({ ...prev, title: e.target.value }))
-              }
+              onChange={e => {
+                const value = e.target.value;
+                if (value.length <= 30) {
+                  setFormData(prev => ({ ...prev, title: value }));
+                }
+              }}
+              maxLength={30}
               placeholder={
                 formData.type === 'post'
                   ? '例: ミレニアムパークで子どもとピクニック'
@@ -239,9 +246,18 @@ export default function PostFormView({
                     ? '例: シカゴでおすすめの日本語学校は？'
                     : '例: 子ども服を譲ります'
               }
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent"
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent ${
+                formData.title.length >= 30
+                  ? 'border-orange-300 bg-orange-50'
+                  : 'border-gray-300'
+              }`}
               required
             />
+            {formData.title.length >= 30 && (
+              <p className="mt-1 text-xs text-orange-600">
+                タイトルは30文字までです
+              </p>
+            )}
           </div>
 
           {/* Category */}
