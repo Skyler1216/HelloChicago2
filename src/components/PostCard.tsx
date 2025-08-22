@@ -1,13 +1,5 @@
 import React, { memo } from 'react';
-import {
-  Heart,
-  MessageCircle,
-  MapPin,
-  HelpCircle,
-  Gift,
-  Edit,
-  Trash2,
-} from 'lucide-react';
+import { Heart, MessageCircle, MapPin, Edit, Trash2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Database } from '../types/database';
 import { useLikes } from '../hooks/useLikes';
@@ -51,45 +43,12 @@ function PostCard({ post, onClick, onEdit, onDelete }: PostCardProps) {
       Heart,
       MessageCircle,
       MapPin,
-      HelpCircle,
-      Gift,
       // Add more icons as needed
     };
 
     return iconMap[iconName] || undefined;
   }, [post.categories.icon]);
 
-  const getPostTypeInfo = () => {
-    switch (post.type) {
-      case 'consultation':
-        return {
-          icon: HelpCircle,
-          label: '相談',
-          color: 'text-teal-600',
-          bgColor: 'bg-teal-50',
-          borderColor: 'border-teal-200',
-        };
-      case 'transfer':
-        return {
-          icon: Gift,
-          label: '譲渡',
-          color: 'text-coral-600',
-          bgColor: 'bg-coral-50',
-          borderColor: 'border-coral-200',
-        };
-      default:
-        return {
-          icon: MessageCircle,
-          label: '投稿',
-          color: 'text-gray-600',
-          bgColor: 'bg-gray-50',
-          borderColor: 'border-gray-200',
-        };
-    }
-  };
-
-  const postTypeInfo = getPostTypeInfo();
-  const PostTypeIcon = postTypeInfo.icon;
   const previewText =
     post.summary && post.summary.trim().length > 0
       ? post.summary
@@ -139,13 +98,6 @@ function PostCard({ post, onClick, onEdit, onDelete }: PostCardProps) {
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          {/* Post Type Badge */}
-          <div
-            className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${postTypeInfo.bgColor} ${postTypeInfo.color} border ${postTypeInfo.borderColor}`}
-          >
-            <PostTypeIcon className="w-3 h-3" />
-            <span>{postTypeInfo.label}</span>
-          </div>
           {/* Category Badge */}
           <div
             className="flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium"
