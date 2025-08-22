@@ -179,7 +179,7 @@ export default function MapView() {
 
           {/* Advanced Filters */}
           {showFilters && (
-            <div className="mt-0.5 sm:mt-1 p-1.5 sm:p-2 bg-gray-50 rounded-lg space-y-1.5 sm:space-y-2">
+            <div className="mt-0.5 sm:mt-1 p-1.5 sm:p-2 bg-gray-50 rounded-lg space-y-1.5 sm:space-y-2 mb-0 sm:mb-0.5">
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-1.5">
                   距離: {distanceFilter}km以内
@@ -226,12 +226,14 @@ export default function MapView() {
           )}
 
           {/* Category Filter */}
-          <CategoryFilter
-            categories={categories}
-            loading={categoriesLoading}
-            selectedCategory={selectedCategory}
-            onCategorySelect={setSelectedCategory}
-          />
+          <div className="mb-0 sm:mb-0.5">
+            <CategoryFilter
+              categories={categories}
+              loading={categoriesLoading}
+              selectedCategory={selectedCategory}
+              onCategorySelect={setSelectedCategory}
+            />
+          </div>
         </div>
       </div>
 

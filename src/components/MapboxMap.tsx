@@ -519,7 +519,7 @@ export default function MapboxMap({
       {/* Map Container */}
       <div
         ref={mapContainer}
-        className="w-full h-full min-h-[calc(100vh-358px)] sm:min-h-[500px] md:min-h-[600px] bg-gray-100"
+        className="w-full h-full min-h-[calc(100vh-310px)] sm:min-h-[500px] md:min-h-[600px] bg-gray-100"
       />
 
       {/* Custom Toolbar */}
