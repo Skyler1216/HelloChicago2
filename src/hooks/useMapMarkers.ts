@@ -1,6 +1,6 @@
 import { useRef, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
-import { Post, CategoryInfo, Location } from '../types/map';
+import { CategoryInfo, Location } from '../types/map';
 
 export function useMapMarkers() {
   const markers = useRef<mapboxgl.Marker[]>([]);
@@ -20,10 +20,24 @@ export function useMapMarkers() {
 
   const createPostMarker = useCallback(
     (
-      spot: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+      spot: {
+        id: string;
+        name: string;
+        description?: string | null;
+        category_id: string;
+        location_lat: number;
+        location_lng: number;
+      },
       categoryInfo: CategoryInfo,
       isHighlighted: boolean,
-      onSpotSelect: (spot: any) => void, // eslint-disable-line @typescript-eslint/no-explicit-any
+      onSpotSelect: (spot: {
+        id: string;
+        name: string;
+        description?: string | null;
+        category_id: string;
+        location_lat: number;
+        location_lng: number;
+      }) => void,
       map: mapboxgl.Map
     ) => {
       const markerElement = document.createElement('div');
@@ -173,7 +187,24 @@ export function useMapMarkers() {
   );
 
   const addGlobalSelectSpotFunction = useCallback(
-    (spots: any[], onSpotSelect: (spot: any) => void) => {
+    (
+      spots: Array<{
+        id: string;
+        name: string;
+        description?: string | null;
+        category_id: string;
+        location_lat: number;
+        location_lng: number;
+      }>,
+      onSpotSelect: (spot: {
+        id: string;
+        name: string;
+        description?: string | null;
+        category_id: string;
+        location_lat: number;
+        location_lng: number;
+      }) => void
+    ) => {
       (
         window as Window &
           typeof globalThis & { selectSpot?: (spotId: string) => void }
