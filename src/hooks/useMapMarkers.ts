@@ -20,10 +20,10 @@ export function useMapMarkers() {
 
   const createPostMarker = useCallback(
     (
-      post: Post,
+      spot: any, // eslint-disable-line @typescript-eslint/no-explicit-any
       categoryInfo: CategoryInfo,
       isHighlighted: boolean,
-      onPostSelect: (post: Post) => void,
+      onSpotSelect: (spot: any) => void, // eslint-disable-line @typescript-eslint/no-explicit-any
       map: mapboxgl.Map
     ) => {
       const markerElement = document.createElement('div');
@@ -53,7 +53,7 @@ export function useMapMarkers() {
       }).setHTML(`
       <div style="padding: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
         <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #1f2937;">
-          ${post.title}
+          ${spot.name}
         </h3>
         <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 8px;">
           <div style="width: 12px; height: 12px; background-color: ${markerColor}; border-radius: 50%;"></div>
@@ -62,10 +62,10 @@ export function useMapMarkers() {
           </span>
         </div>
         <p style="margin: 0 0 8px 0; font-size: 11px; color: #4b5563; line-height: 1.4; max-height: 60px; overflow: hidden;">
-          ${post.content}
+          ${spot.description || ''}
         </p>
         <div style="display: flex; gap: 8px;">
-          <button onclick="window.selectPost('${post.id}')" style="
+          <button onclick="window.selectSpot('${spot.id}')" style="
             padding: 4px 8px;
             background: #f59e0b;
             color: white;
@@ -79,13 +79,13 @@ export function useMapMarkers() {
     `);
 
       const marker = new mapboxgl.Marker(markerElement)
-        .setLngLat([post.location_lng, post.location_lat])
+        .setLngLat([spot.location_lng, spot.location_lat])
         .setPopup(popup)
         .addTo(map);
 
       // マーカークリックイベント
       markerElement.addEventListener('click', () => {
-        onPostSelect(post);
+        onSpotSelect(spot);
       });
 
       // ホバーエフェクト
@@ -172,15 +172,16 @@ export function useMapMarkers() {
     [clearClickMarker]
   );
 
-  const addGlobalSelectPostFunction = useCallback(
-    (posts: Post[], onPostSelect: (post: Post) => void) => {
+  const addGlobalSelectSpotFunction = useCallback(
+    (spots: any[], onSpotSelect: (spot: any) => void) => {
+      // eslint-disable-line @typescript-eslint/no-explicit-any
       (
         window as Window &
-          typeof globalThis & { selectPost?: (postId: string) => void }
-      ).selectPost = (postId: string) => {
-        const post = posts.find(p => p.id === postId);
-        if (post) {
-          onPostSelect(post);
+          typeof globalThis & { selectSpot?: (spotId: string) => void }
+      ).selectSpot = (spotId: string) => {
+        const spot = spots.find(s => s.id === spotId);
+        if (spot) {
+          onSpotSelect(spot);
         }
       };
     },
@@ -194,6 +195,6 @@ export function useMapMarkers() {
     clearClickMarker,
     createPostMarker,
     createClickMarker,
-    addGlobalSelectPostFunction,
+    addGlobalSelectSpotFunction,
   };
 }

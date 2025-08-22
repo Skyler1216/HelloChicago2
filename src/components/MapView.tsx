@@ -10,15 +10,13 @@ import {
 import CategoryFilter from './CategoryFilter';
 import PopularSpots from './PopularSpots';
 import MapboxMap from './MapboxMap';
-import PostDetailView from './PostDetailView';
 import SpotFormModal from './map/SpotFormModal';
 import { useCategories } from '../hooks/useCategories';
-import { usePosts } from '../hooks/usePosts';
 import { useMapSpots } from '../hooks/useMapSpots';
 
 export default function MapView() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedPost, setSelectedPost] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [selectedSpot, setSelectedSpot] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
   const [activeTab, setActiveTab] = useState<'map' | 'spots'>('map');
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -39,7 +37,6 @@ export default function MapView() {
   } | null>(null);
 
   const { categories, loading: categoriesLoading } = useCategories();
-  const { posts } = usePosts();
   const { spots: mapSpots, loading: mapSpotsLoading } = useMapSpots();
 
   // モーダルの表示状態を管理
@@ -49,25 +46,6 @@ export default function MapView() {
     { id: 'map' as const, label: 'マップ', icon: MapIcon },
     { id: 'spots' as const, label: 'お気に入りスポット', icon: TrendingUp },
   ];
-
-  // フィルタリングされた投稿を取得（ホームの投稿）
-  const filteredPosts = posts.filter(post => {
-    // カテゴリフィルター
-    if (selectedCategory && post.category_id !== selectedCategory) {
-      return false;
-    }
-
-    // 検索クエリフィルター
-    if (
-      searchQuery &&
-      !post.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !post.content.toLowerCase().includes(searchQuery.toLowerCase())
-    ) {
-      return false;
-    }
-
-    return true;
-  });
 
   // フィルタリングされたマップスポットを取得
   const filteredMapSpots = mapSpots.filter(spot => {
@@ -91,11 +69,11 @@ export default function MapView() {
     return true;
   });
 
-  // 人気スポットを取得（マップスポットベース）
+  // 人気スポットを取得（マップスポットのみ）
   const popularSpots = React.useMemo(() => {
     const spotMap = new Map();
 
-    // マップスポットを追加
+    // マップスポットのみを追加
     filteredMapSpots.forEach(spot => {
       const key = `${spot.location_lat.toFixed(3)},${spot.location_lng.toFixed(3)}`;
       if (!spotMap.has(key)) {
@@ -122,44 +100,42 @@ export default function MapView() {
       }
     });
 
-    // ホームの投稿も追加（既存のスポットと統合）
-    filteredPosts.forEach(post => {
-      const key = `${post.location_lat.toFixed(3)},${post.location_lng.toFixed(3)}`;
-      if (!spotMap.has(key)) {
-        spotMap.set(key, {
-          location: key,
-          lat: post.location_lat,
-          lng: post.location_lng,
-          address: post.location_address,
-          posts: [],
-          postCount: 0,
-          categories: new Set(),
-          mapSpot: null,
-          isMapSpot: false,
-        });
-      }
-
-      const currentSpot = spotMap.get(key);
-      if (currentSpot) {
-        currentSpot.posts.push(post);
-        currentSpot.postCount++;
-        if (post.category_id) {
-          currentSpot.categories.add(post.category_id);
-        }
-      }
-    });
-
     return Array.from(spotMap.values())
       .sort((a, b) => b.postCount - a.postCount)
       .slice(0, 20); // 上位20件
-  }, [filteredMapSpots, filteredPosts]);
+  }, [filteredMapSpots]);
 
-  if (selectedPost) {
+  if (selectedSpot) {
     return (
-      <PostDetailView
-        post={selectedPost}
-        onBack={() => setSelectedPost(null)}
-      />
+      <div className="h-full flex flex-col bg-white">
+        <div className="flex items-center justify-between p-4 border-b border-gray-100">
+          <button
+            onClick={() => setSelectedSpot(null)}
+            className="flex items-center space-x-2 text-gray-600 hover:text-gray-800"
+          >
+            <span>← 戻る</span>
+          </button>
+          <h1 className="text-lg font-semibold text-gray-900">スポット詳細</h1>
+          <div></div>
+        </div>
+        <div className="flex-1 p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              {selectedSpot.name}
+            </h2>
+            {selectedSpot.description && (
+              <p className="text-gray-600 mb-4">{selectedSpot.description}</p>
+            )}
+            <div className="text-sm text-gray-500">
+              <p>カテゴリ: {selectedSpot.category?.name_ja || '未設定'}</p>
+              <p>
+                作成日:{' '}
+                {new Date(selectedSpot.created_at).toLocaleDateString('ja-JP')}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -311,9 +287,9 @@ export default function MapView() {
             </div>
           ) : (
             <MapboxMap
-              posts={filteredPosts}
+              spots={filteredMapSpots}
               selectedCategory={selectedCategory}
-              onPostSelect={setSelectedPost}
+              onSpotSelect={setSelectedSpot}
               searchQuery={searchQuery}
               distanceFilter={distanceFilter}
               focusLocation={focusLocation}

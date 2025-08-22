@@ -2,7 +2,7 @@ import { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MapPin, Navigation, Layers } from 'lucide-react';
-import { Post, Location, CategoryInfo } from '../types/map';
+import { Location, CategoryInfo } from '../types/map';
 import { useMapMarkers } from '../hooks/useMapMarkers';
 import { useMapControls } from '../hooks/useMapControls';
 
@@ -13,9 +13,9 @@ if (MAPBOX_TOKEN) {
 }
 
 interface MapboxMapProps {
-  posts: Post[];
+  spots: any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
   selectedCategory: string | null;
-  onPostSelect: (post: Post) => void;
+  onSpotSelect: (spot: any) => void; // eslint-disable-line @typescript-eslint/no-explicit-any
   onLocationClick?: (location: Location) => void;
   searchQuery?: string;
   distanceFilter?: number;
@@ -23,9 +23,9 @@ interface MapboxMapProps {
 }
 
 export default function MapboxMap({
-  posts,
+  spots,
   selectedCategory,
-  onPostSelect,
+  onSpotSelect,
   onLocationClick,
   searchQuery,
   focusLocation,
@@ -108,7 +108,7 @@ export default function MapboxMap({
     clearAllMarkers,
     createPostMarker,
     createClickMarker,
-    addGlobalSelectPostFunction,
+    addGlobalSelectSpotFunction,
   } = useMapMarkers();
   const { centerOnLocation, updateMapStyle, updateBuildingVisibility } =
     useMapControls();
@@ -349,49 +349,55 @@ export default function MapboxMap({
     // Clear existing markers
     clearAllMarkers();
 
-    // Filter posts based on category and search
-    const filteredPosts = posts.filter(post => {
-      if (selectedCategory && post.category_id !== selectedCategory) {
+    // Filter spots based on category and search
+    const filteredSpots = spots.filter(spot => {
+      if (selectedCategory && spot.category_id !== selectedCategory) {
         return false;
       }
       if (
         searchQuery &&
-        !post.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !post.content.toLowerCase().includes(searchQuery.toLowerCase())
+        !spot.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !(
+          spot.description &&
+          spot.description.toLowerCase().includes(searchQuery.toLowerCase())
+        )
       ) {
         return false;
       }
       return true;
     });
 
-    // Add markers for filtered posts
-    filteredPosts.forEach(post => {
-      const categoryInfo = getCategoryInfo(post.category_id);
+    // Add markers for filtered spots
+    filteredSpots.forEach(spot => {
+      const categoryInfo = getCategoryInfo(spot.category_id);
       const isHighlighted =
         !!searchQuery &&
-        (post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          post.content.toLowerCase().includes(searchQuery.toLowerCase()));
+        (spot.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (spot.description &&
+            spot.description
+              .toLowerCase()
+              .includes(searchQuery.toLowerCase())));
 
       createPostMarker(
-        post,
+        spot,
         categoryInfo,
         isHighlighted,
-        onPostSelect,
+        onSpotSelect,
         map.current!
       );
     });
 
     // Add global function for popup button clicks
-    addGlobalSelectPostFunction(posts, onPostSelect);
+    addGlobalSelectSpotFunction(spots, onSpotSelect);
   }, [
-    posts,
+    spots,
     selectedCategory,
     searchQuery,
     mapLoaded,
-    onPostSelect,
+    onSpotSelect,
     clearAllMarkers,
     createPostMarker,
-    addGlobalSelectPostFunction,
+    addGlobalSelectSpotFunction,
     getCategoryInfo,
   ]);
 
@@ -531,17 +537,6 @@ export default function MapboxMap({
 
       {/* Bottom info bar */}
       <div className="absolute left-2 right-2 bottom-2 z-10 flex flex-col gap-2">
-        <div className="bg-white rounded-lg shadow-md px-3 py-2 border border-gray-100 w-fit">
-          <div className="flex items-center gap-2 text-xs text-gray-800 font-medium">
-            <div className="w-2 h-2 bg-coral-500 rounded-full"></div>
-            <span>
-              {selectedCategory
-                ? posts.filter(p => p.category_id === selectedCategory).length
-                : posts.length}
-              件の投稿
-            </span>
-          </div>
-        </div>
         <div className="bg-white rounded-lg shadow-md px-3 py-2 text-xs text-gray-800 flex items-center gap-2 w-fit border border-gray-100">
           <MapPin className="w-4 h-4 text-coral-500 flex-shrink-0" />
           <span className="leading-tight whitespace-nowrap">
