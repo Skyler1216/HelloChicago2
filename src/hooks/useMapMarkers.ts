@@ -174,7 +174,6 @@ export function useMapMarkers() {
 
   const addGlobalSelectSpotFunction = useCallback(
     (spots: any[], onSpotSelect: (spot: any) => void) => {
-      // eslint-disable-line @typescript-eslint/no-explicit-any
       (
         window as Window &
           typeof globalThis & { selectSpot?: (spotId: string) => void }

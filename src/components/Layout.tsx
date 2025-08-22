@@ -40,8 +40,8 @@ export default function Layout({
 
       {/* Bottom Navigation */}
       <nav className="bg-white border-t border-gray-200 sticky bottom-0 z-40 w-full">
-        <div className="w-full px-2 sm:px-4">
-          <div className="flex justify-between py-1 sm:py-2 gap-1">
+        <div className="w-full px-3 sm:px-4">
+          <div className="flex justify-between py-2 sm:py-3 gap-1">
             {navItems.map(item => {
               const IconComponent = item.icon;
               const isActive = currentView === item.id;
@@ -50,17 +50,17 @@ export default function Layout({
                 <button
                   key={item.id}
                   onClick={() => onViewChange(item.id)}
-                  className={`flex-1 flex flex-col items-center space-y-0.5 sm:space-y-1 px-0.5 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all duration-200 min-w-0 ${
+                  className={`flex-1 flex flex-col items-center space-y-1 sm:space-y-1.5 px-2 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-all duration-200 min-w-0 ${
                     isActive
                       ? 'text-coral-600 bg-coral-50 scale-105'
                       : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                   }`}
                 >
                   <IconComponent
-                    className={`w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 ${isActive ? 'text-coral-600' : ''}`}
+                    className={`w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0 ${isActive ? 'text-coral-600' : ''}`}
                   />
                   <span
-                    className={`text-[10px] sm:text-xs font-medium leading-tight text-center truncate w-full ${isActive ? 'text-coral-600' : ''}`}
+                    className={`text-xs sm:text-sm font-medium leading-tight text-center truncate w-full ${isActive ? 'text-coral-600' : ''}`}
                   >
                     {item.label}
                   </span>
