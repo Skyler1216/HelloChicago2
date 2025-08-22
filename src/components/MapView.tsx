@@ -38,8 +38,9 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
     lat: number;
     lng: number;
     address?: string;
+    average_rating?: number;
   } | null>(null);
-  const [tempRating, setTempRating] = useState(0);
+  // 旧: 自己評価入力用の一時ratingは廃止（平均表示のみ）
   const [focusLocation, setFocusLocation] = useState<{
     lat: number;
     lng: number;
@@ -78,7 +79,6 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
 
   const handleLocationClick = useCallback(
     (location: { lat: number; lng: number; address?: string }) => {
-      setTempRating(0);
       setActionsLocation(prev => {
         const same =
           prev &&
@@ -329,8 +329,6 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
       <SpotBottomSheet
         open={bottomSheetOpen}
         location={actionsLocation}
-        rating={tempRating}
-        onChangeRating={setTempRating}
         onClose={() => setBottomSheetOpen(false)}
         onClickViewReviews={() => {
           setBottomSheetOpen(false);

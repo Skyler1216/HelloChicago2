@@ -252,6 +252,8 @@ function MapboxMapComponent({
               (props['name'] as string) ||
               (props['name_en'] as string) ||
               '';
+            // 平均評価（将来POIから取れればここに）
+            const averageRating = 0;
 
             // Coordinates: prefer geometry point, fallback to event lngLat
             let lng = e.lngLat.lng;
@@ -272,7 +274,12 @@ function MapboxMapComponent({
             // クリック時は現在地取得を抑制（ボタンの即時発火を防ぐ）
             suppressLocateRef.current = true;
             // マップ自体は一切再センターしない。通知のみ
-            onLocationClick({ lat, lng, address: name });
+            onLocationClick({
+              lat,
+              lng,
+              address: name,
+              average_rating: averageRating,
+            });
           };
           poiClickHandlerRef.current = handlePoiClick;
           map.current.on('click', poiLayerId, handlePoiClick);
@@ -591,7 +598,7 @@ function MapboxMapComponent({
         <div className="bg-white rounded-lg shadow-md px-3 py-2 text-xs text-gray-800 flex items-center gap-2 w-fit border border-gray-100">
           <MapPin className="w-4 h-4 text-coral-500 flex-shrink-0" />
           <span className="leading-tight whitespace-nowrap">
-            クリックでスポット追加
+            クリックでスポットを見る
           </span>
         </div>
       </div>

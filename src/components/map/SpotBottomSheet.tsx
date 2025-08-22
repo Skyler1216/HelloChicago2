@@ -4,9 +4,12 @@ import { Star, Eye, MessageSquarePlus, X } from 'lucide-react';
 interface SpotBottomSheetProps {
   open: boolean;
   onClose: () => void;
-  location: { lat: number; lng: number; address?: string } | null;
-  rating: number;
-  onChangeRating: (rating: number) => void;
+  location: {
+    lat: number;
+    lng: number;
+    address?: string;
+    average_rating?: number;
+  } | null;
   onClickPostReview: () => void;
   onClickViewReviews: () => void;
 }
@@ -15,8 +18,6 @@ export default function SpotBottomSheet({
   open,
   onClose,
   location,
-  rating,
-  onChangeRating,
   onClickPostReview,
   onClickViewReviews,
 }: SpotBottomSheetProps) {
@@ -33,19 +34,24 @@ export default function SpotBottomSheet({
   }, []);
 
   const SNAP_PEEK = useMemo(
-    () => Math.max(120, Math.round(viewportH * 0.22)),
+    () => Math.max(160, Math.round(viewportH * 0.25)),
     [viewportH]
   );
   const SNAP_MID = useMemo(() => Math.round(viewportH * 0.5), [viewportH]);
   const SNAP_FULL = useMemo(() => Math.round(viewportH * 0.88), [viewportH]);
+  const MIN_SHEET = 280; // ボタンまで確実に見える最低高さ(px)
 
   const [height, setHeight] = useState<number>(SNAP_PEEK);
   const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
-    if (open) setHeight(SNAP_PEEK);
-    else setHeight(0);
-  }, [open, SNAP_PEEK]);
+    if (open) {
+      // 初期表示は中間スナップか最低高さの大きい方
+      setHeight(Math.max(SNAP_MID, MIN_SHEET));
+    } else {
+      setHeight(0);
+    }
+  }, [open, SNAP_MID]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -127,6 +133,7 @@ export default function SpotBottomSheet({
         className="mx-auto max-w-md pointer-events-auto bg-white rounded-t-2xl shadow-2xl border-t border-gray-200 relative"
         style={{
           height: `${open ? height : 0}px`,
+          minHeight: open ? `${MIN_SHEET}px` : '0px',
           transition: isDragging
             ? 'none'
             : 'height 220ms cubic-bezier(0.2, 0.8, 0.2, 1)',
@@ -152,7 +159,7 @@ export default function SpotBottomSheet({
         {/* scrollable content */}
         <div
           ref={contentRef}
-          className="h-[calc(100%-20px)] overflow-y-auto px-4 sm:px-5 pb-4"
+          className="h-[calc(100%-20px)] overflow-y-auto px-4 sm:px-5 pb-4 bottom-sheet-scroll"
         >
           {/* place info */}
           <div className="mb-3">
@@ -167,33 +174,33 @@ export default function SpotBottomSheet({
             )}
           </div>
 
-          {/* rating */}
+          {/* rating (average) */}
           <div className="mb-4">
             <div className="text-sm font-medium text-gray-700 mb-2">
-              評価（星）
+              評価（平均）
             </div>
-            <div className="flex items-center gap-1">
-              {[1, 2, 3, 4, 5].map(star => (
-                <button
-                  key={star}
-                  type="button"
-                  aria-label={`評価 ${star}`}
-                  onClick={() => onChangeRating(star)}
-                  className="p-1 hover:scale-110 transition-transform"
-                >
+            <div className="flex items-center gap-2">
+              <div className="flex items-center">
+                {[1, 2, 3, 4, 5].map(star => (
                   <Star
-                    className={`w-6 h-6 ${star <= rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+                    key={star}
+                    className={`w-5 h-5 ${
+                      star <=
+                      Math.round((location?.average_rating || 0) * 2) / 2
+                        ? 'text-yellow-400 fill-current'
+                        : 'text-gray-300'
+                    }`}
                   />
-                </button>
-              ))}
-              {rating > 0 && (
-                <span className="ml-2 text-sm text-gray-600">{rating}/5</span>
-              )}
+                ))}
+              </div>
+              <span className="text-sm text-gray-700">
+                {(location?.average_rating ?? 0).toFixed(1)} / 5.0
+              </span>
             </div>
           </div>
 
           {/* actions */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 mt-2">
             <button
               onClick={onClickViewReviews}
               className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50"
@@ -210,7 +217,7 @@ export default function SpotBottomSheet({
             </button>
           </div>
 
-          <div className="h-4 safe-bottom" />
+          <div className="h-6 safe-bottom" />
         </div>
       </div>
     </div>

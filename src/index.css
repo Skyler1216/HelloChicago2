@@ -78,6 +78,11 @@ body.modal-open {
   animation: modalFadeIn 0.2s ease-out;
 }
 
+/* Bottom sheet helper for iOS bounce */
+.bottom-sheet-scroll {
+  -webkit-overflow-scrolling: touch;
+}
+
 /* モーダルのレスポンシブ対応 */
 @media (max-height: 600px) {
   .modal-content {
