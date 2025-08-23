@@ -74,9 +74,9 @@ export default function PostFormView({
             : '譲渡';
       alert(`${typeLabel}が投稿されました！`);
 
-      // Reset form
+      // Reset form (keep the initially selected type)
       setFormData({
-        type: 'post',
+        type: initialType,
         title: '',
         content: '',
         category: '',
@@ -129,70 +129,7 @@ export default function PostFormView({
 
       <div className="max-w-md mx-auto px-4 py-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Post Type Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              投稿タイプ
-            </label>
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                {
-                  id: 'post',
-                  label: '体験',
-                  icon: Camera,
-                  color: 'text-blue-600',
-                  bgColor: 'bg-blue-50',
-                  borderColor: 'border-blue-200',
-                },
-                {
-                  id: 'consultation',
-                  label: '相談',
-                  icon: LucideIcons.HelpCircle,
-                  color: 'text-teal-600',
-                  bgColor: 'bg-teal-50',
-                  borderColor: 'border-teal-200',
-                },
-                {
-                  id: 'transfer',
-                  label: '譲渡',
-                  icon: LucideIcons.Gift,
-                  color: 'text-coral-600',
-                  bgColor: 'bg-coral-50',
-                  borderColor: 'border-coral-200',
-                },
-              ].map(type => {
-                const IconComponent = type.icon;
-                return (
-                  <button
-                    key={type.id}
-                    type="button"
-                    onClick={() =>
-                      setFormData(prev => ({
-                        ...prev,
-                        type: type.id as 'post' | 'consultation' | 'transfer',
-                      }))
-                    }
-                    className={`p-3 rounded-lg border-2 transition-all ${
-                      formData.type === type.id
-                        ? `${type.borderColor} ${type.bgColor}`
-                        : 'border-gray-200 bg-white hover:bg-gray-50'
-                    }`}
-                  >
-                    <IconComponent
-                      className={`w-5 h-5 mx-auto mb-1 ${type.color}`}
-                    />
-                    <span
-                      className={`text-xs font-medium ${
-                        formData.type === type.id ? type.color : 'text-gray-600'
-                      }`}
-                    >
-                      {type.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          {/* 投稿タイプはホームで選択するため、ここでは表示しない */}
 
           {/* Title */}
           <div>
