@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { X, Send, Camera } from 'lucide-react';
+import { X, Send } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { Database } from '../types/database';
 import { useCategories } from '../hooks/useCategories';
 import { usePosts } from '../hooks/usePosts';
 import { useAuth } from '../hooks/useAuth';
+import ImageUploader from './common/ImageUploader';
 
 type Post = Database['public']['Tables']['posts']['Row'] & {
   profiles: Database['public']['Tables']['profiles']['Row'];
@@ -73,9 +74,6 @@ export default function PostEditModal({
         content: formData.content,
         type: formData.type,
         category_id: formData.category,
-        location_lat: formData.lat,
-        location_lng: formData.lng,
-        location_address: formData.location,
         images: formData.images,
       });
       if (onSaved) {
@@ -222,16 +220,11 @@ export default function PostEditModal({
               />
             </div>
 
-            {/* Photo Upload placeholder (same as create form) */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                写真 (任意)
-              </label>
-              <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-coral-400 transition-colors">
-                <Camera className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500 text-sm">写真を追加・変更</p>
-              </div>
-            </div>
+            {/* Photo Upload */}
+            <ImageUploader
+              value={formData.images}
+              onChange={urls => setFormData(prev => ({ ...prev, images: urls }))}
+            />
 
             {/* Submit Button */}
             <button
