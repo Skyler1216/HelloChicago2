@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Camera, Send, ArrowLeft } from 'lucide-react';
+import { Send, ArrowLeft } from 'lucide-react';
 import ImageUploader from './common/ImageUploader';
 import * as LucideIcons from 'lucide-react';
 import { useCategories } from '../hooks/useCategories';
@@ -26,9 +26,6 @@ export default function PostFormView({
     title: '',
     content: '',
     category: '',
-    // location fields removed from UI; keep defaults for backend compatibility
-    lat: 41.8781,
-    lng: -87.6298,
     images: [] as string[],
   });
 
@@ -62,10 +59,6 @@ export default function PostFormView({
         content: formData.content,
         type: formData.type,
         category_id: formData.category,
-        location_lat: formData.lat,
-        location_lng: formData.lng,
-        // no explicit address in Home form
-        location_address: '',
         images: formData.images,
         author_id: user.id,
         status: formData.type !== 'post' ? 'open' : null,
@@ -86,14 +79,14 @@ export default function PostFormView({
         title: '',
         content: '',
         category: '',
-        lat: 41.8781,
-        lng: -87.6298,
         images: [],
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : '';
       if (/foreign key|constraint|conflict|409/i.test(message)) {
-        setError('投稿に失敗しました。カテゴリー選択など必須項目をご確認ください。');
+        setError(
+          '投稿に失敗しました。カテゴリー選択など必須項目をご確認ください。'
+        );
       } else {
         setError(message || '投稿に失敗しました');
       }

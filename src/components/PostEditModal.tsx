@@ -39,9 +39,6 @@ export default function PostEditModal({
     title: '',
     content: '',
     category: '',
-    location: '',
-    lat: 41.8781,
-    lng: -87.6298,
     images: [] as string[],
   });
 
@@ -53,9 +50,6 @@ export default function PostEditModal({
       title: post.title,
       content: post.content,
       category: post.category_id,
-      location: post.location_address,
-      lat: post.location_lat,
-      lng: post.location_lng,
       images: post.images || [],
     });
   }, [post]);
@@ -223,7 +217,9 @@ export default function PostEditModal({
             {/* Photo Upload */}
             <ImageUploader
               value={formData.images}
-              onChange={urls => setFormData(prev => ({ ...prev, images: urls }))}
+              onChange={urls =>
+                setFormData(prev => ({ ...prev, images: urls }))
+              }
             />
 
             {/* Submit Button */}

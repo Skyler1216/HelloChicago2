@@ -80,13 +80,13 @@ export interface Database {
           type: 'post' | 'consultation' | 'transfer';
           status: 'open' | 'in_progress' | 'closed' | null;
           category_id: string;
-          location_lat: number;
-          location_lng: number;
-          location_address: string;
+          location_lat?: number;
+          location_lng?: number;
+          location_address?: string;
           images: string[];
           author_id: string;
-          likes: number;
-          replies: number;
+          likes?: number; // dropped in migration, kept optional for compatibility
+          replies?: number; // dropped in migration, kept optional for compatibility
           approved: boolean;
           created_at: string;
           updated_at: string;
@@ -99,9 +99,9 @@ export interface Database {
           type: 'post' | 'consultation' | 'transfer';
           status?: 'open' | 'in_progress' | 'closed' | null;
           category_id: string;
-          location_lat: number;
-          location_lng: number;
-          location_address: string;
+          location_lat?: number;
+          location_lng?: number;
+          location_address?: string;
           images?: string[];
           author_id: string;
           likes?: number;

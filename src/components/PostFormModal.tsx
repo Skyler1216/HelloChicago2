@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, Send, X } from 'lucide-react';
+import { Send, X } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useCategories } from '../hooks/useCategories';
 import { usePosts } from '../hooks/usePosts';
@@ -28,9 +28,6 @@ export default function PostFormModal({
     title: '',
     content: '',
     category: '',
-    // location inputs removed
-    lat: 41.8781,
-    lng: -87.6298,
     images: [] as string[],
   });
 
@@ -64,9 +61,6 @@ export default function PostFormModal({
         content: formData.content,
         type: formData.type,
         category_id: formData.category,
-        location_lat: formData.lat,
-        location_lng: formData.lng,
-        location_address: '',
         images: formData.images,
         author_id: user.id,
         status: formData.type !== 'post' ? 'open' : null,
@@ -87,15 +81,15 @@ export default function PostFormModal({
         title: '',
         content: '',
         category: '',
-        lat: 41.8781,
-        lng: -87.6298,
         images: [],
       });
       onClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : '';
       if (/foreign key|constraint|conflict|409/i.test(message)) {
-        setError('投稿に失敗しました。カテゴリー選択など必須項目をご確認ください。');
+        setError(
+          '投稿に失敗しました。カテゴリー選択など必須項目をご確認ください。'
+        );
       } else {
         setError(message || '投稿に失敗しました');
       }
@@ -254,7 +248,9 @@ export default function PostFormModal({
             {/* Photo Upload */}
             <ImageUploader
               value={formData.images}
-              onChange={urls => setFormData(prev => ({ ...prev, images: urls }))}
+              onChange={urls =>
+                setFormData(prev => ({ ...prev, images: urls }))
+              }
             />
 
             {/* Submit Button */}

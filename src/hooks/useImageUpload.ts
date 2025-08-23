@@ -74,7 +74,8 @@ export function useImageUpload(): UseImageUploadReturn {
 
         ctx?.drawImage(img, 0, 0, targetWidth, targetHeight);
 
-        const outputType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+        const outputType =
+          file.type === 'image/png' ? 'image/png' : 'image/jpeg';
 
         canvas.toBlob(
           blob => {
@@ -133,7 +134,8 @@ export function useImageUpload(): UseImageUploadReturn {
         compressedFile.type === 'image/jpeg'
           ? 'jpg'
           : compressedFile.type.split('/')[1] ||
-            (compressedFile.name.split('.').pop() || 'jpg');
+            compressedFile.name.split('.').pop() ||
+            'jpg';
       const fileName = `${folder}/${filenamePrefix}${timestamp}.${extFromType}`;
 
       setUploadProgress(40);

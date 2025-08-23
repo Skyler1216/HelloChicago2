@@ -6,7 +6,6 @@ import {
   Heart,
   MessageSquare,
   Clock,
-  MapPin,
 } from 'lucide-react';
 import { useUserPosts } from '../hooks/useUserPosts';
 import PostDetailView from './PostDetailView';
@@ -241,12 +240,7 @@ export default function UserPostsView({
                       <MessageSquare className="w-4 h-4" />
                       <span>{post.comments_count || 0}</span>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <MapPin className="w-4 h-4" />
-                      <span className="line-clamp-1">
-                        {post.location_address}
-                      </span>
-                    </div>
+                    {/* 場所情報は非表示 */}
                   </div>
                   <span className="text-xs">
                     {new Date(post.created_at).toLocaleDateString('ja-JP')}

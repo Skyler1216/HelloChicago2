@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Send, ArrowLeft, Edit, Trash2, X, Check } from 'lucide-react';
+import {
+  Heart,
+  MessageCircle,
+  Send,
+  ArrowLeft,
+  Edit,
+  Trash2,
+  X,
+  Check,
+} from 'lucide-react';
 // import * as LucideIcons from 'lucide-react';
 import { Database } from '../types/database';
 import { useComments } from '../hooks/useComments';
@@ -529,23 +538,27 @@ export default function PostDetailView({
           </h3>
 
           {/* Images */}
-          {Array.isArray(currentPost.images) && currentPost.images.length > 0 && (
-            <div className="space-y-3 mb-4">
-              {currentPost.images.map((url, idx) => (
-                <div key={`${url}-${idx}`} className="rounded-xl overflow-hidden border border-gray-100">
-                  <img
-                    src={url}
-                    alt={`${currentPost.title} の画像 ${idx + 1}`}
-                    className="w-full max-h-[480px] object-cover"
-                    onError={e => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
+          {Array.isArray(currentPost.images) &&
+            currentPost.images.length > 0 && (
+              <div className="space-y-3 mb-4">
+                {currentPost.images.map((url, idx) => (
+                  <div
+                    key={`${url}-${idx}`}
+                    className="rounded-xl overflow-hidden border border-gray-100"
+                  >
+                    <img
+                      src={url}
+                      alt={`${currentPost.title} の画像 ${idx + 1}`}
+                      className="w-full max-h-[480px] object-cover"
+                      onError={e => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
 
           <p className="text-gray-700 mb-4 leading-relaxed break-words overflow-hidden whitespace-pre-wrap">
             {currentPost.content}

@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Image as ImageIcon, X, Upload } from 'lucide-react';
+import { X, Upload } from 'lucide-react';
 import { useImageUpload } from '../../hooks/useImageUpload';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -37,14 +37,17 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
     if (!files || !user) return;
 
     const remainingSlots = maxImages - value.length;
-    const filesToUpload = Array.from(files).slice(0, Math.max(0, remainingSlots));
+    const filesToUpload = Array.from(files).slice(
+      0,
+      Math.max(0, remainingSlots)
+    );
 
     const previewsQueue = filesToUpload.map(file => URL.createObjectURL(file));
     // enqueue previews
     setLocalPreviews(prev => [...prev, ...previewsQueue]);
 
     for (const file of filesToUpload) {
-      const url = await uploadImage(
+      await uploadImage(
         file,
         user.id,
         uploadedUrl => {
@@ -78,7 +81,9 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <label className="block text-sm font-medium text-gray-700">写真 (最大{maxImages}枚)</label>
+        <label className="block text-sm font-medium text-gray-700">
+          写真 (最大{maxImages}枚)
+        </label>
         {uploading && (
           <span className="text-xs text-gray-500">{uploadProgress}%</span>
         )}
@@ -87,8 +92,15 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
       <div className="grid grid-cols-3 gap-3">
         {/* Existing images */}
         {value.map(url => (
-          <div key={url} className="relative group border rounded-lg overflow-hidden">
-            <img src={url} alt="uploaded" className="w-full h-24 object-cover" />
+          <div
+            key={url}
+            className="relative group border rounded-lg overflow-hidden"
+          >
+            <img
+              src={url}
+              alt="uploaded"
+              className="w-full h-24 object-cover"
+            />
             <button
               type="button"
               onClick={() => handleRemove(url)}
@@ -102,8 +114,15 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
 
         {/* Local previews (during upload) */}
         {localPreviews.map((src, idx) => (
-          <div key={`preview-${idx}`} className="relative border rounded-lg overflow-hidden">
-            <img src={src} alt="preview" className="w-full h-24 object-cover opacity-80" />
+          <div
+            key={`preview-${idx}`}
+            className="relative border rounded-lg overflow-hidden"
+          >
+            <img
+              src={src}
+              alt="preview"
+              className="w-full h-24 object-cover opacity-80"
+            />
             {uploading && (
               <div className="absolute inset-0 bg-black/30 flex items-end">
                 <div className="w-full h-1 bg-gray-200">
@@ -142,11 +161,11 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
       />
 
       {!user && (
-        <p className="mt-2 text-xs text-red-600">アップロードにはログインが必要です</p>
+        <p className="mt-2 text-xs text-red-600">
+          アップロードにはログインが必要です
+        </p>
       )}
-      {error && (
-        <p className="mt-2 text-xs text-red-600">{error}</p>
-      )}
+      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
     </div>
   );
 };
