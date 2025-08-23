@@ -151,24 +151,7 @@ export default function PopularSpots({
         })}
       </div>
 
-      {/* 統計情報 */}
-      <div className="mt-6 p-4 bg-gradient-to-r from-coral-50 to-teal-50 rounded-xl">
-        <h3 className="text-sm font-medium text-gray-700 mb-2">エリア統計</h3>
-        <div className="grid grid-cols-2 gap-4 text-center">
-          <div>
-            <div className="text-2xl font-bold text-coral-600">
-              {spots.reduce((sum, spot) => sum + spot.postCount, 0)}
-            </div>
-            <div className="text-xs text-gray-600">総投稿数</div>
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-teal-600">
-              {spots.length}
-            </div>
-            <div className="text-xs text-gray-600">スポット数</div>
-          </div>
-        </div>
-      </div>
+      {/* エリア統計は非表示（要望により削除） */}
     </div>
   );
 }
