@@ -106,151 +106,68 @@ export default function ReviewFormView({
     return best;
   }, [spots, initialLocation]);
 
-  // Category inference from hints/name
+  // Category inference from hints/name with explicit mapping to 7 top-level categories
   function inferCategoryId(
     name: string | undefined,
     hints: string[],
     available: { id: string; key: string; icon: string }[]
   ): string | null {
-    const text = (name || '').toLowerCase();
-    const allHints = hints.map(h => h.toLowerCase());
-    const score: Record<string, number> = {};
+    const text = `${name || ''} ${(hints || []).join(' ')}`.toLowerCase();
 
-    const addScore = (catId: string, s: number) => {
-      score[catId] = (score[catId] || 0) + s;
+    // Helper to resolve a canonical slug to an available category id
+    const resolve = (slug: string): string | null => {
+      const found = available.find(c => c.id === slug);
+      return found ? found.id : null;
     };
 
-    // Simple dictionary mapping
-    const dict: Array<{
-      keywords: string[];
-      weight: number;
-      match: (s: string) => boolean;
-    }> = [
-      {
-        keywords: ['cafe', 'coffee', '喫茶', 'カフェ'],
-        weight: 3,
-        match: s =>
-          s.includes('cafe') ||
-          s.includes('coffee') ||
-          s.includes('喫茶') ||
-          s.includes('カフェ'),
-      },
-      {
-        keywords: [
-          'restaurant',
-          'food',
-          'diner',
-          '居酒屋',
-          'レストラン',
-          '寿司',
-          'ラーメン',
-        ],
-        weight: 3,
-        match: s =>
-          /restaurant|food|diner|居酒屋|レストラン|寿司|らーめん|ラーメン/.test(
-            s
-          ),
-      },
-      {
-        keywords: ['school', 'university', 'college', '学校', '幼稚園', '大学'],
-        weight: 3,
-        match: s => /school|university|college|学校|幼稚園|大学/.test(s),
-      },
-      {
-        keywords: [
-          'hospital',
-          'clinic',
-          'dentist',
-          'pharmacy',
-          '病院',
-          'クリニック',
-          '歯科',
-          '薬局',
-        ],
-        weight: 3,
-        match: s =>
-          /hospital|clinic|dentist|pharmacy|病院|クリニック|歯科|薬局/.test(s),
-      },
-      {
-        keywords: ['park', 'playground', '公園'],
-        weight: 3,
-        match: s => /park|playground|公園/.test(s),
-      },
-      {
-        keywords: [
-          'supermarket',
-          'grocery',
-          'convenience',
-          'market',
-          'スーパー',
-          'コンビニ',
-        ],
-        weight: 2,
-        match: s =>
-          /supermarket|grocery|convenience|market|スーパー|コンビニ/.test(s),
-      },
-      {
-        keywords: ['post_office', '郵便局'],
-        weight: 2,
-        match: s => /post_office|郵便局/.test(s),
-      },
-      {
-        keywords: ['station', 'bus', 'バス', '駅'],
-        weight: 2,
-        match: s => /station|bus|バス|駅/.test(s),
-      },
-      {
-        keywords: ['library', '図書館'],
-        weight: 2,
-        match: s => /library|図書館/.test(s),
-      },
+    // Priority 1: direct keyword → top-level mapping
+    const rules: Array<{ re: RegExp; slug: string }> = [
+      // Food
+      { re: /(restaurant|food|diner|izakaya|居酒屋|レストラン|寿司|すし|ラーメン|らーめん|cafe|coffee|喫茶|カフェ|bakery|ベーカリー|sweets|スイーツ|fast[_\s-]?food|マクド|バーガー|pizza|pizzeria)/, slug: 'food' },
+      // Hospital
+      { re: /(hospital|clinic|dentist|pharmacy|urgent[_\s-]?care|病院|クリニック|歯科|薬局)/, slug: 'hospital' },
+      // Play / Entertainment
+      { re: /(park|playground|公園|gym|fitness|golf|ゴルフ|cinema|movie|シネマ|映画|museum|美術館|博物館|amusement|zoo|aquarium|stadium|ボウリング|カラオケ)/, slug: 'play' },
+      // Shopping (supermarket/grocery)
+      { re: /(supermarket|grocery|market|アウトレット|mall|ショッピング|ストア|store)/, slug: 'shopping' },
+      // Convenience store → Food per docs' subcategory placement
+      { re: /(convenience|コンビニ)/, slug: 'food' },
+      // Beauty
+      { re: /(beauty|hair|barber|salon|nail|spa|美容|理容|床屋|ヘア|ネイル|エステ|スパ)/, slug: 'beauty' },
+      // Lodging
+      { re: /(hotel|lodging|motel|inn|hostel|宿|ホテル|旅館|モーテル|ホステル)/, slug: 'lodging' },
+      // Other facilities
+      { re: /(school|university|college|kindergarten|preschool|学校|大学|幼稚園|保育園|library|図書館|bank|銀行|atm|post[_\s-]?office|郵便局|city[_\s-]?hall|役所|区役所|embassy|大使館|police|警察)/, slug: 'other' },
     ];
 
-    // Score from name text
-    for (const entry of dict) {
-      if (entry.match(text)) {
-        for (const c of available) addScore(c.id, 0); // ensure key exists
+    for (const r of rules) {
+      if (r.re.test(text)) {
+        const id = resolve(r.slug);
+        if (id) return id;
       }
     }
 
-    // Score from hints
-    const hintText = allHints.join(' ');
-    for (const entry of dict) {
-      if (entry.match(hintText)) {
-        for (const c of available) addScore(c.id, 0);
+    // Priority 2: fallback by Mapbox-like place_type hints if present
+    const joined = (hints || []).join(' ').toLowerCase();
+    const hintRules: Array<{ re: RegExp; slug: string }> = [
+      { re: /(poi|place|address)/, slug: 'other' },
+      { re: /(school|university|college)/, slug: 'other' },
+      { re: /(restaurant|food|cafe|coffee|bakery|fast[_\s-]?food)/, slug: 'food' },
+      { re: /(supermarket|grocery|market|convenience)/, slug: 'shopping' },
+      { re: /(park|playground|gym|museum|cinema|theatre|golf)/, slug: 'play' },
+      { re: /(hospital|clinic|dentist|pharmacy)/, slug: 'hospital' },
+      { re: /(hotel|lodging|motel|inn|hostel)/, slug: 'lodging' },
+      { re: /(beauty|hair|barber|salon|nail|spa)/, slug: 'beauty' },
+    ];
+    for (const r of hintRules) {
+      if (r.re.test(joined)) {
+        const id = resolve(r.slug);
+        if (id) return id;
       }
     }
 
-    // Map hints to category IDs by icon/name heuristics
-    for (const c of available) {
-      const key = (c.key || '').toLowerCase();
-      const icon = (c.icon || '').toLowerCase();
-      const hay = `${key} ${icon} ${text} ${hintText}`;
-      if (/cafe|coffee|喫茶|カフェ/.test(hay)) addScore(c.id, 10);
-      if (/restaurant|food|居酒屋|レストラン|寿司|ラーメン|らーめん/.test(hay))
-        addScore(c.id, 9);
-      if (/school|大学|学校|幼稚園|college|university/.test(hay))
-        addScore(c.id, 8);
-      if (
-        /hospital|clinic|dentist|pharmacy|病院|クリニック|歯科|薬局/.test(hay)
-      )
-        addScore(c.id, 8);
-      if (/park|公園|playground/.test(hay)) addScore(c.id, 7);
-      if (/supermarket|コンビニ|grocery|market/.test(hay)) addScore(c.id, 6);
-      if (/post_office|郵便局/.test(hay)) addScore(c.id, 5);
-      if (/station|駅|bus|バス/.test(hay)) addScore(c.id, 5);
-      if (/library|図書館/.test(hay)) addScore(c.id, 4);
-    }
-
-    let bestId: string | null = null;
-    let bestScore = -Infinity;
-    for (const [id, s] of Object.entries(score)) {
-      if (s > bestScore) {
-        bestId = id;
-        bestScore = s;
-      }
-    }
-    return bestScore > 0 ? bestId : null;
+    // Final fallback: top of the list (sort_order) if available
+    return available.length > 0 ? available[0].id : null;
   }
 
   useEffect(() => {
