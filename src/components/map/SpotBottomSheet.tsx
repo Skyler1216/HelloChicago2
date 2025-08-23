@@ -183,20 +183,53 @@ export default function SpotBottomSheet({
   const [providerCategories, setProviderCategories] = useState<string[] | null>(
     null
   );
+  const [resolvedAddress, setResolvedAddress] = useState<string>('');
   const [providerLoading, setProviderLoading] = useState(false);
+  // Fallback reverse geocoding (OSM) to ensure we have an address line (English)
+  useEffect(() => {
+    if (!open || !location) return;
+    // If we already have a resolved address different from the POI name, skip
+    if (resolvedAddress && resolvedAddress !== location.address) return;
+    const controller = new AbortController();
+    const run = async () => {
+      try {
+        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${location.lat}&lon=${location.lng}&accept-language=en`;
+        const res = await fetch(url, {
+          signal: controller.signal,
+          headers: { Accept: 'application/json' },
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        const display = (json?.display_name as string) || '';
+        if (display && display !== location.address) {
+          setResolvedAddress(display);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    run();
+    return () => controller.abort();
+  }, [open, location?.lat, location?.lng, location?.address, resolvedAddress]);
   useEffect(() => {
     const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN as
       | string
       | undefined;
-    if (!open || !location || !token) {
+    if (!open || !location) {
       setProviderCategories(null);
+      setResolvedAddress(location?.address || '');
+      return;
+    }
+    if (!token) {
+      setProviderCategories(null);
+      setResolvedAddress(location.address || '');
       return;
     }
     const controller = new AbortController();
     const fetchCategories = async () => {
       try {
         setProviderLoading(true);
-        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${location.lng},${location.lat}.json?types=poi&limit=1&language=ja&access_token=${encodeURIComponent(
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${location.lng},${location.lat}.json?types=poi&limit=1&language=en&access_token=${encodeURIComponent(
           token
         )}`;
         const res = await fetch(url, { signal: controller.signal });
@@ -204,6 +237,19 @@ export default function SpotBottomSheet({
         const json = await res.json();
         const feature = json?.features?.[0];
         const props = (feature?.properties || {}) as Record<string, unknown>;
+        const placeName = (feature?.place_name as string) || '';
+        const poiName =
+          (feature?.text as string) ||
+          (props['name_ja'] as string) ||
+          (props['name'] as string) ||
+          '';
+        let addressLine = placeName || '';
+        if (poiName && addressLine) {
+          const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp('^' + escape(poiName) + '\\s*,\\s*', 'i');
+          addressLine = addressLine.replace(regex, '').trim();
+        }
+        setResolvedAddress(addressLine || location.address || '');
         const list: string[] = [];
         const addFrom = (v: unknown) => {
           if (!v) return;
@@ -223,7 +269,10 @@ export default function SpotBottomSheet({
         if (props['maki']) list.push(String(props['maki']));
         setProviderCategories(list.length > 0 ? list : null);
       } catch (err) {
-        if ((err as Error).name !== 'AbortError') setProviderCategories(null);
+        if ((err as Error).name !== 'AbortError') {
+          setProviderCategories(null);
+          setResolvedAddress(location.address || '');
+        }
       } finally {
         setProviderLoading(false);
       }
@@ -405,14 +454,27 @@ export default function SpotBottomSheet({
             <div className="text-base font-semibold text-gray-900">
               {location.address || '未設定の場所'}
             </div>
-            {/* 緯度経度は非表示 */}
-            <div className="text-xs text-gray-500 mt-0.5">
-              {reviewsLoading
-                ? '口コミ 読み込み中…'
-                : `口コミ ${reviews.length}件`}
+            {/* 住所コピー */}
+            <div className="mt-1 flex items-center gap-2">
+              <input
+                readOnly
+                value={resolvedAddress || `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`}
+                onFocus={e => e.currentTarget.select()}
+                className="flex-1 text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded-md px-2 py-1"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const text = resolvedAddress || `${location.lat}, ${location.lng}`;
+                  navigator.clipboard.writeText(text);
+                }}
+                className="text-xs px-2 py-1 rounded-md bg-coral-50 text-coral-700 hover:bg-coral-100 border border-coral-100"
+              >
+                コピー
+              </button>
             </div>
             {displayCategoryName && (
-              <div className="mt-1 text-xs text-gray-700">
+              <div className="mt-2 text-xs text-gray-700">
                 カテゴリ: {displayCategoryName}
                 {!nearestSpotObj?.category_id && '（候補）'}
               </div>
@@ -440,12 +502,7 @@ export default function SpotBottomSheet({
               <span className="text-sm text-gray-700">
                 {(displayAverage ?? 0).toFixed(1)} / 5.0
               </span>
-              <span className="text-xs text-gray-500">
-                ・{' '}
-                {reviewsLoading
-                  ? '口コミ 読み込み中…'
-                  : `口コミ ${reviews.length}件`}
-              </span>
+              {/* 口コミ件数は重複するため非表示 */}
               {providerLoading && (
                 <span className="text-xs text-gray-400">
                   ・ カテゴリ解析中…
