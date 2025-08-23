@@ -406,10 +406,10 @@ export interface Database {
           read_at: string | null;
           pushed_at: string | null;
           emailed_at: string | null;
-
           expires_at: string | null;
           action_url: string | null;
           action_text: string | null;
+          deleted_at?: string | null;
         };
         Insert: {
           id?: string;
@@ -437,10 +437,10 @@ export interface Database {
           read_at?: string | null;
           pushed_at?: string | null;
           emailed_at?: string | null;
-
           expires_at?: string | null;
           action_url?: string | null;
           action_text?: string | null;
+          deleted_at?: string | null;
         };
         Update: {
           id?: string;
@@ -468,10 +468,10 @@ export interface Database {
           read_at?: string | null;
           pushed_at?: string | null;
           emailed_at?: string | null;
-
           expires_at?: string | null;
           action_url?: string | null;
           action_text?: string | null;
+          deleted_at?: string | null;
         };
       };
     };

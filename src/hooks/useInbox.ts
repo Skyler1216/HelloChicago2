@@ -66,10 +66,13 @@ export function useInbox(userId: string): UseInboxReturn {
   // Load notifications
   const loadNotifications = useCallback(async () => {
     try {
+      // Fetch notifications that are not expired and still valid
       const { data, error: fetchError } = await supabase
         .from('notifications')
         .select('*')
         .eq('recipient_id', userId)
+        .is('deleted_at', null)
+        .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
         .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
@@ -126,6 +129,17 @@ export function useInbox(userId: string): UseInboxReturn {
 
     // Transform notifications
     notifications.forEach(notification => {
+      // Skip expired notifications on client as double-safety
+      if (
+        notification.expires_at &&
+        new Date(notification.expires_at).getTime() < Date.now()
+      ) {
+        return;
+      }
+      // Skip deleted notifications
+      if ((notification as any).deleted_at) {
+        return;
+      }
       items.push({
         id: notification.id,
         type: 'notification' as const,
