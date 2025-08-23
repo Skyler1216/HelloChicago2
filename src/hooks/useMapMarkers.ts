@@ -46,50 +46,41 @@ export function useMapMarkers() {
       markerElement.className = 'custom-marker';
 
       const markerColor = categoryInfo.color;
+      const rating = typeof spot.average_rating === 'number' ? spot.average_rating : 0;
+      const hasReviews = rating > 0;
 
-      const hasReviews =
-        typeof spot.average_rating === 'number' && spot.average_rating > 0;
+      // Pin-shaped marker with inner circle and optional rating badge
       markerElement.innerHTML = `
-      <div style="position: relative; width: 28px; height: 28px;">
-        <div style="
-          position: absolute;
-          left: 2px;
-          top: 2px;
-          width: 24px; 
-          height: 24px; 
-          background: ${markerColor}; 
-          border: 3px solid white; 
-          border-radius: 50%; 
-          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-          cursor: pointer;
-          transition: all 0.2s ease;
-          ${isHighlighted ? 'transform: scale(1.2); box-shadow: 0 4px 16px rgba(0,0,0,0.4);' : ''}
-        "></div>
+      <div style="position: relative; width: 34px; height: 48px; transform-origin: bottom center; ${
+        isHighlighted ? 'transform: scale(1.15);' : ''
+      }">
+        <svg width="34" height="48" viewBox="0 0 32 44" style="filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));">
+          <path d="M16 0c-8.8 0-16 6.7-16 15 0 10.4 14.3 26.5 15 27.3.6.7 1.5.7 2.1 0 .7-.8 15-16.9 15-27.3C32 6.7 24.8 0 16 0z" fill="${markerColor}" stroke="white" stroke-width="2"/>
+          <circle cx="16" cy="15" r="6.5" fill="white"/>
+        </svg>
         ${
           hasReviews
-            ? `
-          <div style="
-            position: absolute;
-            top: -4px;
-            right: -4px;
-            width: 14px;
-            height: 14px;
-            background: #FBBF24; /* amber-400 */
-            color: #FFF;
-            border: 2px solid #FFF;
-            border-radius: 50%;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.25);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            line-height: 1;
-          " title="口コミあり">★</div>
-        `
+            ? `<div style="
+                position: absolute;
+                top: -6px;
+                right: -6px;
+                background: rgba(17,24,39,0.9);
+                color: #fff;
+                font-size: 10px;
+                padding: 2px 6px;
+                border-radius: 9999px;
+                border: 2px solid #fff;
+                display: inline-flex;
+                align-items: center;
+                gap: 3px;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+              " title="平均評価">
+                <span style="color:#FBBF24;">★</span>
+                <span>${rating.toFixed(1)}</span>
+              </div>`
             : ''
         }
-      </div>
-    `;
+      </div>`;
 
       const popup = new mapboxgl.Popup({
         closeButton: true,
@@ -136,12 +127,12 @@ export function useMapMarkers() {
 
       // ホバーエフェクト
       markerElement.addEventListener('mouseenter', () => {
-        markerElement.style.transform = 'scale(1.1)';
+        markerElement.style.transform = 'scale(1.12)';
       });
 
       markerElement.addEventListener('mouseleave', () => {
         markerElement.style.transform = isHighlighted
-          ? 'scale(1.2)'
+          ? 'scale(1.15)'
           : 'scale(1)';
       });
 
