@@ -145,6 +145,9 @@ export function useMapMarkers() {
           : 'scale(1)';
       });
 
+      // Track marker so we can clear it later
+      markers.current.push(marker);
+
       return marker;
     },
     []
