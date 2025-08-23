@@ -40,6 +40,13 @@ export default function SpotFormView({
     }
   }, [initialLocation]);
 
+  // 初期カテゴリをドキュメント順で設定
+  useEffect(() => {
+    if (!formData.category_id && categories.length > 0) {
+      setFormData(prev => ({ ...prev, category_id: categories[0].id }));
+    }
+  }, [categories, formData.category_id]);
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.name.trim()) newErrors.name = 'スポット名は必須です';

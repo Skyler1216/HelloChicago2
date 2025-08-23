@@ -40,6 +40,11 @@ export interface Database {
           name_ja: string;
           icon: string;
           color: string;
+          parent_id?: string | null;
+          sort_order?: number | null;
+          is_active?: boolean | null;
+          created_at?: string;
+          updated_at?: string;
         };
         Insert: {
           id: string;
@@ -47,6 +52,11 @@ export interface Database {
           name_ja: string;
           icon: string;
           color: string;
+          parent_id?: string | null;
+          sort_order?: number | null;
+          is_active?: boolean | null;
+          created_at?: string;
+          updated_at?: string;
         };
         Update: {
           id?: string;
@@ -54,6 +64,11 @@ export interface Database {
           name_ja?: string;
           icon?: string;
           color?: string;
+          parent_id?: string | null;
+          sort_order?: number | null;
+          is_active?: boolean | null;
+          created_at?: string;
+          updated_at?: string;
         };
       };
       posts: {

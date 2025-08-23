@@ -19,7 +19,11 @@ export function useCategories() {
       const { data, error } = await supabase
         .from('categories')
         .select('*')
-        .order('name_ja');
+        // Only active, top-level categories for selectors
+        .eq('is_active', true as any)
+        .is('parent_id', null as any)
+        .order('sort_order', { ascending: true } as any)
+        .order('name_ja', { ascending: true } as any);
 
       if (error) throw error;
 

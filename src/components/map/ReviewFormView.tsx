@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Send, Star } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import { useMapSpots } from '../../hooks/useMapSpots';
 import { useSpotReviews } from '../../hooks/useSpotReviews';
 import { useAuth } from '../../hooks/useAuth';
@@ -41,6 +42,7 @@ export default function ReviewFormView({
   const { spots, createSpot, rateSpot, loading } = useMapSpots();
   const { user } = useAuth();
   const { categories } = useCategories();
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
   const [rating, setRating] = useState<number>(0);
   const [comment, setComment] = useState<string>('');
@@ -64,6 +66,21 @@ export default function ReviewFormView({
       setRating(myExistingRating);
     }
   }, [myExistingRating, rating]);
+  // Prefill category by inference or default top category from docs ordering
+  useEffect(() => {
+    if (!initialLocation || selectedCategoryId) return;
+    const inferred = inferCategoryId(
+      initialLocation.address,
+      initialLocation.category_hints || [],
+      categories.map(c => ({ id: c.id, key: c.name_ja, icon: c.icon }))
+    );
+    if (inferred) {
+      setSelectedCategoryId(inferred);
+    } else if (categories.length > 0) {
+      setSelectedCategoryId(categories[0].id);
+    }
+  }, [initialLocation, categories, selectedCategoryId]);
+
 
   // Prefill existing comment if present
   const myExistingReview = useMemo(
@@ -258,7 +275,7 @@ export default function ReviewFormView({
       let spotId = targetSpotId;
       if (!spotId) {
         // Auto-categorize using hints and heuristics
-        const categoryId = inferCategoryId(
+        const categoryId = selectedCategoryId || inferCategoryId(
           initialLocation.address,
           initialLocation.category_hints || [],
           categories.map(c => ({ id: c.id, key: c.name_ja, icon: c.icon }))
@@ -345,6 +362,43 @@ export default function ReviewFormView({
           onSubmit={handleSubmit}
           className="p-4 space-y-5 max-w-md mx-auto"
         >
+          {/* Category selector */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              カテゴリ
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              {categories.map(category => {
+                const IconComponent =
+                  LucideIcons[category.icon as keyof typeof LucideIcons];
+                const active = selectedCategoryId === category.id;
+                return (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => setSelectedCategoryId(category.id)}
+                    className={`flex items-center space-x-2 p-3 rounded-xl border-2 transition-all ${
+                      active
+                        ? 'border-coral-500 bg-coral-50 text-coral-700'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    {IconComponent &&
+                      typeof IconComponent === 'function' &&
+                      React.createElement(
+                        IconComponent as React.ComponentType<{
+                          className?: string;
+                        }>,
+                        { className: 'w-4 h-4' }
+                      )}
+                    <span className="text-sm font-medium">
+                      {category.name_ja}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           {/* Rating */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
