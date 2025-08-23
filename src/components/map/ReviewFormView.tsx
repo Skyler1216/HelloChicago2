@@ -42,7 +42,9 @@ export default function ReviewFormView({
   const { spots, createSpot, rateSpot, loading } = useMapSpots();
   const { user } = useAuth();
   const { categories } = useCategories();
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null
+  );
 
   const [rating, setRating] = useState<number>(0);
   const [comment, setComment] = useState<string>('');
@@ -80,7 +82,6 @@ export default function ReviewFormView({
       setSelectedCategoryId(categories[0].id);
     }
   }, [initialLocation, categories, selectedCategoryId]);
-
 
   // Prefill existing comment if present
   const myExistingReview = useMemo(
@@ -123,21 +124,42 @@ export default function ReviewFormView({
     // Priority 1: direct keyword → top-level mapping
     const rules: Array<{ re: RegExp; slug: string }> = [
       // Food
-      { re: /(restaurant|food|diner|izakaya|居酒屋|レストラン|寿司|すし|ラーメン|らーめん|cafe|coffee|喫茶|カフェ|bakery|ベーカリー|sweets|スイーツ|fast[_\s-]?food|マクド|バーガー|pizza|pizzeria)/, slug: 'food' },
+      {
+        re: /(restaurant|food|diner|izakaya|居酒屋|レストラン|寿司|すし|ラーメン|らーめん|cafe|coffee|喫茶|カフェ|bakery|ベーカリー|sweets|スイーツ|fast[_\s-]?food|マクド|バーガー|pizza|pizzeria)/,
+        slug: 'food',
+      },
       // Hospital
-      { re: /(hospital|clinic|dentist|pharmacy|urgent[_\s-]?care|病院|クリニック|歯科|薬局)/, slug: 'hospital' },
+      {
+        re: /(hospital|clinic|dentist|pharmacy|urgent[_\s-]?care|病院|クリニック|歯科|薬局)/,
+        slug: 'hospital',
+      },
       // Play / Entertainment
-      { re: /(park|playground|公園|gym|fitness|golf|ゴルフ|cinema|movie|シネマ|映画|museum|美術館|博物館|amusement|zoo|aquarium|stadium|ボウリング|カラオケ)/, slug: 'play' },
+      {
+        re: /(park|playground|公園|gym|fitness|golf|ゴルフ|cinema|movie|シネマ|映画|museum|美術館|博物館|amusement|zoo|aquarium|stadium|ボウリング|カラオケ)/,
+        slug: 'play',
+      },
       // Shopping (supermarket/grocery)
-      { re: /(supermarket|grocery|market|アウトレット|mall|ショッピング|ストア|store)/, slug: 'shopping' },
+      {
+        re: /(supermarket|grocery|market|アウトレット|mall|ショッピング|ストア|store)/,
+        slug: 'shopping',
+      },
       // Convenience store → Food per docs' subcategory placement
       { re: /(convenience|コンビニ)/, slug: 'food' },
       // Beauty
-      { re: /(beauty|hair|barber|salon|nail|spa|美容|理容|床屋|ヘア|ネイル|エステ|スパ)/, slug: 'beauty' },
+      {
+        re: /(beauty|hair|barber|salon|nail|spa|美容|理容|床屋|ヘア|ネイル|エステ|スパ)/,
+        slug: 'beauty',
+      },
       // Lodging
-      { re: /(hotel|lodging|motel|inn|hostel|宿|ホテル|旅館|モーテル|ホステル)/, slug: 'lodging' },
+      {
+        re: /(hotel|lodging|motel|inn|hostel|宿|ホテル|旅館|モーテル|ホステル)/,
+        slug: 'lodging',
+      },
       // Other facilities
-      { re: /(school|university|college|kindergarten|preschool|学校|大学|幼稚園|保育園|library|図書館|bank|銀行|atm|post[_\s-]?office|郵便局|city[_\s-]?hall|役所|区役所|embassy|大使館|police|警察)/, slug: 'other' },
+      {
+        re: /(school|university|college|kindergarten|preschool|学校|大学|幼稚園|保育園|library|図書館|bank|銀行|atm|post[_\s-]?office|郵便局|city[_\s-]?hall|役所|区役所|embassy|大使館|police|警察)/,
+        slug: 'other',
+      },
     ];
 
     for (const r of rules) {
@@ -152,7 +174,10 @@ export default function ReviewFormView({
     const hintRules: Array<{ re: RegExp; slug: string }> = [
       { re: /(poi|place|address)/, slug: 'other' },
       { re: /(school|university|college)/, slug: 'other' },
-      { re: /(restaurant|food|cafe|coffee|bakery|fast[_\s-]?food)/, slug: 'food' },
+      {
+        re: /(restaurant|food|cafe|coffee|bakery|fast[_\s-]?food)/,
+        slug: 'food',
+      },
       { re: /(supermarket|grocery|market|convenience)/, slug: 'shopping' },
       { re: /(park|playground|gym|museum|cinema|theatre|golf)/, slug: 'play' },
       { re: /(hospital|clinic|dentist|pharmacy)/, slug: 'hospital' },
@@ -192,11 +217,13 @@ export default function ReviewFormView({
       let spotId = targetSpotId;
       if (!spotId) {
         // Auto-categorize using hints and heuristics
-        const categoryId = selectedCategoryId || inferCategoryId(
-          initialLocation.address,
-          initialLocation.category_hints || [],
-          categories.map(c => ({ id: c.id, key: c.name_ja, icon: c.icon }))
-        );
+        const categoryId =
+          selectedCategoryId ||
+          inferCategoryId(
+            initialLocation.address,
+            initialLocation.category_hints || [],
+            categories.map(c => ({ id: c.id, key: c.name_ja, icon: c.icon }))
+          );
         const created = await createSpot({
           name: initialLocation.address || 'スポット',
           location_lat: initialLocation.lat,

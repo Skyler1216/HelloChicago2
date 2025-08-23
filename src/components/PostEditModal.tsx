@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Send, MapPin, Camera } from 'lucide-react';
+import { X, Send, Camera } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { Database } from '../types/database';
 import { useCategories } from '../hooks/useCategories';
@@ -200,25 +200,7 @@ export default function PostEditModal({
               </div>
             </div>
 
-            {/* Location */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                場所
-              </label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={formData.location}
-                  onChange={e =>
-                    setFormData({ ...formData, location: e.target.value })
-                  }
-                  placeholder="住所または場所名を入力"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-coral-500 focus:border-transparent transition-all"
-                  required
-                />
-              </div>
-            </div>
+            {/* 場所入力は不要のため削除 */}
 
             {/* Content */}
             <div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, MapPin, Send, X } from 'lucide-react';
+import { Camera, Send, X } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useCategories } from '../hooks/useCategories';
 import { usePosts } from '../hooks/usePosts';
@@ -27,8 +27,8 @@ export default function PostFormModal({
     title: '',
     content: '',
     category: '',
-    location: '',
-    lat: 41.8781, // Default to Chicago coordinates
+    // location inputs removed
+    lat: 41.8781,
     lng: -87.6298,
     images: [] as string[],
   });
@@ -60,7 +60,7 @@ export default function PostFormModal({
         category_id: formData.category,
         location_lat: formData.lat,
         location_lng: formData.lng,
-        location_address: formData.location,
+        location_address: '',
         images: formData.images,
         author_id: user.id,
         status: formData.type !== 'post' ? 'open' : null,
@@ -81,7 +81,6 @@ export default function PostFormModal({
         title: '',
         content: '',
         category: '',
-        location: '',
         lat: 41.8781,
         lng: -87.6298,
         images: [],
@@ -212,25 +211,7 @@ export default function PostFormModal({
               </div>
             </div>
 
-            {/* Location */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                場所
-              </label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={formData.location}
-                  onChange={e =>
-                    setFormData({ ...formData, location: e.target.value })
-                  }
-                  placeholder="住所または場所名を入力"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-coral-500 focus:border-transparent transition-all"
-                  required
-                />
-              </div>
-            </div>
+            {/* 場所入力は不要のため削除 */}
 
             {/* Content */}
             <div>

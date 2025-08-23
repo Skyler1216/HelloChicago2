@@ -20,10 +20,10 @@ export function useCategories() {
         .from('categories')
         .select('*')
         // Only active, top-level categories for selectors
-        .eq('is_active', true as any)
-        .is('parent_id', null as any)
-        .order('sort_order', { ascending: true } as any)
-        .order('name_ja', { ascending: true } as any);
+        .eq('is_active', true)
+        .is('parent_id', null)
+        .order('sort_order', { ascending: true })
+        .order('name_ja', { ascending: true });
 
       if (error) throw error;
 
