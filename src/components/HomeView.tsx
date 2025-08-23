@@ -178,35 +178,11 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
                     onClick={() => handlePostTypeSelect(tab.id)}
                     className="w-full flex items-center space-x-4 p-4 rounded-xl border border-gray-200 hover:border-coral-300 hover:bg-coral-50 transition-all duration-200"
                   >
-                    <div
-                      className={`p-3 rounded-lg ${
-                        tab.id === 'post'
-                          ? 'bg-blue-100'
-                          : tab.id === 'consultation'
-                            ? 'bg-green-100'
-                            : 'bg-purple-100'
-                      }`}
-                    >
-                      <IconComponent
-                        className={`w-6 h-6 ${
-                          tab.id === 'post'
-                            ? 'text-blue-600'
-                            : tab.id === 'consultation'
-                              ? 'text-green-600'
-                              : 'text-purple-600'
-                        }`}
-                      />
+                    <div className="p-3">
+                      <IconComponent className="w-6 h-6 text-coral-600" />
                     </div>
                     <div className="flex-1 text-left">
-                      <div
-                        className={`font-bold text-lg ${
-                          tab.id === 'post'
-                            ? 'text-blue-600'
-                            : tab.id === 'consultation'
-                              ? 'text-green-600'
-                              : 'text-purple-600'
-                        }`}
-                      >
+                      <div className="font-bold text-lg text-coral-600">
                         {tab.label}
                       </div>
                       <div className="text-gray-600 text-sm mt-1">
