@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Camera, Send, ArrowLeft } from 'lucide-react';
+import ImageUploader from './common/ImageUploader';
 import * as LucideIcons from 'lucide-react';
 import { useCategories } from '../hooks/useCategories';
 import { usePosts } from '../hooks/usePosts';
@@ -47,6 +48,11 @@ export default function PostFormView({
       return;
     }
 
+    if (!formData.category) {
+      setError('カテゴリーを選択してください');
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
@@ -85,7 +91,12 @@ export default function PostFormView({
         images: [],
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : '投稿に失敗しました');
+      const message = err instanceof Error ? err.message : '';
+      if (/foreign key|constraint|conflict|409/i.test(message)) {
+        setError('投稿に失敗しました。カテゴリー選択など必須項目をご確認ください。');
+      } else {
+        setError(message || '投稿に失敗しました');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -248,15 +259,10 @@ export default function PostFormView({
           </div>
 
           {/* Photo Upload */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              写真 (任意)
-            </label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-coral-400 transition-colors">
-              <Camera className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500 text-sm">写真を追加する</p>
-            </div>
-          </div>
+          <ImageUploader
+            value={formData.images}
+            onChange={urls => setFormData(prev => ({ ...prev, images: urls }))}
+          />
 
           {/* Error Message */}
           {error && (

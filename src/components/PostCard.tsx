@@ -164,7 +164,7 @@ function PostCard({ post, onClick, onEdit, onDelete }: PostCardProps) {
       </h3>
 
       {/* Image */}
-      {post.images.length > 0 && (
+      {Array.isArray(post.images) && post.images.length > 0 && (
         <div className="mb-3 rounded-xl overflow-hidden">
           <img
             src={post.images[0]}
