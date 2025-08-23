@@ -81,7 +81,36 @@ CREATE TABLE profiles (
 );
 ```
 
-#### **2. 通知システム（3テーブル構成）**
+#### **2. categories テーブル**
+
+投稿カテゴリとサブカテゴリを管理するテーブルです。
+
+```sql
+CREATE TABLE categories (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL UNIQUE,
+  name_ja text NOT NULL,
+  parent_id uuid REFERENCES categories(id),
+  icon text,
+  color text,
+  sort_order integer DEFAULT 0,
+  is_active boolean DEFAULT true,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+```
+
+**主要カテゴリ（7分類）**:
+
+1. **買い物** - グロースリーストア、衣類
+2. **食べる** - レストラン、コンビニ、カフェ、ファストフード、ベーカリー、スイーツ
+3. **遊ぶ** - プレイグラウンド、公園、ジム、ゴルフ、映画館、美術館・博物館、アミューズメント施設
+4. **病院** - 医療施設
+5. **美容室** - 美容・理容施設
+6. **宿泊** - ホテル、アパートメント等
+7. **その他施設** - 図書館、学校、銀行、郵便局、役所
+
+#### **3. 通知システム（3テーブル構成）**
 
 効率的な通知管理のため、以下の3つのテーブルで構成されています：
 
@@ -133,7 +162,14 @@ HelloChicagoアプリケーションは、SupabaseをベースとしたRESTful A
 
 ### **主要機能**
 
-#### **1. 受信トレイ機能**
+#### **1. カテゴリ管理機能**
+
+- 7つの主要カテゴリとサブカテゴリの階層管理
+- カテゴリ別の投稿表示・フィルタリング
+- 地図上でのカテゴリ別マーカー表示
+- カテゴリ別の人気スポットランキング
+
+#### **2. 受信トレイ機能**
 
 - 通知とメッセージの統合管理
 - タブナビゲーション（すべて・通知・メッセージ）

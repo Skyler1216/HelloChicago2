@@ -415,12 +415,28 @@ export default function () {
 
 ```sql
 -- テスト用カテゴリデータ
-INSERT INTO categories (id, name, name_ja, icon, color) VALUES
-  ('test-hospital', 'Test Hospital', 'テスト病院', 'Heart', '#FF6B6B');
+INSERT INTO categories (id, name, name_ja, icon, color, sort_order) VALUES
+  ('shopping', 'Shopping', '買い物', 'ShoppingBag', '#4ECDC4', 1),
+  ('food', 'Food & Dining', '食べる', 'Utensils', '#FF6B6B', 2),
+  ('play', 'Entertainment', '遊ぶ', 'Gamepad2', '#45B7D1', 3),
+  ('hospital', 'Hospital', '病院', 'Heart', '#96CEB4', 4),
+  ('beauty', 'Beauty Salon', '美容室', 'Scissors', '#FFEAA7', 5),
+  ('lodging', 'Lodging', '宿泊', 'Bed', '#DDA0DD', 6),
+  ('other', 'Other Facilities', 'その他施設', 'Building2', '#98D8C8', 7);
+
+-- テスト用サブカテゴリデータ
+INSERT INTO categories (id, name, name_ja, parent_id, icon, color, sort_order) VALUES
+  ('grocery', 'Grocery Store', 'グロースリーストア', 'shopping', 'Store', '#4ECDC4', 1),
+  ('clothing', 'Clothing', '衣類', 'shopping', 'Shirt', '#4ECDC4', 2),
+  ('restaurant', 'Restaurant', 'レストラン', 'food', 'Utensils', '#FF6B6B', 1),
+  ('convenience', 'Convenience Store', 'コンビニ', 'food', 'Store', '#FF6B6B', 2),
+  ('cafe', 'Cafe', 'カフェ', 'food', 'Coffee', '#FF6B6B', 3),
+  ('playground', 'Playground', 'プレイグラウンド', 'play', 'Baby', '#45B7D1', 1),
+  ('park', 'Park', '公園', 'play', 'TreePine', '#45B7D1', 2);
 
 -- テスト用投稿データ
 INSERT INTO posts (title, content, type, category_id, author_id) VALUES
-  ('テスト投稿', 'テスト内容', 'post', 'test-hospital', 'test-user-id');
+  ('テスト投稿', 'テスト内容', 'post', 'hospital', 'test-user-id');
 ```
 
 ## テスト自動化

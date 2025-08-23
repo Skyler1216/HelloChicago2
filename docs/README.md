@@ -15,7 +15,7 @@
 - 正典: CI/CD・環境変数・監視・運用は `deployment-design.md`
 - 正典: テスト方針・テストレベル・メトリクスは `test-strategy.md`
 - 機能別のUX/運用ガイドは各機能ドキュメント（例: `profile-documentation.md`）
-- 事業・ユーザー要件は `prd.md`
+- 事業・ユーザー要件・カテゴリ分類は `prd.md`
 
 ## 重複排除ポリシー
 
