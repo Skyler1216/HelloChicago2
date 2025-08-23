@@ -44,7 +44,7 @@ export function useUserStats(userId: string | undefined) {
       // まずユーザーの投稿を取得
       const { data: posts, error: postsError } = await supabase
         .from('posts')
-        .select('id, approved, likes')
+        .select('id, approved')
         .eq('author_id', userId);
 
       if (postsError) throw postsError;
@@ -94,7 +94,24 @@ export function useUserStats(userId: string | undefined) {
 
       const postsData = posts || [];
       const approvedPosts = postsData.filter(post => post.approved);
-      const popularPosts = postsData.filter(post => post.likes >= 10);
+      // 人気投稿は likes テーブルから件数 >= 10 を満たす投稿を算出
+      const popularPostsIds: string[] = [];
+      if (postIds.length > 0) {
+        const { data: likesForPopularity } = await supabase
+          .from('likes')
+          .select('post_id')
+          .in('post_id', postIds);
+        if (likesForPopularity) {
+          const countMap = new Map<string, number>();
+          likesForPopularity.forEach(row => {
+            countMap.set(row.post_id, (countMap.get(row.post_id) || 0) + 1);
+          });
+          for (const [pid, count] of countMap) {
+            if (count >= 10) popularPostsIds.push(pid);
+          }
+        }
+      }
+      const popularPosts = postsData.filter(p => popularPostsIds.includes(p.id));
 
       // 登録からの日数計算
       const joinedDate = new Date(profileData.created_at);

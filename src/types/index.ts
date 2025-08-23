@@ -18,7 +18,7 @@ export interface Post {
     avatar?: string;
   };
   createdAt: Date;
-  likes: number;
+  likes?: number; // deprecated field
   replies?: number;
   approved: boolean;
   likes_count?: number;
