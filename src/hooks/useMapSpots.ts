@@ -234,51 +234,9 @@ export function useMapSpots() {
     }
   };
 
-  // お気に入りに追加/削除
-  const toggleFavorite = async (spotId: string): Promise<boolean> => {
-    if (!user) {
-      setError('ユーザーが認証されていません');
-      return false;
-    }
-
-    try {
-      // 現在のお気に入り状態を確認
-      const { data: existingFavorite } = await supabase
-        .from('spot_favorites')
-        .select('id')
-        .eq('spot_id', spotId)
-        .eq('user_id', user.id)
-        .single();
-
-      if (existingFavorite) {
-        // お気に入りを削除
-        const { error: deleteError } = await supabase
-          .from('spot_favorites')
-          .delete()
-          .eq('id', existingFavorite.id);
-
-        if (deleteError) throw deleteError;
-      } else {
-        // お気に入りを追加
-        const { error: insertError } = await supabase
-          .from('spot_favorites')
-          .insert({
-            spot_id: spotId,
-            user_id: user.id,
-          });
-
-        if (insertError) throw insertError;
-      }
-
-      // スポット一覧を即時更新（平均値等が変わる）
-      await fetchSpots();
-      return true;
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'お気に入りの更新に失敗しました'
-      );
-      return false;
-    }
+  // お気に入り機能はマップでは非対応（仕様明確化）。空実装を残して互換性維持。
+  const toggleFavorite = async (): Promise<boolean> => {
+    return false;
   };
 
   // 評価を追加/更新

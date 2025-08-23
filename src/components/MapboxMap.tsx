@@ -616,9 +616,9 @@ function MapboxMapComponent({
 
       {/* Bottom info bar */}
       <div className="absolute left-2 right-2 bottom-2 z-10 flex flex-col gap-2">
-        <div className="bg-white rounded-lg shadow-md px-3 py-2 text-xs text-gray-800 flex items-center gap-2 w-fit border border-gray-100">
-          <MapPin className="w-4 h-4 text-coral-500 flex-shrink-0" />
-          <span className="leading-tight whitespace-nowrap">
+        <div className="bg-white rounded-lg shadow-md px-2 py-1 text-[10px] text-gray-800 flex items-center gap-1.5 w-fit border border-gray-100">
+          <MapPin className="w-3 h-3 text-coral-500 flex-shrink-0" />
+          <span className="leading-tight whitespace-nowrap text-[10px]">
             クリックでスポットを見る
           </span>
         </div>
