@@ -1,11 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import {
-  TrendingUp,
-  Map as MapIcon,
-  Search,
-  Filter,
-  MapPin,
-} from 'lucide-react';
+import { TrendingUp, Map as MapIcon, Search, MapPin } from 'lucide-react';
 import CategoryFilter from './CategoryFilter';
 import PopularSpots from './PopularSpots';
 import MapboxMap from './MapboxMap';
@@ -30,11 +24,8 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
   const [selectedSpot, setSelectedSpot] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
   const [activeTab, setActiveTab] = useState<'map' | 'spots'>('map');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [distanceFilter, setDistanceFilter] = useState<number>(10); // km
-  const [sortBy, setSortBy] = useState<'recent' | 'popular' | 'rating'>(
-    'recent'
-  );
+  const [distanceFilter] = useState<number>(10); // 固定: 上部フィルター撤去に伴い内部のみ
+  const [sortBy] = useState<'recent' | 'popular' | 'rating'>('recent');
   // POIクリックで表示するアクションモーダルの状態
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
   const [actionsLocation, setActionsLocation] = useState<{
@@ -208,7 +199,7 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
-      {/* Header with Search and Filters */}
+      {/* Header with Search */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-10 flex-shrink-0">
         <div className="px-3 sm:px-4 py-1.5 sm:py-2">
           {/* Search Bar */}
@@ -223,20 +214,8 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
             />
           </div>
 
-          {/* Filter Toggle and Category Filter */}
-          <div className="flex items-center justify-between mb-0.5 sm:mb-1">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                showFilters
-                  ? 'bg-coral-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <Filter className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span>フィルター</span>
-            </button>
-
+          {/* Stats (count) */}
+          <div className="flex items-center justify-end mb-0.5 sm:mb-1">
             <div className="flex items-center space-x-1 sm:space-x-2">
               <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
               <span className="text-xs sm:text-sm text-gray-600">
@@ -244,54 +223,6 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
               </span>
             </div>
           </div>
-
-          {/* Advanced Filters */}
-          {showFilters && (
-            <div className="mt-0.5 sm:mt-1 p-1.5 sm:p-2 bg-gray-50 rounded-lg space-y-1.5 sm:space-y-2 mb-0 sm:mb-0.5">
-              <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-1.5">
-                  距離: {distanceFilter}km以内
-                </label>
-                <input
-                  type="range"
-                  min="1"
-                  max="50"
-                  value={distanceFilter}
-                  onChange={e => setDistanceFilter(Number(e.target.value))}
-                  className="w-full h-1.5 sm:h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-1.5">
-                  並び順
-                </label>
-                <div className="flex space-x-1 sm:space-x-2">
-                  {[
-                    { value: 'recent', label: '最新' },
-                    { value: 'popular', label: '人気' },
-                    { value: 'rating', label: '評価' },
-                  ].map(option => (
-                    <button
-                      key={option.value}
-                      onClick={() =>
-                        setSortBy(
-                          option.value as 'recent' | 'popular' | 'rating'
-                        )
-                      }
-                      className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                        sortBy === option.value
-                          ? 'bg-coral-500 text-white'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-100'
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Category Filter */}
           <div className="mb-0 sm:mb-0.5">
