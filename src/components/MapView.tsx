@@ -13,6 +13,7 @@ import MapboxMap from './MapboxMap';
 import { useCategories } from '../hooks/useCategories';
 import { useMapSpots } from '../hooks/useMapSpots';
 import SpotBottomSheet from './map/SpotBottomSheet';
+import ReviewsBottomSheet from './map/ReviewsBottomSheet';
 import TabNavigation, { TabItem } from './common/TabNavigation';
 // import ReviewsBottomSheet from './map/ReviewsBottomSheet';
 
@@ -43,8 +44,8 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
     average_rating?: number;
     category_hints?: string[];
   } | null>(null);
-  // const [actionsSpotId, setActionsSpotId] = useState<string | null>(null);
-  // const [reviewsSheetOpen, setReviewsSheetOpen] = useState(false);
+  const [actionsSpotId, setActionsSpotId] = useState<string | null>(null);
+  const [reviewsSheetOpen, setReviewsSheetOpen] = useState(false);
   // 旧: 自己評価入力用の一時ratingは廃止（平均表示のみ）
   const [focusLocation, setFocusLocation] = useState<{
     lat: number;
@@ -354,8 +355,10 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
         open={bottomSheetOpen}
         location={actionsLocation}
         onClose={() => setBottomSheetOpen(false)}
-        onClickViewReviews={() => {
-          // 旧: 口コミ一覧シートは一旦停止
+        onClickViewReviews={({ spotId }) => {
+          if (!spotId) return; // スポットが無い場所は未対応
+          setActionsSpotId(spotId);
+          setReviewsSheetOpen(true);
         }}
         onClickPostReview={() => {
           setBottomSheetOpen(false);
@@ -365,7 +368,12 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
         }}
       />
 
-      {/* Reviews Bottom Sheet - disabled in rollback */}
+      <ReviewsBottomSheet
+        open={reviewsSheetOpen}
+        onClose={() => setReviewsSheetOpen(false)}
+        spotId={actionsSpotId}
+        location={actionsLocation}
+      />
     </div>
   );
 }

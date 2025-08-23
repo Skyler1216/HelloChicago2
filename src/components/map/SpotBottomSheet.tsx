@@ -15,7 +15,10 @@ interface SpotBottomSheetProps {
     category_hints?: string[];
   } | null;
   onClickPostReview: () => void;
-  onClickViewReviews: () => void;
+  onClickViewReviews: (args: {
+    spotId: string | null;
+    location: { lat: number; lng: number; address?: string } | null;
+  }) => void;
 }
 
 export default function SpotBottomSheet({
@@ -454,7 +457,9 @@ export default function SpotBottomSheet({
           {/* actions */}
           <div className="grid grid-cols-2 gap-3 mt-2">
             <button
-              onClick={onClickViewReviews}
+              onClick={() =>
+                onClickViewReviews({ spotId: targetSpotId, location })
+              }
               className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50"
             >
               <Eye className="w-5 h-5" />
