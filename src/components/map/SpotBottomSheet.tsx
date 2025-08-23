@@ -167,6 +167,15 @@ export default function SpotBottomSheet({
     return typeof v === 'number' ? v : null;
   }, [nearestSpotObj]);
 
+  // 星表示用の平均値は、近接スポットの値を優先し、なければロケーションの推定値
+  const displayAverage = useMemo(() => {
+    const avgFromSpot = nearestSpotObj?.average_rating;
+    if (typeof avgFromSpot === 'number') return avgFromSpot;
+    return typeof location?.average_rating === 'number'
+      ? location.average_rating
+      : 0;
+  }, [nearestSpotObj?.average_rating, location?.average_rating]);
+
   // Provider-based categories via Mapbox Geocoding for better accuracy
   const [providerCategories, setProviderCategories] = useState<string[] | null>(
     null
@@ -218,7 +227,7 @@ export default function SpotBottomSheet({
     };
     fetchCategories();
     return () => controller.abort();
-  }, [open, location?.lat, location?.lng]);
+  }, [open, location?.lat, location?.lng, location]);
 
   // Strict mapping: provider categories and hints only, precedence by rule
   const suggestedCategoryId = useMemo(() => {
@@ -418,8 +427,7 @@ export default function SpotBottomSheet({
                   <Star
                     key={star}
                     className={`w-5 h-5 ${
-                      star <=
-                      Math.round((location?.average_rating || 0) * 2) / 2
+                      star <= Math.round((displayAverage || 0) * 2) / 2
                         ? 'text-yellow-400 fill-current'
                         : 'text-gray-300'
                     }`}
@@ -427,7 +435,7 @@ export default function SpotBottomSheet({
                 ))}
               </div>
               <span className="text-sm text-gray-700">
-                {(location?.average_rating ?? 0).toFixed(1)} / 5.0
+                {(displayAverage ?? 0).toFixed(1)} / 5.0
               </span>
               <span className="text-xs text-gray-500">
                 ・{' '}

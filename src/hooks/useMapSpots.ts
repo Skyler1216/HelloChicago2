@@ -10,6 +10,17 @@ import {
   CreateSpotNoteData,
 } from '../types/map';
 
+// Supabase row shapes with possible stringified numeric fields
+type MapSpotRow = Omit<MapSpot, 'location_lat' | 'location_lng'> & {
+  location_lat: number | string;
+  location_lng: number | string;
+};
+
+type RatingRow = {
+  spot_id: string;
+  rating: number | string | null;
+};
+
 export function useMapSpots() {
   const [spots, setSpots] = useState<MapSpotWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,47 +33,85 @@ export function useMapSpots() {
       setLoading(true);
       setError(null);
 
+      // NOTE:
+      // Nested relations to favorites/ratings can fail with RLS/privilege errors
+      // on some environments (anon vs authenticated). To ensure spots render,
+      // first fetch only base spot fields; derive aggregates separately if needed.
       const { data, error: fetchError } = await supabase
         .from('map_spots')
-        .select(
-          `
-          *,
-          category:categories(*),
-          favorites:spot_favorites(count),
-          ratings:spot_ratings(rating),
-          user_rating:spot_ratings(rating),
-          user_favorite:spot_favorites(id)
-        `
-        )
+        .select('*')
         .eq('is_public', true)
         .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
 
-      // データを整形
-      const formattedSpots: MapSpotWithDetails[] = (data || []).map(spot => {
-        const ratingsArray = Array.isArray(spot.ratings) ? spot.ratings : [];
-        const avg =
-          ratingsArray.length > 0
-            ? ratingsArray.reduce(
-                (sum: number, r: { rating: number }) => sum + (r?.rating ?? 0),
-                0
-              ) / ratingsArray.length
-            : 0;
-        const userRatingArr = Array.isArray(spot.user_rating)
-          ? spot.user_rating
-          : [];
-        const userFavoriteArr = Array.isArray(spot.user_favorite)
-          ? spot.user_favorite
-          : [];
+      // rating集計を別クエリで取得（RLSでspot_ratingsは閲覧可）
+      const spotIds = ((data ?? []) as unknown as MapSpotRow[])
+        .map(s => s.id)
+        .filter(Boolean);
+      let spotIdToAvg: Record<string, { sum: number; count: number }> = {};
+      if (spotIds.length > 0) {
+        const { data: ratings, error: ratingsError } = await supabase
+          .from('spot_ratings')
+          .select('spot_id, rating')
+          .in('spot_id', spotIds);
+        if (ratingsError) {
+          // 集計に失敗しても表示は継続（平均は0）
+          spotIdToAvg = {};
+        } else {
+          spotIdToAvg = ((ratings ?? []) as unknown as RatingRow[]).reduce(
+            (
+              acc: Record<string, { sum: number; count: number }>,
+              r: RatingRow
+            ) => {
+              const sid = r.spot_id;
+              const ratingVal = Number(r.rating ?? 0) || 0;
+              if (!acc[sid]) acc[sid] = { sum: 0, count: 0 };
+              acc[sid].sum += ratingVal;
+              acc[sid].count += 1;
+              return acc;
+            },
+            {}
+          );
+        }
+      }
 
-        return {
-          ...spot,
-          favorites_count: spot.favorites?.[0]?.count || 0,
+      // データを整形
+      const formattedSpots: MapSpotWithDetails[] = (
+        (data ?? []) as unknown as MapSpotRow[]
+      ).map((spot: MapSpotRow) => {
+        // Normalize numeric fields coming from SQL DECIMAL as strings
+        const lat =
+          typeof spot.location_lat === 'string'
+            ? parseFloat(spot.location_lat)
+            : spot.location_lat;
+        const lng =
+          typeof spot.location_lng === 'string'
+            ? parseFloat(spot.location_lng)
+            : spot.location_lng;
+
+        const agg = spotIdToAvg[spot.id];
+        const avg = agg && agg.count > 0 ? agg.sum / agg.count : 0;
+
+        const shaped: MapSpotWithDetails = {
+          id: spot.id,
+          name: spot.name,
+          description: spot.description,
+          category_id: spot.category_id,
+          location_lat: lat,
+          location_lng: lng,
+          location_address: spot.location_address,
+          created_by: spot.created_by,
+          is_public: spot.is_public,
+          created_at: spot.created_at,
+          updated_at: spot.updated_at,
+          favorites_count: 0,
           average_rating: avg,
-          user_rating: userRatingArr?.[0]?.rating,
-          user_favorite: !!userFavoriteArr?.length,
-        } as MapSpotWithDetails;
+          user_rating: undefined,
+          user_favorite: false,
+        };
+
+        return shaped;
       });
 
       // 更新の抑制はしすぎない。ID順が同じでも内容が変わる（average_rating 等）ので差分比較
