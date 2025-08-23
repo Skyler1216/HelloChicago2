@@ -102,35 +102,12 @@ export default function PostFormView({
     );
   }
 
-  // カテゴリーの表示順序を制御
+  // カテゴリーの表示順序は sort_order → name_ja
   const sortedCategories = [...categories].sort((a, b) => {
-    // カテゴリの並び順を定義（その他を確実に最後に）
-    const order = [
-      'restaurant',
-      'park',
-      'shopping',
-      'entertainment',
-      'sports',
-      'school',
-      'children', // 子ども
-      'hospital', // 病院
-      'beauty', // 美容院
-      'other', // その他を最後に
-    ];
-
-    const aIndex = order.indexOf(a.id);
-    const bIndex = order.indexOf(b.id);
-
-    // その他は必ず最後に
-    if (a.id === 'other') return 1;
-    if (b.id === 'other') return -1;
-
-    // 定義された順序にないカテゴリはその他の前に配置
-    if (aIndex === -1 && bIndex === -1) return 0;
-    if (aIndex === -1) return -1;
-    if (bIndex === -1) return 1;
-
-    return aIndex - bIndex;
+    const ao = (a.sort_order ?? 9999) as number;
+    const bo = (b.sort_order ?? 9999) as number;
+    if (ao !== bo) return ao - bo;
+    return a.name_ja.localeCompare(b.name_ja, 'ja');
   });
 
   return (
