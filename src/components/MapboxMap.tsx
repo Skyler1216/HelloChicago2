@@ -157,20 +157,21 @@ function MapboxMapComponent({
   // Get category information for posts
   const getCategoryInfo = useCallback(
     (categoryId: string | null | undefined): CategoryInfo => {
-      const defaultColors = [
-        '#FF6B6B',
-        '#4ECDC4',
-        '#45B7D1',
-        '#96CEB4',
-        '#FFEAA7',
-      ];
+      // Try to use actual category color from categories hook when possible
+      try {
+        const id = typeof categoryId === 'string' ? categoryId : '';
+        if (id && Array.isArray((window as any).__app_categories__)) {
+          const found = (window as any).__app_categories__.find((c: any) => c.id === id);
+          if (found?.color) {
+            return { color: found.color, name_ja: found.name_ja || id };
+          }
+        }
+      } catch {}
+      const defaultColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'];
       const idString = typeof categoryId === 'string' ? categoryId : '';
       const code = idString.length > 0 ? idString.charCodeAt(0) : 0;
       const colorIndex = code % defaultColors.length;
-      return {
-        color: defaultColors[colorIndex],
-        name_ja: idString || 'その他',
-      };
+      return { color: defaultColors[colorIndex], name_ja: idString || 'その他' };
     },
     []
   );

@@ -57,9 +57,11 @@ export default function PopularSpots({
               new Date(a.created_at).getTime()
           )[0];
 
-          // カテゴリの色を決定（最初のカテゴリを使用）
-          const categoryColor =
-            index < 3 ? ['#FF6B6B', '#4ECDC4', '#45B7D1'][index] : '#6B7280';
+          // カテゴリの色を地図ピンと一致させる: カテゴリの先頭文字コードで決定（useMapMarkers と同等ロジック）
+          const idString = (spot.posts[0]?.category_id || '').toString();
+          const defaultColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'];
+          const code = idString.length > 0 ? idString.charCodeAt(0) : 0;
+          const categoryColor = defaultColors[code % defaultColors.length];
 
           return (
             <div
@@ -113,13 +115,23 @@ export default function PopularSpots({
               </div>
 
               {/* カテゴリタグ */}
-              <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2">
                 {Array.from(spot.categories)
                   .slice(0, 3)
                   .map(categoryId => (
                     <span
                       key={categoryId}
-                      className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full"
+                          className="px-2 py-1 text-gray-700 text-xs rounded-full"
+                          style={{
+                            backgroundColor:
+                              ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'][
+                                (categoryId.charCodeAt(0) || 0) % 5
+                              ] + '26', // 15% opacity approx
+                            border: '1px solid ' +
+                              ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'][
+                                (categoryId.charCodeAt(0) || 0) % 5
+                              ] + '55',
+                          }}
                     >
                       {categoryId}
                     </span>
