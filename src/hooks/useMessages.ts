@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { Database } from '../types/database';
 
@@ -88,6 +88,17 @@ export function useMessages(userId: string): UseMessagesReturn {
     }
   }, []);
 
+  // キャッシュをクリア
+  const clearCache = useCallback((id: string) => {
+    try {
+      const cacheKey = CACHE_KEY_PREFIX + id;
+      localStorage.removeItem(cacheKey);
+      console.log('📱 useMessages: Cache cleared for user:', id);
+    } catch (err) {
+      console.warn('📱 useMessages: Cache clear error', err);
+    }
+  }, []);
+
   // メッセージを読み込み（キャッシュ優先）
   const loadMessages = useCallback(
     async (forceRefresh = false) => {
@@ -171,21 +182,27 @@ export function useMessages(userId: string): UseMessagesReturn {
 
         if (functionError) throw functionError;
 
-        // ローカル状態を更新
+        // ローカル状態を更新（特定のメッセージのみ）
         setMessages(prev =>
-          prev.map(message => ({
-            ...message,
-            comment_reads: message.comment_reads || [
-              { id, read_at: new Date().toISOString() },
-            ],
-          }))
+          prev.map(message =>
+            message.id === id
+              ? {
+                  ...message,
+                  comment_reads: [{ id, read_at: new Date().toISOString() }],
+                }
+              : message
+          )
         );
+
+        // キャッシュをクリア（強制リフレッシュは削除）
+        clearCache(userId);
+        console.log('📱 Messages: Item marked as read successfully:', id);
       } catch (err) {
         console.error('📱 Messages: Mark as read error:', err);
         throw err;
       }
     },
-    [userId]
+    [userId, clearCache]
   );
 
   // 全て既読にする
@@ -208,21 +225,32 @@ export function useMessages(userId: string): UseMessagesReturn {
 
         await Promise.all(promises);
 
-        // ローカル状態を更新
+        // ローカル状態を更新（未読だったメッセージのみ）
         setMessages(prev =>
-          prev.map(message => ({
-            ...message,
-            comment_reads: message.comment_reads || [
-              { id: message.id, read_at: new Date().toISOString() },
-            ],
-          }))
+          prev.map(message => {
+            const wasUnread = !(
+              message.comment_reads && message.comment_reads.length > 0
+            );
+            return wasUnread
+              ? {
+                  ...message,
+                  comment_reads: [
+                    { id: message.id, read_at: new Date().toISOString() },
+                  ],
+                }
+              : message;
+          })
         );
+
+        // キャッシュをクリア（強制リフレッシュは削除）
+        clearCache(userId);
+        console.log('📱 Messages: All items marked as read successfully');
       }
     } catch (err) {
       console.error('📱 Messages: Mark all as read error:', err);
       throw err;
     }
-  }, [userId, messages]);
+  }, [userId, messages, clearCache]);
 
   // リフレッシュ
   const refreshMessages = useCallback(async () => {
@@ -234,11 +262,57 @@ export function useMessages(userId: string): UseMessagesReturn {
     }
   }, [loadMessages]);
 
-  // 未読数を計算
-  const unreadCount = messages.filter(message => {
-    const isRead = message.comment_reads && message.comment_reads.length > 0;
-    return !isRead;
-  }).length;
+  // 未読数を計算（永続化された既読状態を考慮）
+  const unreadCount = useMemo(() => {
+    // 永続化された既読状態を取得
+    let persistentReadCount = 0;
+    try {
+      const cached = localStorage.getItem(`inbox_read_state_${userId}`);
+      if (cached) {
+        const readItems = new Set<string>(JSON.parse(cached));
+        persistentReadCount = messages.filter(m => readItems.has(m.id)).length;
+      }
+    } catch (err) {
+      console.warn('📱 Messages: Failed to get persistent read state:', err);
+    }
+
+    // データベースの既読状態と永続化された既読状態を統合
+    const databaseUnread = messages.filter(message => {
+      const isRead = message.comment_reads && message.comment_reads.length > 0;
+      return !isRead;
+    }).length;
+
+    const actualUnreadCount = databaseUnread - persistentReadCount;
+
+    console.log('📱 Messages: Unread count calculation', {
+      totalMessages: messages.length,
+      databaseUnread,
+      persistentRead: persistentReadCount,
+      actualUnread: Math.max(0, actualUnreadCount),
+    });
+
+    return Math.max(0, actualUnreadCount);
+  }, [messages, userId]);
+
+  // 永続化された既読状態の変更を監視
+  useEffect(() => {
+    const handleStorageChange = () => {
+      // 強制的に再計算を促す
+      console.log(
+        '📱 Messages: Storage change detected, forcing recalculation'
+      );
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    // カスタムイベントも監視（同じタブ内での変更）
+    window.addEventListener('inboxReadStateChanged', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('inboxReadStateChanged', handleStorageChange);
+    };
+  }, []);
 
   return {
     messages,

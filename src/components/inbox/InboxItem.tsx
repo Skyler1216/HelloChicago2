@@ -1,5 +1,5 @@
 import { Bell, MessageSquare, Clock, Check } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import NotificationDetailModal from './NotificationDetailModal';
 
 type InboxItemData = {
@@ -26,6 +26,15 @@ export default function InboxItem({
   onMarkAsRead,
 }: InboxItemProps) {
   const [showDetailModal, setShowDetailModal] = useState(false);
+
+  // 既読状態の変化を監視
+  useEffect(() => {
+    console.log('📱 InboxItem: Read state changed for item:', {
+      id: item.id,
+      type: item.type,
+      isRead: item.isRead,
+    });
+  }, [item.isRead, item.id, item.type]);
 
   // 管理者通知かどうかを判定
   const isAdminNotification = () => {
@@ -108,6 +117,14 @@ export default function InboxItem({
                 <button
                   onClick={e => {
                     e.stopPropagation();
+                    console.log(
+                      '📱 InboxItem: Mark as read clicked for item:',
+                      {
+                        id: item.id,
+                        type: item.type,
+                        currentReadState: item.isRead,
+                      }
+                    );
                     onMarkAsRead();
                   }}
                   className="p-1 text-coral-600 hover:text-coral-700 hover:bg-coral-100 rounded-full transition-colors flex-shrink-0"

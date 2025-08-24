@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { Database } from '../types/database';
 
@@ -77,6 +77,17 @@ export function useNotifications(userId: string): UseNotificationsReturn {
       console.log('📱 useNotifications: Data cached');
     } catch (err) {
       console.warn('📱 useNotifications: Cache write error', err);
+    }
+  }, []);
+
+  // キャッシュをクリア
+  const clearCache = useCallback((id: string) => {
+    try {
+      const cacheKey = CACHE_KEY_PREFIX + id;
+      localStorage.removeItem(cacheKey);
+      console.log('📱 useNotifications: Cache cleared for user:', id);
+    } catch (err) {
+      console.warn('📱 useNotifications: Cache clear error', err);
     }
   }, []);
 
@@ -162,12 +173,16 @@ export function useNotifications(userId: string): UseNotificationsReturn {
               : notification
           )
         );
+
+        // キャッシュをクリア（強制リフレッシュは削除）
+        clearCache(userId);
+        console.log('📱 Notifications: Item marked as read successfully:', id);
       } catch (err) {
         console.error('📱 Notifications: Mark as read error:', err);
         throw err;
       }
     },
-    [userId]
+    [userId, clearCache]
   );
 
   // 全て既読にする
@@ -192,11 +207,15 @@ export function useNotifications(userId: string): UseNotificationsReturn {
           read_at: new Date().toISOString(),
         }))
       );
+
+      // キャッシュをクリア（強制リフレッシュは削除）
+      clearCache(userId);
+      console.log('📱 Notifications: All items marked as read successfully');
     } catch (err) {
       console.error('📱 Notifications: Mark all as read error:', err);
       throw err;
     }
-  }, [userId]);
+  }, [userId, clearCache]);
 
   // リフレッシュ
   const refreshNotifications = useCallback(async () => {
@@ -208,8 +227,58 @@ export function useNotifications(userId: string): UseNotificationsReturn {
     }
   }, [loadNotifications]);
 
-  // 未読数を計算
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  // 未読数を計算（永続化された既読状態を考慮）
+  const unreadCount = useMemo(() => {
+    // 永続化された既読状態を取得
+    let persistentReadCount = 0;
+    try {
+      const cached = localStorage.getItem(`inbox_read_state_${userId}`);
+      if (cached) {
+        const readItems = new Set<string>(JSON.parse(cached));
+        persistentReadCount = notifications.filter(n =>
+          readItems.has(n.id)
+        ).length;
+      }
+    } catch (err) {
+      console.warn(
+        '📱 Notifications: Failed to get persistent read state:',
+        err
+      );
+    }
+
+    // データベースの既読状態と永続化された既読状態を統合
+    const actualUnreadCount =
+      notifications.filter(n => !n.is_read).length - persistentReadCount;
+
+    console.log('📱 Notifications: Unread count calculation', {
+      totalNotifications: notifications.length,
+      databaseUnread: notifications.filter(n => !n.is_read).length,
+      persistentRead: persistentReadCount,
+      actualUnread: Math.max(0, actualUnreadCount),
+    });
+
+    return Math.max(0, actualUnreadCount);
+  }, [notifications, userId]);
+
+  // 永続化された既読状態の変更を監視
+  useEffect(() => {
+    const handleStorageChange = () => {
+      // 強制的に再計算を促す
+      console.log(
+        '📱 Notifications: Storage change detected, forcing recalculation'
+      );
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    // カスタムイベントも監視（同じタブ内での変更）
+    window.addEventListener('inboxReadStateChanged', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('inboxReadStateChanged', handleStorageChange);
+    };
+  }, []);
 
   return {
     notifications,

@@ -68,7 +68,13 @@ export default function InboxView({
   };
 
   const handleMarkAsRead = async (id: string) => {
-    await markAsRead(id);
+    console.log('📱 InboxView: Marking item as read:', id);
+    try {
+      await markAsRead(id);
+      console.log('📱 InboxView: Item marked as read successfully:', id);
+    } catch (error) {
+      console.error('📱 InboxView: Failed to mark item as read:', error);
+    }
   };
 
   const tabs: TabItem[] = [
