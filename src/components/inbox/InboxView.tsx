@@ -29,6 +29,7 @@ export default function InboxView({
     refreshInbox,
     filterByType,
     currentFilter,
+    forceReset,
   } = useInbox(user?.id || '');
 
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -97,12 +98,20 @@ export default function InboxView({
             エラーが発生しました
           </h3>
           <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={refreshInbox}
-            className="px-4 py-2 bg-coral-500 text-white rounded-lg hover:bg-coral-600 transition-colors"
-          >
-            再試行
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2 justify-center">
+            <button
+              onClick={refreshInbox}
+              className="px-4 py-2 bg-coral-500 text-white rounded-lg hover:bg-coral-600 transition-colors"
+            >
+              再試行
+            </button>
+            <button
+              onClick={forceReset}
+              className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              リセット
+            </button>
+          </div>
         </div>
       </div>
     );

@@ -45,6 +45,7 @@ export function useProfileManager(userId: string) {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [forceLoading, setForceLoading] = useState(false);
 
   // プロフィールデータの読み込み
   const loadProfileData = useCallback(async () => {
@@ -57,6 +58,7 @@ export function useProfileManager(userId: string) {
 
     setLoading(true);
     setError(null);
+    setForceLoading(false);
 
     try {
       // プロフィール基本情報と詳細情報を並行して取得
@@ -89,6 +91,40 @@ export function useProfileManager(userId: string) {
       setLoading(false);
     }
   }, [userId, addToast]);
+
+  // タイムアウト機能（無限ローディング防止）
+  useEffect(() => {
+    if (!userId) return;
+
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.warn(
+          '📱 ProfileManager: Loading timeout reached, forcing completion'
+        );
+        setForceLoading(true);
+        setLoading(false);
+        setError(
+          'プロフィールの読み込みがタイムアウトしました。再試行してください。'
+        );
+      }
+    }, 10000); // 10秒でタイムアウト
+
+    return () => clearTimeout(timeoutId);
+  }, [userId, loading]);
+
+  // 強制リセット機能
+  const forceReset = useCallback(() => {
+    console.log('📱 ProfileManager: Force reset triggered');
+    setForceLoading(false);
+    setError(null);
+    setLoading(false);
+  }, []);
+
+  // ローディング状態の管理（タイムアウト機能付き）
+  const effectiveLoading = useMemo(() => {
+    if (forceLoading) return false;
+    return loading;
+  }, [forceLoading, loading]);
 
   // 保存履歴の追加
   const addToSaveHistory = useCallback(
@@ -325,7 +361,7 @@ export function useProfileManager(userId: string) {
   return {
     // 状態
     ...state,
-    loading,
+    loading: effectiveLoading,
     error,
 
     // アクション
@@ -345,5 +381,6 @@ export function useProfileManager(userId: string) {
     // ユーティリティ
     enableAutoSave,
     reload: loadProfileData,
+    forceReset, // 強制リセット機能
   };
 }

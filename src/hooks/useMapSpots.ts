@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import {
@@ -25,6 +25,7 @@ export function useMapSpots() {
   const [spots, setSpots] = useState<MapSpotWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [forceLoading, setForceLoading] = useState(false);
   const { user } = useAuth();
 
   // スポット一覧を取得
@@ -32,6 +33,7 @@ export function useMapSpots() {
     try {
       setLoading(true);
       setError(null);
+      setForceLoading(false);
 
       // NOTE:
       // Nested relations to favorites/ratings can fail with RLS/privilege errors
@@ -79,71 +81,73 @@ export function useMapSpots() {
       // データを整形
       const formattedSpots: MapSpotWithDetails[] = (
         (data ?? []) as unknown as MapSpotRow[]
-      ).map((spot: MapSpotRow) => {
-        // Normalize numeric fields coming from SQL DECIMAL as strings
-        const lat =
-          typeof spot.location_lat === 'string'
-            ? parseFloat(spot.location_lat)
-            : spot.location_lat;
-        const lng =
-          typeof spot.location_lng === 'string'
-            ? parseFloat(spot.location_lng)
-            : spot.location_lng;
+      ).map(spot => {
+        const avgData = spotIdToAvg[spot.id] || { sum: 0, count: 0 };
+        const averageRating =
+          avgData.count > 0 ? avgData.sum / avgData.count : 0;
 
-        const agg = spotIdToAvg[spot.id];
-        const avg = agg && agg.count > 0 ? agg.sum / agg.count : 0;
-
-        const shaped: MapSpotWithDetails = {
-          id: spot.id,
-          name: spot.name,
-          description: spot.description,
-          category_id: spot.category_id,
-          location_lat: lat,
-          location_lng: lng,
-          location_address: spot.location_address,
-          created_by: spot.created_by,
-          is_public: spot.is_public,
-          created_at: spot.created_at,
-          updated_at: spot.updated_at,
-          favorites_count: 0,
-          average_rating: avg,
-          user_rating: undefined,
-          user_favorite: false,
+        return {
+          ...spot,
+          location_lat:
+            typeof spot.location_lat === 'string'
+              ? parseFloat(spot.location_lat)
+              : spot.location_lat,
+          location_lng:
+            typeof spot.location_lng === 'string'
+              ? parseFloat(spot.location_lng)
+              : spot.location_lng,
+          average_rating: Math.round(averageRating * 10) / 10,
+          rating_count: avgData.count,
+          favorites_count: 0, // デフォルト値として0を設定
+          user_rating: undefined, // デフォルト値としてundefinedを設定
+          user_favorite: false, // デフォルト値としてfalseを設定
         };
-
-        return shaped;
       });
 
-      // 更新の抑制はしすぎない。ID順が同じでも内容が変わる（average_rating 等）ので差分比較
-      setSpots(prev => {
-        if (prev.length !== formattedSpots.length) return formattedSpots;
-        for (let i = 0; i < prev.length; i++) {
-          const a = prev[i];
-          const b = formattedSpots[i];
-          if (
-            a.id !== b.id ||
-            a.average_rating !== b.average_rating ||
-            a.favorites_count !== b.favorites_count ||
-            a.user_rating !== b.user_rating ||
-            a.user_favorite !== b.user_favorite ||
-            a.location_lat !== b.location_lat ||
-            a.location_lng !== b.location_lng ||
-            a.name !== b.name ||
-            a.description !== b.description
-          ) {
-            return formattedSpots;
-          }
-        }
-        return prev; // 実質変化なし
-      });
+      setSpots(formattedSpots);
     } catch (err) {
+      console.error('Failed to fetch map spots:', err);
       setError(
-        err instanceof Error ? err.message : 'スポットの取得に失敗しました'
+        err instanceof Error
+          ? err.message
+          : 'マップスポットの取得に失敗しました'
       );
     } finally {
       setLoading(false);
     }
   };
+
+  // タイムアウト機能（無限ローディング防止）
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.warn(
+          '📱 MapSpots: Loading timeout reached, forcing completion'
+        );
+        setForceLoading(true);
+        setLoading(false);
+        setError(
+          'マップスポットの読み込みがタイムアウトしました。再試行してください。'
+        );
+      }
+    }, 12000); // 12秒でタイムアウト
+
+    return () => clearTimeout(timeoutId);
+  }, [loading]);
+
+  // 強制リセット機能
+  const forceReset = useCallback(() => {
+    console.log('📱 MapSpots: Force reset triggered');
+    setForceLoading(false);
+    setError(null);
+    setLoading(false);
+  }, []);
+
+  // ローディング状態の管理（タイムアウト機能付き）
+  const effectiveLoading = useMemo(() => {
+    if (forceLoading) return false;
+    return loading;
+  }, [forceLoading, loading]);
 
   // 新しいスポットを作成
   const createSpot = async (
@@ -299,7 +303,7 @@ export function useMapSpots() {
 
   return {
     spots,
-    loading,
+    loading: effectiveLoading,
     error,
     createSpot,
     updateSpot,
@@ -308,5 +312,6 @@ export function useMapSpots() {
     rateSpot,
     addNote,
     refetch: fetchSpots,
+    forceReset,
   };
 }

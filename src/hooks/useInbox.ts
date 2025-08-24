@@ -35,6 +35,7 @@ interface UseInboxReturn {
   refreshInbox: () => Promise<void>;
   filterByType: (type: 'notification' | 'message') => void;
   currentFilter: 'notification' | 'message';
+  forceReset: () => void; // 強制リセット機能
 }
 
 export function useInbox(userId: string): UseInboxReturn {
@@ -42,6 +43,7 @@ export function useInbox(userId: string): UseInboxReturn {
     'notification' | 'message'
   >('notification');
   const [error, setError] = useState<string | null>(null);
+  const [forceLoading, setForceLoading] = useState(false);
 
   // 通知とメッセージを個別に管理
   const {
@@ -66,9 +68,31 @@ export function useInbox(userId: string): UseInboxReturn {
     isRefreshing: messagesRefreshing,
   } = useMessages(userId);
 
-  // 統合されたローディング状態
-  const loading = notificationsLoading || messagesLoading;
+  // 統合されたローディング状態（タイムアウト機能付き）
+  const loading = useMemo(() => {
+    // 強制ローディングが有効な場合はfalse
+    if (forceLoading) return false;
+
+    // 通知またはメッセージのローディング中
+    return notificationsLoading || messagesLoading;
+  }, [notificationsLoading, messagesLoading, forceLoading]);
+
   const isRefreshing = notificationsRefreshing || messagesRefreshing;
+
+  // タイムアウト機能（無限ローディング防止）
+  useEffect(() => {
+    if (!userId) return;
+
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.warn('📱 Inbox: Loading timeout reached, forcing completion');
+        setForceLoading(true);
+        setError('読み込みがタイムアウトしました。再試行してください。');
+      }
+    }, 15000); // 15秒でタイムアウト
+
+    return () => clearTimeout(timeoutId);
+  }, [userId, loading]);
 
   // エラーの統合
   useEffect(() => {
@@ -78,6 +102,13 @@ export function useInbox(userId: string): UseInboxReturn {
       setError(null);
     }
   }, [notificationsError, messagesError]);
+
+  // 強制リセット機能
+  const forceReset = useCallback(() => {
+    console.log('📱 Inbox: Force reset triggered');
+    setForceLoading(false);
+    setError(null);
+  }, []);
 
   // 通知をInboxItem形式に変換
   const notificationItems = useMemo((): InboxItem[] => {
@@ -223,5 +254,6 @@ export function useInbox(userId: string): UseInboxReturn {
     refreshInbox,
     filterByType,
     currentFilter,
+    forceReset,
   };
 }
