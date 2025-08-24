@@ -83,7 +83,8 @@ export default function App() {
   const { ToastContainer } = useToast();
 
   // アプリ状態管理
-  const { shouldShowLoading, backgroundRefreshing } = useAppState();
+  const { shouldShowLoading, backgroundRefreshing, forceInitialization } =
+    useAppState();
 
   // 状態異常検知・回復
   const { currentAnomaly } = useAppStateManager();
@@ -95,6 +96,18 @@ export default function App() {
   const { isOnline } = useAppLifecycle({
     onAppVisible: () => {
       console.log('📱 App became visible');
+
+      // アプリが表示された際の状態復旧処理
+      if (shouldShowLoading && !authLoading) {
+        console.log('📱 App visible but stuck in loading, attempting recovery');
+        // 少し待ってから強制初期化を試行
+        setTimeout(() => {
+          if (shouldShowLoading) {
+            console.log('📱 Still loading, forcing initialization');
+            forceInitialization();
+          }
+        }, 2000);
+      }
     },
     onAppHidden: () => {
       console.log('📱 App hidden');
@@ -142,7 +155,12 @@ export default function App() {
       isAuthenticated,
       isApproved,
     });
-    return <LoadingScreen />;
+    return (
+      <LoadingScreen
+        onForceRefresh={forceInitialization}
+        maxLoadingTime={15000} // 15秒で復旧オプションを表示
+      />
+    );
   }
 
   // Show login screen if not authenticated

@@ -102,13 +102,68 @@ export function usePageVisibility(options: UsePageVisibilityOptions = {}) {
 
   // Page Visibility API のセットアップ
   useEffect(() => {
-    // visibilitychange イベント
+    const handleVisibilityChange = () => {
+      const isVisible = !document.hidden;
+      const now = Date.now();
+
+      setState(prevState => {
+        const newState = { ...prevState };
+
+        if (isVisible && !prevState.isVisible) {
+          // バックグラウンドからフォアグラウンドに復帰
+          const backgroundTime = now - prevState.lastHiddenTime;
+          newState.isVisible = true;
+          newState.lastVisibleTime = now;
+          newState.visibilityCount += 1;
+          newState.backgroundTime = backgroundTime;
+
+          console.log(
+            `📱 App became visible (background time: ${Math.round(backgroundTime / 1000)}s)`
+          );
+
+          // Service Workerにアプリフォーカスを通知
+          if (
+            'serviceWorker' in navigator &&
+            navigator.serviceWorker.controller
+          ) {
+            navigator.serviceWorker.controller.postMessage({
+              type: 'APP_FOCUS',
+              backgroundTime,
+            });
+          }
+
+          // コールバック実行
+          setTimeout(() => {
+            callbacksRef.current.onVisible?.(backgroundTime);
+          }, 0);
+        } else if (!isVisible && prevState.isVisible) {
+          // フォアグラウンドからバックグラウンドに移行
+          newState.isVisible = false;
+          newState.lastHiddenTime = now;
+          newState.backgroundTime = 0;
+
+          console.log('📱 App became hidden');
+
+          // コールバック実行
+          setTimeout(() => {
+            callbacksRef.current.onHidden?.();
+          }, 0);
+        }
+
+        return newState;
+      });
+    };
+
+    // 初期状態の設定
+    if (document.readyState === 'complete') {
+      handleVisibilityChange();
+    }
+
+    // イベントリスナーの設定
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // フォーカス/ブラーイベント（補完用）
+    // フォーカス・ブラーイベント（フォールバック）
     const handleFocus = () => {
-      if (document.hidden) return; // visibilitychange で処理される
-
       const now = Date.now();
       const backgroundTime = now - stateRef.current.lastHiddenTime;
 
@@ -128,9 +183,6 @@ export function usePageVisibility(options: UsePageVisibilityOptions = {}) {
       }
     };
 
-    window.addEventListener('focus', handleFocus, { passive: true });
-    window.addEventListener('blur', handleBlur, { passive: true });
-
     // ページの読み込み完了時も初期状態をチェック
     const handleLoad = () => {
       if (!document.hidden && !stateRef.current.isVisible) {
@@ -138,19 +190,48 @@ export function usePageVisibility(options: UsePageVisibilityOptions = {}) {
       }
     };
 
+    // アプリの状態復旧を促進するための追加イベント
+    const handleResume = () => {
+      if (document.hidden) return;
+
+      const now = Date.now();
+      const backgroundTime = now - stateRef.current.lastHiddenTime;
+
+      if (backgroundTime > 5000) {
+        // 5秒以上のバックグラウンド
+        console.log('📱 App resume detected, triggering visibility check');
+        handleVisibilityChange();
+      }
+    };
+
+    // イベントリスナーの設定
+    window.addEventListener('focus', handleFocus, { passive: true });
+    window.addEventListener('blur', handleBlur, { passive: true });
+    window.addEventListener('resume', handleResume, { passive: true });
+
     if (document.readyState === 'complete') {
       handleLoad();
     } else {
       window.addEventListener('load', handleLoad);
     }
 
+    // 定期的な状態チェック（フォールバック）
+    const intervalId = setInterval(() => {
+      if (document.hidden !== stateRef.current.isVisible) {
+        console.log('📱 State mismatch detected, correcting...');
+        handleVisibilityChange();
+      }
+    }, 10000); // 10秒ごと
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('resume', handleResume);
       window.removeEventListener('load', handleLoad);
+      clearInterval(intervalId);
     };
-  }, [handleVisibilityChange]);
+  }, []);
 
   // データの新鮮度チェック
   const isDataStale = useCallback(
