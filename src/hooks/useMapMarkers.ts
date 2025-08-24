@@ -46,7 +46,8 @@ export function useMapMarkers() {
       markerElement.className = 'custom-marker';
 
       const markerColor = categoryInfo.color;
-      const rating = typeof spot.average_rating === 'number' ? spot.average_rating : 0;
+      const rating =
+        typeof spot.average_rating === 'number' ? spot.average_rating : 0;
       const hasReviews = rating > 0;
 
       // Pin-shaped marker with inner circle and optional rating badge

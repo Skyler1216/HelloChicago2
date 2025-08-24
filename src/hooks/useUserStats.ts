@@ -111,7 +111,9 @@ export function useUserStats(userId: string | undefined) {
           }
         }
       }
-      const popularPosts = postsData.filter(p => popularPostsIds.includes(p.id));
+      const popularPosts = postsData.filter(p =>
+        popularPostsIds.includes(p.id)
+      );
 
       // 登録からの日数計算
       const joinedDate = new Date(profileData.created_at);

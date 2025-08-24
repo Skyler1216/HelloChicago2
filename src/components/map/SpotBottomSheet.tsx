@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Star, Eye, MessageSquarePlus, X } from 'lucide-react';
 import { useMapSpots } from '../../hooks/useMapSpots';
-import { useSpotReviews } from '../../hooks/useSpotReviews';
 import { useCategories } from '../../hooks/useCategories';
 
 interface SpotBottomSheetProps {
@@ -160,7 +159,6 @@ export default function SpotBottomSheet({
   }, [spots, location]);
 
   const targetSpotId = nearestSpot ? nearestSpot.id : null;
-  const { reviews, loading: reviewsLoading } = useSpotReviews(targetSpotId);
   const nearestSpotObj = useMemo(
     () => spots.find(s => s.id === targetSpotId) || null,
     [spots, targetSpotId]
@@ -245,7 +243,8 @@ export default function SpotBottomSheet({
           '';
         let addressLine = placeName || '';
         if (poiName && addressLine) {
-          const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const escape = (s: string) =>
+            s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
           const regex = new RegExp('^' + escape(poiName) + '\\s*,\\s*', 'i');
           addressLine = addressLine.replace(regex, '').trim();
         }
@@ -458,14 +457,18 @@ export default function SpotBottomSheet({
             <div className="mt-1 flex items-center gap-2">
               <input
                 readOnly
-                value={resolvedAddress || `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`}
+                value={
+                  resolvedAddress ||
+                  `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`
+                }
                 onFocus={e => e.currentTarget.select()}
                 className="flex-1 text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded-md px-2 py-1"
               />
               <button
                 type="button"
                 onClick={() => {
-                  const text = resolvedAddress || `${location.lat}, ${location.lng}`;
+                  const text =
+                    resolvedAddress || `${location.lat}, ${location.lng}`;
                   navigator.clipboard.writeText(text);
                 }}
                 className="text-xs px-2 py-1 rounded-md bg-coral-50 text-coral-700 hover:bg-coral-100 border border-coral-100"
@@ -517,17 +520,17 @@ export default function SpotBottomSheet({
               onClick={() =>
                 onClickViewReviews({ spotId: targetSpotId, location })
               }
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50"
+              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 whitespace-nowrap"
             >
-              <Eye className="w-5 h-5" />
-              <span>口コミを見る</span>
+              <Eye className="w-5 h-5 flex-shrink-0 text-gray-700" />
+              <span className="whitespace-nowrap">口コミを見る</span>
             </button>
             <button
               onClick={onClickPostReview}
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-coral-500 text-white hover:bg-coral-600"
+              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-coral-500 text-white hover:bg-coral-600 whitespace-nowrap"
             >
-              <MessageSquarePlus className="w-5 h-5" />
-              <span>
+              <MessageSquarePlus className="w-5 h-5 flex-shrink-0 text-white" />
+              <span className="whitespace-nowrap">
                 {myExistingRating ? '口コミを編集する' : '口コミを投稿する'}
               </span>
             </button>
