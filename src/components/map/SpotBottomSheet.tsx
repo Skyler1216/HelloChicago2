@@ -473,7 +473,7 @@ export default function SpotBottomSheet({
                 }}
                 className="text-xs px-2 py-1 rounded-md bg-coral-50 text-coral-700 hover:bg-coral-100 border border-coral-100"
               >
-                コピー
+                住所をコピー
               </button>
             </div>
             {displayCategoryName && (
