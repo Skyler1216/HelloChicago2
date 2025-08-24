@@ -245,7 +245,7 @@ export function useProfileManager(userId: string) {
   // 初期データの読み込み
   useEffect(() => {
     if (userId && userId.trim() !== '' && userId.length >= 36) {
-      loadProfileData();
+      loadProfileData(false); // キャッシュ優先で読み込み
     } else {
       // ユーザーIDが無効な場合は初期状態にリセット
       setState({
@@ -258,6 +258,7 @@ export function useProfileManager(userId: string) {
       });
       setLoading(false);
       setError(null);
+      setLastFetchTime(0);
     }
   }, [userId, loadProfileData]);
 
