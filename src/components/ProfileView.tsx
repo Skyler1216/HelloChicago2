@@ -48,6 +48,16 @@ export default function ProfileView({
   // 現在のプロフィールデータを使用（useAuthの状態を優先）
   const activeProfile = authProfile || profile;
 
+  // 元の動作していたuseProfileDetailsを使用
+  const {
+    profileDetails,
+    loading: profileDetailsLoading,
+    reload: reloadProfileDetails,
+    // キャッシュ関連の情報を追加
+    isCached,
+    cacheAge,
+  } = useProfileDetails(activeProfile?.id || '');
+
   // プロフィール更新後の強制再読み込み
   const handleProfileUpdate = async () => {
     console.log('🔄 Profile update detected, reloading auth state...');
@@ -56,12 +66,59 @@ export default function ProfileView({
     await reloadProfileDetails();
   };
 
-  const { stats: userStats } = useUserStats(activeProfile?.id);
+  // キャッシュ情報をデバッグ表示
   const {
-    profileDetails,
-    loading: profileDetailsLoading,
-    reload: reloadProfileDetails,
-  } = useProfileDetails(activeProfile?.id || '');
+    stats: userStats,
+    isCached: statsCached,
+    cacheAge: statsCacheAge,
+  } = useUserStats(activeProfile?.id);
+
+  // プロフィールデータの詳細をデバッグ表示
+  console.log('📱 ProfileView: Profile data debug', {
+    activeProfile: activeProfile
+      ? {
+          id: activeProfile.id,
+          name: activeProfile.name,
+          created_at: activeProfile.created_at,
+        }
+      : null,
+    profileDetails: profileDetails
+      ? {
+          profile_id: profileDetails.profile_id,
+          arrival_date: profileDetails.arrival_date,
+          bio: profileDetails.bio,
+          location_area: profileDetails.location_area,
+        }
+      : null,
+    profileDetailsLoading,
+    // キャッシュ情報を追加
+    isCached,
+    cacheAge: cacheAge > 0 ? `${cacheAge}s` : 'N/A',
+    // 統計情報のキャッシュ状態も追加
+    statsCached,
+    statsCacheAge: statsCacheAge > 0 ? `${statsCacheAge}s` : 'N/A',
+  });
+
+  // キャッシュ情報をデバッグ表示
+  if (isCached) {
+    console.log('📱 ProfileView: Using cached profile data', {
+      age: cacheAge + 's',
+    });
+  }
+  if (statsCached) {
+    console.log('📱 ProfileView: Using cached stats data', {
+      age: statsCacheAge + 's',
+    });
+  }
+
+  // プロフィール更新後の強制再読み込み
+  // const handleProfileUpdate = async () => { // この行は削除
+  //   console.log('🔄 Profile update detected, reloading auth state...'); // この行は削除
+  //   await reloadProfile(); // この行は削除
+  //   // プロフィール詳細情報も再読み込み // この行は削除
+  //   await refreshProfile(); // この行は削除
+  // }; // この行は削除
+
   const {
     communityInfo,
     loading: communityLoading,

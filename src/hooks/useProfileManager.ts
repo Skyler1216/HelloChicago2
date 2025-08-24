@@ -55,8 +55,8 @@ export function useProfileManager(userId: string) {
   const [forceLoading, setForceLoading] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
-  // キャッシュの有効期限（30分）
-  const CACHE_TTL = 30 * 60 * 1000; // 30分
+  // キャッシュの有効期限（2時間に延長）
+  const CACHE_TTL = 2 * 60 * 60 * 1000; // 2時間
 
   // キャッシュからデータを取得
   const getCachedProfileData = useCallback((): ProfileCacheData | null => {
@@ -65,18 +65,32 @@ export function useProfileManager(userId: string) {
     try {
       const cacheKey = `profile_${userId}`;
       const cached = localStorage.getItem(cacheKey);
-      if (!cached) return null;
+      if (!cached) {
+        console.log('📱 ProfileManager: No cache found');
+        return null;
+      }
 
       const data: ProfileCacheData = JSON.parse(cached);
       const now = Date.now();
+      const age = now - data.timestamp;
+      const isValid = age < CACHE_TTL;
+
+      console.log('📱 ProfileManager: Cache check', {
+        age: Math.round(age / 1000) + 's',
+        ttl: Math.round(CACHE_TTL / 1000) + 's',
+        isValid,
+        hasProfile: !!data.profile,
+        hasDetails: !!data.profileDetails,
+      });
 
       // キャッシュが有効期限内かチェック
-      if (now - data.timestamp < CACHE_TTL) {
+      if (isValid) {
         console.log('📱 ProfileManager: Using cached data');
         return data;
       }
 
       // 期限切れのキャッシュを削除
+      console.log('📱 ProfileManager: Cache expired, removing');
       localStorage.removeItem(cacheKey);
       return null;
     } catch (error) {
@@ -97,7 +111,11 @@ export function useProfileManager(userId: string) {
           timestamp: Date.now(),
         };
         localStorage.setItem(cacheKey, JSON.stringify(cacheData));
-        console.log('📱 ProfileManager: Data cached successfully');
+        console.log('📱 ProfileManager: Data cached successfully', {
+          profileId: data.profile?.id,
+          hasDetails: !!data.profileDetails,
+          timestamp: new Date(cacheData.timestamp).toISOString(),
+        });
       } catch (error) {
         console.warn('Failed to write profile cache:', error);
       }
@@ -245,7 +263,49 @@ export function useProfileManager(userId: string) {
   // 初期データの読み込み
   useEffect(() => {
     if (userId && userId.trim() !== '' && userId.length >= 36) {
-      loadProfileData(false); // キャッシュ優先で読み込み
+      // キャッシュチェックを直接実行（useCallbackの依存関係を回避）
+      try {
+        const cacheKey = `profile_${userId}`;
+        const cached = localStorage.getItem(cacheKey);
+
+        if (cached) {
+          const data: ProfileCacheData = JSON.parse(cached);
+          const now = Date.now();
+          const age = now - data.timestamp;
+          const isValid = age < CACHE_TTL;
+
+          console.log('📱 ProfileManager: Cache check on mount', {
+            age: Math.round(age / 1000) + 's',
+            ttl: Math.round(CACHE_TTL / 1000) + 's',
+            isValid,
+            hasProfile: !!data.profile,
+            hasDetails: !!data.profileDetails,
+          });
+
+          if (isValid) {
+            console.log('📱 ProfileManager: Initial load from cache');
+            setState(prev => ({
+              ...prev,
+              profile: data.profile,
+              profileDetails: data.profileDetails,
+              lastSaved: new Date(data.timestamp),
+            }));
+            setLastFetchTime(data.timestamp);
+            setLoading(false);
+            setError(null);
+            return; // キャッシュから読み込んだ場合は終了
+          } else {
+            console.log('📱 ProfileManager: Cache expired, removing');
+            localStorage.removeItem(cacheKey);
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to read profile cache on mount:', error);
+      }
+
+      // キャッシュがない場合または期限切れの場合はAPIから取得
+      console.log('📱 ProfileManager: Initial load from API');
+      loadProfileData(true);
     } else {
       // ユーザーIDが無効な場合は初期状態にリセット
       setState({
@@ -260,7 +320,7 @@ export function useProfileManager(userId: string) {
       setError(null);
       setLastFetchTime(0);
     }
-  }, [userId, loadProfileData]);
+  }, [userId]); // 依存関係を最小限に
 
   // プロフィール基本情報の更新
   const updateProfile = useCallback(

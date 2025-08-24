@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { Database } from '../types/database';
 import { formatSupabaseError, logError } from '../utils/errorHandler';
@@ -16,6 +16,19 @@ interface UseProfileDetailsReturn {
   updateProfileDetails: (updates: ProfileDetailsUpdate) => Promise<boolean>;
   createProfileDetails: (details: ProfileDetailsInsert) => Promise<boolean>;
   reload: () => Promise<void>;
+  // キャッシュ関連の機能を追加
+  isCached: boolean;
+  cacheAge: number;
+  forceRefresh: () => Promise<void>;
+}
+
+// キャッシュの設定
+const CACHE_KEY_PREFIX = 'profile_details_cache_';
+const CACHE_TTL = 2 * 60 * 60 * 1000; // 2時間
+
+interface CacheData {
+  data: ProfileDetails;
+  timestamp: number;
 }
 
 export function useProfileDetails(
@@ -26,9 +39,60 @@ export function useProfileDetails(
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isCached, setIsCached] = useState(false);
+  const [cacheAge, setCacheAge] = useState(0);
 
-  useEffect(() => {
-    const loadData = async () => {
+  // キャッシュからデータを取得
+  const getCachedData = useCallback((id: string): ProfileDetails | null => {
+    try {
+      const cacheKey = CACHE_KEY_PREFIX + id;
+      const cached = localStorage.getItem(cacheKey);
+
+      if (!cached) return null;
+
+      const cacheData: CacheData = JSON.parse(cached);
+      const now = Date.now();
+
+      // キャッシュが有効期限切れかチェック
+      if (now - cacheData.timestamp > CACHE_TTL) {
+        localStorage.removeItem(cacheKey);
+        return null;
+      }
+
+      const age = Math.floor((now - cacheData.timestamp) / 1000);
+      setCacheAge(age);
+      setIsCached(true);
+
+      console.log('📱 useProfileDetails: Cache hit', { age: age + 's' });
+      return cacheData.data;
+    } catch (err) {
+      console.warn('📱 useProfileDetails: Cache read error', err);
+      return null;
+    }
+  }, []);
+
+  // データをキャッシュに保存
+  const setCachedData = useCallback((id: string, data: ProfileDetails) => {
+    try {
+      const cacheKey = CACHE_KEY_PREFIX + id;
+      const cacheData: CacheData = {
+        data,
+        timestamp: Date.now(),
+      };
+
+      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+      setIsCached(false);
+      setCacheAge(0);
+
+      console.log('📱 useProfileDetails: Data cached');
+    } catch (err) {
+      console.warn('📱 useProfileDetails: Cache write error', err);
+    }
+  }, []);
+
+  // データ読み込み（キャッシュ優先）
+  const loadData = useCallback(
+    async (forceRefresh = false) => {
       if (!profileId) {
         setLoading(false);
         return;
@@ -37,6 +101,18 @@ export function useProfileDetails(
       try {
         setLoading(true);
         setError(null);
+
+        // キャッシュから取得を試行（強制更新でない場合）
+        if (!forceRefresh) {
+          const cachedData = getCachedData(profileId);
+          if (cachedData) {
+            setProfileDetails(cachedData);
+            setLoading(false);
+            return;
+          }
+        }
+
+        console.log('📱 useProfileDetails: Fetching from database...');
 
         const { data, error: fetchError } = await supabase
           .from('profile_details')
@@ -47,16 +123,29 @@ export function useProfileDetails(
         if (fetchError) throw fetchError;
 
         setProfileDetails(data);
+
+        // データをキャッシュに保存
+        if (data) {
+          setCachedData(profileId, data);
+        }
       } catch (err) {
         logError(err, 'useProfileDetails.loadData');
         setError(formatSupabaseError(err));
       } finally {
         setLoading(false);
       }
-    };
+    },
+    [profileId, getCachedData, setCachedData]
+  );
 
-    loadData();
-  }, [profileId]);
+  useEffect(() => {
+    loadData(false); // 初回はキャッシュ優先
+  }, [loadData]);
+
+  // 強制更新（キャッシュを無視）
+  const forceRefresh = useCallback(async () => {
+    await loadData(true);
+  }, [loadData]);
 
   const createProfileDetails = async (
     details: ProfileDetailsInsert
@@ -73,6 +162,12 @@ export function useProfileDetails(
       if (insertError) throw insertError;
 
       setProfileDetails(data);
+
+      // 新しく作成されたデータをキャッシュに保存
+      if (data) {
+        setCachedData(profileId!, data);
+      }
+
       return true;
     } catch (err) {
       logError(err, 'useProfileDetails.createProfileDetails');
@@ -99,6 +194,12 @@ export function useProfileDetails(
       if (updateError) throw updateError;
 
       setProfileDetails(data);
+
+      // 更新されたデータをキャッシュに保存
+      if (data) {
+        setCachedData(profileId, data);
+      }
+
       return true;
     } catch (err) {
       logError(err, 'useProfileDetails.updateProfileDetails');
@@ -123,6 +224,11 @@ export function useProfileDetails(
       if (fetchError) throw fetchError;
 
       setProfileDetails(data);
+
+      // データをキャッシュに保存
+      if (data) {
+        setCachedData(profileId, data);
+      }
     } catch (err) {
       logError(err, 'useProfileDetails.updateProfileDetails');
       setError(formatSupabaseError(err));
@@ -138,6 +244,10 @@ export function useProfileDetails(
     updateProfileDetails,
     createProfileDetails,
     reload,
+    // キャッシュ関連の情報を追加
+    isCached,
+    cacheAge,
+    forceRefresh,
   };
 }
 
