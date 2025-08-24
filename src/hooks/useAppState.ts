@@ -23,6 +23,7 @@ interface UseAppStateReturn {
 /**
  * アプリ全体の状態管理フック
  * アプリの初期化、ローディング状態、データ更新を統一管理
+ * パフォーマンス最適化版
  */
 export function useAppState(): UseAppStateReturn {
   const { loading: authLoading, isAuthenticated, isApproved } = useAuth();
@@ -36,6 +37,32 @@ export function useAppState(): UseAppStateReturn {
 
   const initializationRef = useRef(false);
   const recoveryTimeoutRef = useRef<NodeJS.Timeout>();
+  const isMobile = useRef(false);
+  const lastStateUpdateRef = useRef(0);
+
+  // モバイルデバイス判定
+  useEffect(() => {
+    isMobile.current =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      );
+  }, []);
+
+  // パフォーマンス最適化された状態更新
+  const updateAppState = useCallback(
+    (updater: (prev: AppState) => AppState) => {
+      const now = Date.now();
+
+      // モバイルでは更新頻度を制限（200ms間隔）
+      if (isMobile.current && now - lastStateUpdateRef.current < 200) {
+        return;
+      }
+
+      lastStateUpdateRef.current = now;
+      setAppState(updater);
+    },
+    []
+  );
 
   // アプリライフサイクルの監視
   const { shouldRefreshData: shouldRefreshFromLifecycle } = useAppLifecycle({
@@ -45,29 +72,38 @@ export function useAppState(): UseAppStateReturn {
       const timeSinceLastRefresh = now - appState.lastRefreshTime;
       const timeSinceLastForeground = now - appState.lastForegroundTime;
 
-      console.log('📱 App became visible', {
-        timeSinceLastRefresh: Math.round(timeSinceLastRefresh / 1000) + 's',
-        timeSinceLastForeground:
-          Math.round(timeSinceLastForeground / 1000) + 's',
-      });
+      // モバイルではログを簡素化
+      if (!isMobile.current) {
+        console.log('📱 App became visible', {
+          timeSinceLastRefresh: Math.round(timeSinceLastRefresh / 1000) + 's',
+          timeSinceLastForeground:
+            Math.round(timeSinceLastForeground / 1000) + 's',
+        });
+      }
 
       // フォアグラウンド時間を更新
-      setAppState(prev => ({
+      updateAppState(prev => ({
         ...prev,
         lastForegroundTime: now,
       }));
 
       // 5分以上経過している場合はデータ更新を推奨
       if (timeSinceLastRefresh > 5 * 60 * 1000) {
-        console.log('📱 App visible after long time, suggesting data refresh');
+        if (!isMobile.current) {
+          console.log(
+            '📱 App visible after long time, suggesting data refresh'
+          );
+        }
       }
 
       // 長時間バックグラウンドにいた場合は状態復旧を試行
       if (timeSinceLastForeground > 10 * 60 * 1000) {
         // 10分以上
-        console.log(
-          '📱 Long background time detected, attempting state recovery'
-        );
+        if (!isMobile.current) {
+          console.log(
+            '📱 Long background time detected, attempting state recovery'
+          );
+        }
         attemptStateRecovery();
       }
     },
@@ -76,56 +112,66 @@ export function useAppState(): UseAppStateReturn {
 
   // 状態復旧の試行
   const attemptStateRecovery = useCallback(() => {
-    console.log('📱 Attempting state recovery...');
+    if (!isMobile.current) {
+      console.log('📱 Attempting state recovery...');
+    }
 
     // 既存のタイムアウトをクリア
     if (recoveryTimeoutRef.current) {
       clearTimeout(recoveryTimeoutRef.current);
     }
 
-    // 5秒後に強制復旧を試行
+    // モバイルでは復旧時間を短縮（3秒）、PCでは5秒
+    const recoveryDelay = isMobile.current ? 3000 : 5000;
+
     recoveryTimeoutRef.current = setTimeout(() => {
-      console.log('📱 Force recovery timeout reached, resetting state');
+      if (!isMobile.current) {
+        console.log('📱 Force recovery timeout reached, resetting state');
+      }
 
       // 認証状態を再確認
       if (!authLoading) {
         if (isAuthenticated && isApproved !== undefined) {
           // 認証済み・承認済みの場合は初期化完了
-          setAppState(prev => ({
+          updateAppState(prev => ({
             ...prev,
             isInitialized: true,
             lastRefreshTime: Date.now(),
           }));
         } else if (!isAuthenticated) {
           // 未認証の場合は初期化完了
-          setAppState(prev => ({
+          updateAppState(prev => ({
             ...prev,
             isInitialized: true,
             lastRefreshTime: Date.now(),
           }));
         } else {
           // 承認状態が不明な場合は強制初期化
-          console.warn('📱 Approval status unclear, forcing initialization');
-          setAppState(prev => ({
+          if (!isMobile.current) {
+            console.warn('📱 Approval status unclear, forcing initialization');
+          }
+          updateAppState(prev => ({
             ...prev,
             isInitialized: true,
             lastRefreshTime: Date.now(),
           }));
         }
       }
-    }, 5000);
-  }, [authLoading, isAuthenticated, isApproved]);
+    }, recoveryDelay);
+  }, [authLoading, isAuthenticated, isApproved, updateAppState]);
 
   // 強制初期化
   const forceInitialization = useCallback(() => {
-    console.log('📱 Force initialization triggered');
+    if (!isMobile.current) {
+      console.log('📱 Force initialization triggered');
+    }
     initializationRef.current = false;
-    setAppState(prev => ({
+    updateAppState(prev => ({
       ...prev,
       isInitialized: false,
       hasShownInitialLoading: false,
     }));
-  }, []);
+  }, [updateAppState]);
 
   // 初期化判定
   useEffect(() => {
@@ -137,7 +183,7 @@ export function useAppState(): UseAppStateReturn {
       if (isAuthenticated) {
         if (isApproved !== undefined) {
           initializationRef.current = true;
-          setAppState(prev => ({
+          updateAppState(prev => ({
             ...prev,
             isInitialized: true,
             lastRefreshTime: Date.now(),
@@ -146,22 +192,22 @@ export function useAppState(): UseAppStateReturn {
       } else {
         // 未認証の場合は即座に初期化完了
         initializationRef.current = true;
-        setAppState(prev => ({
+        updateAppState(prev => ({
           ...prev,
           isInitialized: true,
           lastRefreshTime: Date.now(),
         }));
       }
     }
-  }, [authLoading, isAuthenticated, isApproved]);
+  }, [authLoading, isAuthenticated, isApproved, updateAppState]);
 
   // 初回ローディング完了フラグの管理
   useEffect(() => {
     if (appState.isInitialized && !appState.hasShownInitialLoading) {
       // 初期化完了時に一度だけフラグを更新
-      setAppState(prev => ({ ...prev, hasShownInitialLoading: true }));
+      updateAppState(prev => ({ ...prev, hasShownInitialLoading: true }));
     }
-  }, [appState.isInitialized, appState.hasShownInitialLoading]);
+  }, [appState.isInitialized, appState.hasShownInitialLoading, updateAppState]);
 
   // ローディング表示の判定（副作用なし）
   const shouldShowLoading = useMemo(() => {
@@ -188,20 +234,23 @@ export function useAppState(): UseAppStateReturn {
 
   // データ更新完了の記録
   const markDataRefreshed = useCallback(() => {
-    setAppState(prev => ({
+    updateAppState(prev => ({
       ...prev,
       lastRefreshTime: Date.now(),
       backgroundRefreshing: false,
     }));
-  }, []);
+  }, [updateAppState]);
 
   // バックグラウンド更新状態の設定
-  const setBackgroundRefreshing = useCallback((refreshing: boolean) => {
-    setAppState(prev => ({
-      ...prev,
-      backgroundRefreshing: refreshing,
-    }));
-  }, []);
+  const setBackgroundRefreshing = useCallback(
+    (refreshing: boolean) => {
+      updateAppState(prev => ({
+        ...prev,
+        backgroundRefreshing: refreshing,
+      }));
+    },
+    [updateAppState]
+  );
 
   // クリーンアップ
   useEffect(() => {

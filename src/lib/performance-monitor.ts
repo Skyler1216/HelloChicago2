@@ -46,10 +46,25 @@ class PerformanceMonitor {
   private flushInterval: number = 30000; // 30 seconds
   private flushTimer?: NodeJS.Timeout;
 
+  // モバイルデバイス判定
+  private isMobile: boolean = false;
+
   constructor() {
     this.startPeriodicFlush();
     this.setupGlobalErrorHandling();
     this.setupPerformanceObserver();
+
+    // モバイルデバイス判定
+    this.isMobile =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      );
+
+    // モバイルでは監視頻度を調整
+    if (this.isMobile) {
+      this.maxMetrics = 500; // メトリクス数を削減
+      this.flushInterval = 60000; // フラッシュ間隔を1分に延長
+    }
   }
 
   /**
@@ -217,6 +232,35 @@ class PerformanceMonitor {
       metadata,
     });
 
+    this.checkMetricsLimit();
+  }
+
+  /**
+   * Track performance metric
+   */
+  trackMetric(
+    type: PerformanceMetrics['type'],
+    name: string,
+    duration: number,
+    metadata?: Record<string, unknown>
+  ): void {
+    if (!this.isEnabled) return;
+
+    // モバイルでは軽量なメトリクスのみ収集
+    if (this.isMobile && type === 'component_render') {
+      // コンポーネントレンダリングはモバイルでは制限
+      if (duration < 100) return; // 100ms未満は記録しない
+    }
+
+    const metric: PerformanceMetrics = {
+      timestamp: Date.now(),
+      type,
+      name,
+      duration,
+      metadata,
+    };
+
+    this.metrics.push(metric);
     this.checkMetricsLimit();
   }
 

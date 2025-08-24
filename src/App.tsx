@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { signOut } from './lib/supabase';
 import SplashScreen from './components/SplashScreen';
 import LoginScreen from './components/LoginScreen';
@@ -73,6 +73,16 @@ export default function App() {
   const [selectedPostType, setSelectedPostType] = useState<
     'post' | 'consultation' | 'transfer'
   >('post');
+
+  // モバイルデバイス判定
+  const isMobile = useRef(false);
+  useEffect(() => {
+    isMobile.current =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      );
+  }, []);
+
   const {
     user,
     profile,
@@ -95,28 +105,43 @@ export default function App() {
   // アプリライフサイクル管理
   const { isOnline } = useAppLifecycle({
     onAppVisible: () => {
-      console.log('📱 App became visible');
+      if (!isMobile.current) {
+        console.log('📱 App became visible');
+      }
 
       // アプリが表示された際の状態復旧処理
       if (shouldShowLoading && !authLoading) {
-        console.log('📱 App visible but stuck in loading, attempting recovery');
-        // 少し待ってから強制初期化を試行
+        if (!isMobile.current) {
+          console.log(
+            '📱 App visible but stuck in loading, attempting recovery'
+          );
+        }
+        // モバイルでは復旧時間を短縮（1秒）、PCでは2秒
+        const recoveryDelay = isMobile.current ? 1000 : 2000;
         setTimeout(() => {
           if (shouldShowLoading) {
-            console.log('📱 Still loading, forcing initialization');
+            if (!isMobile.current) {
+              console.log('📱 Still loading, forcing initialization');
+            }
             forceInitialization();
           }
-        }, 2000);
+        }, recoveryDelay);
       }
     },
     onAppHidden: () => {
-      console.log('📱 App hidden');
+      if (!isMobile.current) {
+        console.log('📱 App hidden');
+      }
     },
     onAppOnline: () => {
-      console.log('📱 App came online');
+      if (!isMobile.current) {
+        console.log('📱 App came online');
+      }
     },
     onAppOffline: () => {
-      console.log('📱 App went offline');
+      if (!isMobile.current) {
+        console.log('📱 App went offline');
+      }
     },
     refreshThreshold: 5 * 60 * 1000, // 5分以上非アクティブだったら再読み込み
   });
