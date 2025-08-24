@@ -236,7 +236,7 @@ export default function ProfileView({
       </div>
 
       {/* Enhanced Quick Actions (theme simplified to coral) */}
-      <div className="bg-white rounded-2xl p-5 mb-6 shadow-sm border border-gray-100">
+      <div className="bg-white rounded-2xl p-5 mb-3 shadow-sm border border-gray-100">
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <button
