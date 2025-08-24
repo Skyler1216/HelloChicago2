@@ -18,27 +18,25 @@ import { useAuth } from './hooks/useAuth';
 import { useToast } from './hooks/useToast';
 import { validateConfig } from './lib/config';
 
-// Prevent page bounce on mobile
+// Prevent page bounce on mobile while preserving scroll
 function preventPageBounce() {
-  // Prevent pull-to-refresh
+  let startY = 0;
+  
+  // Prevent pull-to-refresh only at the top of the page
   document.addEventListener('touchstart', (e) => {
-    if (e.touches.length > 1) return;
-  }, { passive: false });
+    startY = e.touches[0].clientY;
+  }, { passive: true });
 
   document.addEventListener('touchmove', (e) => {
-    const scrollElement = document.documentElement;
-    if (scrollElement.scrollTop === 0 && e.touches[0].clientY > 0) {
-      e.preventDefault();
-    }
-    if (scrollElement.scrollTop + scrollElement.clientHeight >= scrollElement.scrollHeight && e.touches[0].clientY < 0) {
+    const currentY = e.touches[0].clientY;
+    const isScrollingDown = currentY > startY;
+    const isAtTop = window.scrollY === 0;
+    
+    // Only prevent if at top and trying to pull down (refresh)
+    if (isAtTop && isScrollingDown) {
       e.preventDefault();
     }
   }, { passive: false });
-
-  // Prevent context menu on long press
-  document.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-  });
 }
 
 export default function App() {

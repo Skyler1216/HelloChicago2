@@ -43,35 +43,27 @@
     <style>
       html, body {
         height: 100%;
-        overflow: hidden;
-        overscroll-behavior: none;
+        margin: 0;
+        padding: 0;
+        overscroll-behavior-y: none;
         -webkit-overflow-scrolling: touch;
-        touch-action: pan-x pan-y;
-        position: fixed;
-        width: 100%;
       }
       
       #root {
-        height: 100vh;
-        overflow: auto;
-        overscroll-behavior: none;
+        min-height: 100vh;
+        overscroll-behavior-y: none;
         -webkit-overflow-scrolling: touch;
       }
       
-      /* Prevent pull-to-refresh */
+      /* Prevent pull-to-refresh but allow normal scrolling */
       body {
         overscroll-behavior-y: none;
+        touch-action: pan-x pan-y;
       }
       
       /* iOS specific fixes */
       html {
         -webkit-text-size-adjust: 100%;
-      }
-      
-      /* Disable bounce effect */
-      * {
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior: none;
       }
     </style>
   </head>
