@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { usePageVisibility } from './usePageVisibility';
 
 interface AppState {
   isVisible: boolean;
@@ -39,6 +40,42 @@ export function useAppLifecycle(options: UseAppLifecycleOptions = {}) {
     onAppOffline,
   });
 
+  // Page Visibility API を使用した高度な可視性検知
+  const { isVisible, shouldForceRefresh, getUsagePattern } = usePageVisibility({
+    onVisible: bgTime => {
+      const now = Date.now();
+      setAppState(prev => ({
+        ...prev,
+        isVisible: true,
+        lastActiveTime: now,
+        inactiveTime: bgTime,
+      }));
+
+      const pattern = getUsagePattern();
+
+      console.log('📱 App lifecycle - visible:', {
+        backgroundTime: Math.round(bgTime / 1000) + 's',
+        shouldRefresh: shouldForceRefresh(now - bgTime),
+        pattern,
+      });
+
+      // バックグラウンド時間に基づいて適切なコールバックを実行
+      if (bgTime > refreshThreshold || shouldForceRefresh(now - bgTime)) {
+        console.log('📱 Long background time detected, triggering refresh');
+      }
+
+      callbacksRef.current.onAppVisible?.();
+    },
+    onHidden: () => {
+      setAppState(prev => ({
+        ...prev,
+        isVisible: false,
+      }));
+      callbacksRef.current.onAppHidden?.();
+    },
+    refreshThreshold,
+  });
+
   // コールバックの更新
   useEffect(() => {
     callbacksRef.current = {
@@ -49,39 +86,7 @@ export function useAppLifecycle(options: UseAppLifecycleOptions = {}) {
     };
   }, [onAppVisible, onAppHidden, onAppOnline, onAppOffline]);
 
-  // アプリの表示状態変更時の処理
-  const handleVisibilityChange = useCallback(() => {
-    const isVisible = !document.hidden;
-    const now = Date.now();
-
-    setAppState(prev => {
-      const newState = {
-        ...prev,
-        isVisible,
-        lastActiveTime: isVisible ? now : prev.lastActiveTime,
-        inactiveTime: isVisible ? now - prev.lastActiveTime : prev.inactiveTime,
-      };
-      stateRef.current = newState;
-      return newState;
-    });
-
-    if (isVisible) {
-      // アプリがフォアグラウンドに戻った
-      const inactiveTime = now - stateRef.current.lastActiveTime;
-
-      // 非アクティブ時間が閾値を超えた場合、再読み込みが必要かもしれない
-      if (inactiveTime > refreshThreshold) {
-        console.log(
-          '📱 App returned after long inactive period, may need refresh'
-        );
-      }
-
-      callbacksRef.current.onAppVisible?.();
-    } else {
-      // アプリがバックグラウンドに移行
-      callbacksRef.current.onAppHidden?.();
-    }
-  }, [refreshThreshold]);
+  // レガシーのvisibilitychange処理は削除（usePageVisibilityで処理）
 
   // ネットワーク状態変更時の処理
   const handleOnline = useCallback(() => {
@@ -94,39 +99,16 @@ export function useAppLifecycle(options: UseAppLifecycleOptions = {}) {
     callbacksRef.current.onAppOffline?.();
   }, []);
 
-  // イベントリスナーの設定
+  // ネットワークイベントリスナーの設定
   useEffect(() => {
-    document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // ページフォーカス/ブラーイベントも追加
-    const handleFocus = () => {
-      const now = Date.now();
-      setAppState(prev => ({
-        ...prev,
-        isVisible: true,
-        lastActiveTime: now,
-        inactiveTime: now - prev.lastActiveTime,
-      }));
-      callbacksRef.current.onAppVisible?.();
-    };
-
-    const handleBlur = () => {
-      callbacksRef.current.onAppHidden?.();
-    };
-
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('blur', handleBlur);
-
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('blur', handleBlur);
     };
-  }, [handleVisibilityChange, handleOnline, handleOffline]);
+  }, [handleOnline, handleOffline]);
 
   // 手動でアクティブ時間を更新
   const updateActiveTime = useCallback(() => {
@@ -138,15 +120,18 @@ export function useAppLifecycle(options: UseAppLifecycleOptions = {}) {
     }));
   }, []);
 
-  // データ再読み込みが必要かチェック
+  // データ再読み込みが必要かチェック（usePageVisibilityと連携）
   const shouldRefreshData = useCallback(() => {
     const now = Date.now();
     const inactiveTime = now - stateRef.current.lastActiveTime;
-    return inactiveTime > refreshThreshold;
-  }, [refreshThreshold]);
+    return (
+      inactiveTime > refreshThreshold ||
+      shouldForceRefresh(stateRef.current.lastActiveTime)
+    );
+  }, [refreshThreshold, shouldForceRefresh]);
 
-  // ページの可視性とオンライン状態を組み合わせた状態
-  const canFetchData = appState.isVisible && appState.isOnline;
+  // ページの可視性とオンライン状態を組み合わせた状態（usePageVisibilityの結果を使用）
+  const canFetchData = isVisible && appState.isOnline;
 
   return {
     ...appState,

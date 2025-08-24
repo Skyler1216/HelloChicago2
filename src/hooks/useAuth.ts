@@ -13,6 +13,7 @@ export function useAuth() {
 
   const initializationRef = useRef(false);
   const profileLoadingRef = useRef(false);
+  const authStateChangingRef = useRef(false);
 
   useEffect(() => {
     if (initializationRef.current) return;
@@ -54,23 +55,41 @@ export function useAuth() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setProfile(null);
-        setLoading(false);
+      // 同時に複数の認証状態変更が発生しないように制御
+      if (authStateChangingRef.current) {
+        console.log('📱 Auth state change in progress, skipping:', event);
         return;
       }
 
-      if (event === 'SIGNED_IN' && session?.user) {
-        setUser(session.user);
-        setLoading(true);
-        await loadUserProfile(session.user.id);
-        setLoading(false);
-      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-        setUser(session.user);
-        if (!profile) {
-          await loadUserProfile(session.user.id);
+      authStateChangingRef.current = true;
+
+      try {
+        if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+          return;
         }
+
+        if (event === 'SIGNED_IN' && session?.user) {
+          setUser(session.user);
+          // 初期化時以外はローディング表示しない（バックグラウンド更新）
+          if (initialized) {
+            await loadUserProfile(session.user.id);
+          } else {
+            setLoading(true);
+            await loadUserProfile(session.user.id);
+            setLoading(false);
+          }
+        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+          setUser(session.user);
+          // トークン更新時はローディング不要、プロファイルがない場合のみ読み込み
+          if (!profile) {
+            await loadUserProfile(session.user.id);
+          }
+        }
+      } finally {
+        authStateChangingRef.current = false;
       }
     });
 

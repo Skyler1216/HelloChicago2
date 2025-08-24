@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { Database } from '../types/database';
 import { formatSupabaseError, logError } from '../utils/errorHandler';
+import { useCache } from './useCache';
+import { useAppLifecycle } from './useAppLifecycle';
 
 type Notification = Database['public']['Tables']['notifications']['Row'];
 type Comment = Database['public']['Tables']['comments']['Row'];
@@ -62,66 +64,182 @@ export function useInbox(userId: string): UseInboxReturn {
   const [currentFilter, setCurrentFilter] = useState<
     'notification' | 'message'
   >('notification');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Load notifications
-  const loadNotifications = useCallback(async () => {
-    try {
-      // Fetch notifications that are not expired and still valid
-      const { data, error: fetchError } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('recipient_id', userId)
-        .is('deleted_at', null)
-        .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
-        .order('created_at', { ascending: false });
+  // キャッシュの設定
+  const notificationsCache = useCache<Notification[]>('notifications', {
+    ttl: 2 * 60 * 1000, // 2分
+    priority: 9, // 通知は最高優先度
+    staleWhileRevalidate: true,
+  });
 
-      if (fetchError) throw fetchError;
-      setNotifications(data || []);
-    } catch (err) {
-      logError(err, 'useInbox.loadNotifications');
-      setError(formatSupabaseError(err));
-    }
-  }, [userId]);
+  const messagesCache = useCache<Comment[]>('messages', {
+    ttl: 3 * 60 * 1000, // 3分
+    priority: 8, // メッセージは高優先度
+    staleWhileRevalidate: true,
+  });
 
-  // Load messages (comments on user's posts)
-  const loadMessages = useCallback(async () => {
-    try {
-      // Get user's posts first
-      const { data: userPosts, error: postsError } = await supabase
-        .from('posts')
-        .select('id, title, type')
-        .eq('author_id', userId);
+  // アプリライフサイクルの管理
+  const { canFetchData, shouldRefreshData } = useAppLifecycle({
+    onAppVisible: () => {
+      if (shouldRefreshData()) {
+        console.log('📱 App visible: refreshing inbox data');
+        loadInbox(true); // 強制リフレッシュ
+      }
+    },
+    refreshThreshold: 1 * 60 * 1000, // 1分以上非アクティブだったら再読み込み
+  });
 
-      if (postsError) throw postsError;
+  // Load notifications with cache
+  const loadNotifications = useCallback(
+    async (forceRefresh = false) => {
+      try {
+        const cacheKey = `notifications_${userId}`;
 
-      if (userPosts && userPosts.length > 0) {
-        const postIds = userPosts.map(post => post.id);
+        // キャッシュをチェック
+        if (!forceRefresh) {
+          const cachedNotifications = notificationsCache.get(cacheKey);
+          if (cachedNotifications) {
+            setNotifications(cachedNotifications);
 
-        // Get comments on user's posts with read status
-        const { data: comments, error: commentsError } = await supabase
-          .from('comments')
-          .select(
-            `
+            // 古いデータの場合はバックグラウンドで更新
+            if (notificationsCache.isStale(cacheKey)) {
+              setIsRefreshing(true);
+              // バックグラウンド更新は続行
+            } else {
+              return; // 有効なキャッシュがあるので終了
+            }
+          }
+        }
+
+        // ネットワークが利用できない場合はオフラインデータを使用
+        if (!canFetchData) {
+          const offlineData = notificationsCache.getOfflineData(cacheKey);
+          if (offlineData) {
+            setNotifications(offlineData);
+            return;
+          }
+        }
+
+        // Fetch notifications that are not expired and still valid
+        const { data, error: fetchError } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('recipient_id', userId)
+          .is('deleted_at', null)
+          .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
+          .order('created_at', { ascending: false });
+
+        if (fetchError) throw fetchError;
+
+        const notifications = data || [];
+
+        // キャッシュに保存
+        notificationsCache.set(cacheKey, notifications);
+        setNotifications(notifications);
+      } catch (err) {
+        logError(err, 'useInbox.loadNotifications');
+        setError(formatSupabaseError(err));
+
+        // エラー時はキャッシュからフォールバック
+        const fallbackData = notificationsCache.getOfflineData(
+          `notifications_${userId}`
+        );
+        if (fallbackData) {
+          setNotifications(fallbackData);
+          console.log('📱 Using cached notifications as fallback');
+        }
+      } finally {
+        setIsRefreshing(false);
+      }
+    },
+    [userId, notificationsCache, canFetchData]
+  );
+
+  // Load messages (comments on user's posts) with cache
+  const loadMessages = useCallback(
+    async (forceRefresh = false) => {
+      try {
+        const cacheKey = `messages_${userId}`;
+
+        // キャッシュをチェック
+        if (!forceRefresh) {
+          const cachedMessages = messagesCache.get(cacheKey);
+          if (cachedMessages) {
+            setMessages(cachedMessages);
+
+            // 古いデータの場合はバックグラウンドで更新
+            if (messagesCache.isStale(cacheKey)) {
+              setIsRefreshing(true);
+              // バックグラウンド更新は続行
+            } else {
+              return; // 有効なキャッシュがあるので終了
+            }
+          }
+        }
+
+        // ネットワークが利用できない場合はオフラインデータを使用
+        if (!canFetchData) {
+          const offlineData = messagesCache.getOfflineData(cacheKey);
+          if (offlineData) {
+            setMessages(offlineData);
+            return;
+          }
+        }
+
+        // Get user's posts first
+        const { data: userPosts, error: postsError } = await supabase
+          .from('posts')
+          .select('id, title, type')
+          .eq('author_id', userId);
+
+        if (postsError) throw postsError;
+
+        if (userPosts && userPosts.length > 0) {
+          const postIds = userPosts.map(post => post.id);
+
+          // Get comments on user's posts with read status
+          const { data: comments, error: commentsError } = await supabase
+            .from('comments')
+            .select(
+              `
             *,
             profiles!comments_author_id_fkey(name, avatar_url),
             comment_reads!left(read_at)
           `
-          )
-          .in('post_id', postIds)
-          .eq('is_approved', true)
-          .order('created_at', { ascending: false });
+            )
+            .in('post_id', postIds)
+            .eq('is_approved', true)
+            .order('created_at', { ascending: false });
 
-        if (commentsError) throw commentsError;
+          if (commentsError) throw commentsError;
 
-        setMessages(comments || []);
-      } else {
-        setMessages([]);
+          const messages = comments || [];
+
+          // キャッシュに保存
+          messagesCache.set(cacheKey, messages);
+          setMessages(messages);
+        } else {
+          setMessages([]);
+          // 空の配列もキャッシュしておく
+          messagesCache.set(cacheKey, []);
+        }
+      } catch (err) {
+        logError(err, 'useInbox.loadMessages');
+        setError(formatSupabaseError(err));
+
+        // エラー時はキャッシュからフォールバック
+        const fallbackData = messagesCache.getOfflineData(`messages_${userId}`);
+        if (fallbackData) {
+          setMessages(fallbackData);
+          console.log('📱 Using cached messages as fallback');
+        }
+      } finally {
+        setIsRefreshing(false);
       }
-    } catch (err) {
-      logError(err, 'useInbox.loadMessages');
-      setError(formatSupabaseError(err));
-    }
-  }, [userId]);
+    },
+    [userId, messagesCache, canFetchData]
+  );
 
   // Transform data to inbox items
   const transformToInboxItems = useCallback(() => {
@@ -184,19 +302,28 @@ export function useInbox(userId: string): UseInboxReturn {
   }, [notifications, messages]);
 
   // Load all data
-  const loadInbox = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const loadInbox = useCallback(
+    async (forceRefresh = false) => {
+      // 初期読み込み時のみローディング表示
+      if (!notifications.length && !messages.length) {
+        setLoading(true);
+      }
+      setError(null);
 
-    try {
-      await Promise.all([loadNotifications(), loadMessages()]);
-    } catch (err) {
-      logError(err, 'useInbox.loadInbox');
-      setError(formatSupabaseError(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [loadNotifications, loadMessages]);
+      try {
+        await Promise.all([
+          loadNotifications(forceRefresh),
+          loadMessages(forceRefresh),
+        ]);
+      } catch (err) {
+        logError(err, 'useInbox.loadInbox');
+        setError(formatSupabaseError(err));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loadNotifications, loadMessages, notifications.length, messages.length]
+  );
 
   // Mark item as read (handles both notifications and comments)
   const markAsRead = useCallback(
@@ -244,7 +371,7 @@ export function useInbox(userId: string): UseInboxReturn {
           if (functionError) throw functionError;
 
           // Update local state by refreshing messages
-          await loadMessages();
+          await loadMessages(true); // 強制リフレッシュ
         }
       } catch (err) {
         logError(err, 'useInbox.markAsRead');
@@ -299,7 +426,7 @@ export function useInbox(userId: string): UseInboxReturn {
         await Promise.all(promises);
 
         // Refresh messages to update read status
-        await loadMessages();
+        await loadMessages(true); // 強制リフレッシュ
       }
     } catch (err) {
       logError(err, 'useInbox.markAllAsRead');
@@ -344,6 +471,7 @@ export function useInbox(userId: string): UseInboxReturn {
     unreadCount,
     loading,
     error,
+    isRefreshing,
     markAsRead,
     markAllAsRead,
     refreshInbox,

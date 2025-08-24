@@ -1,7 +1,8 @@
 // Service Worker for HelloChicago App
-// キャッシュとオフライン対応
+// キャッシュとオフライン対応、アプリライフサイクル管理
 
-const CACHE_NAME = 'hellochicago-v1';
+const CACHE_NAME = 'hellochicago-v2';
+const API_CACHE_NAME = 'hellochicago-api-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -9,6 +10,23 @@ const STATIC_ASSETS = [
   '/src/App.tsx',
   // その他の重要なアセット
 ];
+
+// キャッシュ戦略の設定
+const CACHE_STRATEGIES = {
+  // 静的アセット: キャッシュファースト
+  STATIC: 'cache-first',
+  // API: ネットワークファースト（Stale While Revalidate）
+  API: 'network-first',
+  // 画像: キャッシュファースト（長期間）
+  IMAGES: 'cache-first'
+};
+
+// キャッシュの有効期限設定
+const CACHE_EXPIRY = {
+  API: 5 * 60 * 1000, // 5分
+  STATIC: 7 * 24 * 60 * 60 * 1000, // 7日
+  IMAGES: 30 * 24 * 60 * 60 * 1000, // 30日
+};
 
 // インストール時
 self.addEventListener('install', (event) => {
@@ -26,31 +44,124 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   console.log('📱 SW: Activating...');
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('📱 SW: Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    Promise.all([
+      // 古いキャッシュを削除
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (![CACHE_NAME, API_CACHE_NAME].includes(cacheName)) {
+              console.log('📱 SW: Deleting old cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      }),
+      // 期限切れのキャッシュエントリを削除
+      cleanExpiredCache()
+    ])
   );
   self.clients.claim();
 });
+
+// 期限切れキャッシュのクリーンアップ
+async function cleanExpiredCache() {
+  try {
+    const cache = await caches.open(API_CACHE_NAME);
+    const requests = await cache.keys();
+    
+    for (const request of requests) {
+      const response = await cache.match(request);
+      if (response) {
+        const cachedTime = response.headers.get('sw-cached-time');
+        if (cachedTime) {
+          const age = Date.now() - parseInt(cachedTime);
+          if (age > CACHE_EXPIRY.API) {
+            await cache.delete(request);
+            console.log('📱 SW: Deleted expired cache entry');
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('📱 SW: Error cleaning expired cache:', error);
+  }
+}
+
+// レスポンスにキャッシュ時間を追加
+function addCacheHeaders(response, cacheTime = Date.now()) {
+  const headers = new Headers(response.headers);
+  headers.set('sw-cached-time', cacheTime.toString());
+  
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: headers
+  });
+}
+
+// Stale While Revalidate 戦略
+async function staleWhileRevalidate(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cachedResponse = await cache.match(request);
+  
+  // キャッシュがある場合は即座に返し、バックグラウンドで更新
+  if (cachedResponse) {
+    // バックグラウンドで更新
+    fetch(request)
+      .then(response => {
+        if (response.status === 200) {
+          const responseWithHeaders = addCacheHeaders(response.clone());
+          cache.put(request, responseWithHeaders);
+        }
+      })
+      .catch(error => {
+        console.log('📱 SW: Background update failed:', error);
+      });
+    
+    return cachedResponse;
+  }
+  
+  // キャッシュがない場合はネットワークから取得
+  try {
+    const response = await fetch(request);
+    if (response.status === 200) {
+      const responseWithHeaders = addCacheHeaders(response.clone());
+      cache.put(request, responseWithHeaders);
+    }
+    return response;
+  } catch (error) {
+    throw error;
+  }
+}
 
 // フェッチ時
 self.addEventListener('fetch', (event) => {
   // GET リクエストのみ処理
   if (event.request.method !== 'GET') return;
 
-  // Supabase API の場合はネットワーク優先
-  if (event.request.url.includes('supabase.co')) {
+  const url = new URL(event.request.url);
+
+  // Supabase API の場合は Stale While Revalidate
+  if (url.hostname.includes('supabase.co')) {
     event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          // レスポンスが成功した場合、キャッシュに保存
+      staleWhileRevalidate(event.request, API_CACHE_NAME)
+        .catch(() => {
+          // 完全にネットワークが使えない場合は古いキャッシュでも返す
+          return caches.match(event.request);
+        })
+    );
+    return;
+  }
+
+  // 画像ファイルの場合はキャッシュ優先（長期間）
+  if (event.request.destination === 'image' || url.pathname.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)$/i)) {
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
+        return fetch(event.request).then((response) => {
           if (response.status === 200) {
             const responseClone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
@@ -58,11 +169,8 @@ self.addEventListener('fetch', (event) => {
             });
           }
           return response;
-        })
-        .catch(() => {
-          // ネットワークエラーの場合、キャッシュから返す
-          return caches.match(event.request);
-        })
+        });
+      })
     );
     return;
   }
@@ -104,6 +212,9 @@ self.addEventListener('message', (event) => {
           })
         );
         break;
+      case 'CLEAR_API_CACHE':
+        event.waitUntil(caches.delete(API_CACHE_NAME));
+        break;
       case 'CACHE_URLS':
         if (event.data.urls) {
           event.waitUntil(
@@ -113,6 +224,45 @@ self.addEventListener('message', (event) => {
           );
         }
         break;
+      case 'PRELOAD_DATA':
+        // アプリ復帰時の事前データ読み込み
+        if (event.data.urls) {
+          event.waitUntil(
+            Promise.all(
+              event.data.urls.map(url => 
+                staleWhileRevalidate(new Request(url), API_CACHE_NAME)
+                  .catch(error => console.log('📱 SW: Preload failed for', url, error))
+              )
+            )
+          );
+        }
+        break;
+      case 'APP_FOCUS':
+        // アプリがフォーカスされた時の処理
+        console.log('📱 SW: App focused, running cleanup');
+        event.waitUntil(cleanExpiredCache());
+        break;
     }
+  }
+});
+
+// バックグラウンド同期のサポート
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'background-sync') {
+    console.log('📱 SW: Background sync triggered');
+    event.waitUntil(
+      // 重要なデータの事前キャッシュなど
+      cleanExpiredCache()
+    );
+  }
+});
+
+// プッシュ通知のサポート（将来的な拡張用）
+self.addEventListener('push', (event) => {
+  if (event.data) {
+    const data = event.data.json();
+    console.log('📱 SW: Push received:', data);
+    
+    // 通知の表示は必要に応じて実装
   }
 });

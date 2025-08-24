@@ -17,7 +17,9 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { useAuth } from './hooks/useAuth';
 import { useToast } from './hooks/useToast';
 import { useAppLifecycle } from './hooks/useAppLifecycle';
+import { useAppState } from './hooks/useAppState';
 import { validateConfig } from './lib/config';
+import AppStateDebug from './components/debug/AppStateDebug';
 
 // Prevent page bounce on mobile while preserving scroll
 function preventPageBounce() {
@@ -69,19 +71,22 @@ export default function App() {
   const [selectedPostType, setSelectedPostType] = useState<
     'post' | 'consultation' | 'transfer'
   >('post');
-  const { user, profile, loading, isAuthenticated, isApproved } = useAuth();
+  const {
+    user,
+    profile,
+    loading: authLoading,
+    isAuthenticated,
+    isApproved,
+  } = useAuth();
   const { ToastContainer } = useToast();
 
+  // アプリ状態管理
+  const { shouldShowLoading, backgroundRefreshing } = useAppState();
+
   // アプリライフサイクル管理
-  const { isOnline, inactiveTime } = useAppLifecycle({
+  const { isOnline } = useAppLifecycle({
     onAppVisible: () => {
       console.log('📱 App became visible');
-      // 長時間非アクティブだった場合は認証状態を再確認
-      if (inactiveTime > 30 * 60 * 1000) {
-        // 30分以上
-        console.log('📱 Long inactive period detected, checking auth state');
-        // useAuthのreloadProfileを呼ぶ場合はここで実行
-      }
     },
     onAppHidden: () => {
       console.log('📱 App hidden');
@@ -120,8 +125,8 @@ export default function App() {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
 
-  // Show loading screen
-  if (loading) {
+  // Show loading screen - only show when actually needed
+  if (shouldShowLoading || authLoading) {
     return <LoadingScreen />;
   }
 
@@ -337,16 +342,25 @@ export default function App() {
         </div>
       )}
 
+      {/* バックグラウンド更新インジケーター */}
+      {backgroundRefreshing && (
+        <div className="fixed top-0 left-0 right-0 z-40 bg-blue-500 text-white text-center py-1 text-xs font-medium">
+          🔄 データを更新中...
+        </div>
+      )}
+
       <Layout
         currentView={currentView}
         onViewChange={(view: 'home' | 'map' | 'inbox' | 'profile') =>
           setCurrentView(view)
         }
-        className={!isOnline ? 'pt-10' : ''}
+        className={`${!isOnline ? 'pt-10' : ''} ${backgroundRefreshing ? 'pt-6' : ''}`}
       >
         {renderCurrentView()}
       </Layout>
       <ToastContainer />
+      {/* Debug component - only in development */}
+      {process.env.NODE_ENV === 'development' && <AppStateDebug />}
     </ErrorBoundary>
   );
 }
