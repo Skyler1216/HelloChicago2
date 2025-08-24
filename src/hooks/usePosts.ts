@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Database } from '../types/database';
 
@@ -17,7 +17,11 @@ export function usePosts(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadPosts = useCallback(async () => {
+  useEffect(() => {
+    loadPosts();
+  }, [type, categoryId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadPosts = async () => {
     try {
       setLoading(true);
 
@@ -110,11 +114,7 @@ export function usePosts(
     } finally {
       setLoading(false);
     }
-  }, [type, categoryId]);
-
-  useEffect(() => {
-    loadPosts();
-  }, [loadPosts]);
+  };
 
   const createPost = async (
     postData: Database['public']['Tables']['posts']['Insert']
