@@ -3,6 +3,7 @@ import { usePageVisibility } from '../../hooks/usePageVisibility';
 import { useAppLifecycle } from '../../hooks/useAppLifecycle';
 import { useCache } from '../../hooks/useCache';
 import { useAuth } from '../../hooks/useAuth';
+import { useInbox } from '../../hooks/useInbox';
 
 export default function AppStateDebug() {
   const [isVisible, setIsVisible] = useState(false);
@@ -10,7 +11,14 @@ export default function AppStateDebug() {
   const pageVisibility = usePageVisibility();
   const appLifecycle = useAppLifecycle();
   const cache = useCache('debug', { ttl: 60000 });
-  const { loading: authLoading, isAuthenticated, isApproved } = useAuth();
+  const { user, loading: authLoading, isAuthenticated, isApproved } = useAuth();
+  const {
+    unreadCount,
+    loading: inboxLoading,
+    error: inboxError,
+    notifications,
+    messages,
+  } = useInbox(user?.id || '');
 
   if (!isVisible) {
     return (
@@ -92,6 +100,18 @@ export default function AppStateDebug() {
               <div>Loading: {authLoading ? '⏳' : '✅'}</div>
               <div>Authenticated: {isAuthenticated ? '✅' : '❌'}</div>
               <div>Approved: {isApproved ? '✅' : '❌'}</div>
+            </div>
+          </div>
+
+          {/* Inbox State */}
+          <div>
+            <h4 className="font-semibold text-indigo-600">📨 Inbox State</h4>
+            <div className="pl-2 space-y-1">
+              <div>Loading: {inboxLoading ? '⏳' : '✅'}</div>
+              <div>Error: {inboxError ? '❌' : '✅'}</div>
+              <div>Unread: {unreadCount}</div>
+              <div>Notifications: {notifications.length}</div>
+              <div>Messages: {messages.length}</div>
             </div>
           </div>
 

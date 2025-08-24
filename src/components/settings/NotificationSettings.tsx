@@ -41,6 +41,11 @@ export default function NotificationSettings({
     system_notifications: true,
   });
 
+  // エラーハンドリング
+  if (error) {
+    console.error('📱 NotificationSettings: Hook error:', error);
+  }
+
   // サーバー設定をローカル状態に同期
   useEffect(() => {
     if (settings) {

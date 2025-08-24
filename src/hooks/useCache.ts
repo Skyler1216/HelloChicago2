@@ -65,7 +65,7 @@ export function useCache<T>(key: string, options: CacheOptions = {}) {
     const hitRate = hits + misses > 0 ? (hits / (hits + misses)) * 100 : 0;
 
     setCacheStats({ size, hits, misses, staleHits, hitRate });
-  }, [cacheStats.hits, cacheStats.misses, cacheStats.staleHits]);
+  }, []); // 依存配列を空にする
 
   // 初期化時にキャッシュを復元
   useEffect(() => {

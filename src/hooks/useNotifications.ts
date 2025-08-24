@@ -1,127 +1,96 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { Database } from '../types/database';
 
 type Notification = Database['public']['Tables']['notifications']['Row'];
-type NotificationInsert =
-  Database['public']['Tables']['notifications']['Insert'];
 
 interface UseNotificationsReturn {
   notifications: Notification[];
-  unreadCount: number;
   loading: boolean;
   error: string | null;
-  markAsRead: (notificationId: string) => Promise<boolean>;
-  markAllAsRead: () => Promise<boolean>;
-  deleteNotification: (notificationId: string) => Promise<boolean>;
+  unreadCount: number;
+  markAsRead: (id: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
   refreshNotifications: () => Promise<void>;
+  isRefreshing: boolean;
 }
 
-export function useNotifications(
-  userId: string | undefined
-): UseNotificationsReturn {
+export function useNotifications(userId: string): UseNotificationsReturn {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    if (!userId) {
+  // 通知を読み込み
+  const loadNotifications = useCallback(async () => {
+    try {
+      setError(null);
+
+      const { data, error: fetchError } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('recipient_id', userId)
+        .is('deleted_at', null)
+        .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
+        .order('created_at', { ascending: false });
+
+      if (fetchError) throw fetchError;
+
+      setNotifications(data || []);
+    } catch (err) {
+      console.error('📱 Notifications: Load error:', err);
+      setError(
+        err instanceof Error ? err.message : '通知の読み込みに失敗しました'
+      );
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const loadNotifications = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const { data, error: fetchError } = await supabase
-          .from('notifications')
-          .select(
-            `
-          *,
-          sender:profiles(id, name, avatar_url),
-          related_post:posts(id, title)
-        `
-          )
-          .eq('recipient_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(50);
-
-        if (fetchError) throw fetchError;
-
-        setNotifications(data || []);
-      } catch (err) {
-        console.error('❌ Error loading notifications:', err);
-        setError(
-          err instanceof Error ? err.message : 'Failed to load notifications'
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadNotifications();
-
-    // リアルタイム更新の設定
-    const subscription = supabase
-      .channel('notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'notifications',
-          filter: `recipient_id=eq.${userId}`,
-        },
-        () => {
-          loadNotifications();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, [userId]);
 
-  const markAsRead = async (notificationId: string): Promise<boolean> => {
-    try {
-      const { error: updateError } = await supabase
-        .from('notifications')
-        .update({
-          is_read: true,
-          read_at: new Date().toISOString(),
-        })
-        .eq('id', notificationId)
-        .eq('recipient_id', userId);
-
-      if (updateError) throw updateError;
-
-      // ローカル状態を更新
-      setNotifications(prev =>
-        prev.map(notification =>
-          notification.id === notificationId
-            ? {
-                ...notification,
-                is_read: true,
-                read_at: new Date().toISOString(),
-              }
-            : notification
-        )
-      );
-
-      return true;
-    } catch (err) {
-      console.error('❌ Error marking notification as read:', err);
-      setError(err instanceof Error ? err.message : 'Failed to mark as read');
-      return false;
+  // 初期読み込み
+  useEffect(() => {
+    if (userId) {
+      loadNotifications();
     }
-  };
+  }, [userId, loadNotifications]);
 
-  const markAllAsRead = async (): Promise<boolean> => {
-    if (!userId) return false;
+  // 既読にする
+  const markAsRead = useCallback(
+    async (id: string) => {
+      try {
+        const { error: updateError } = await supabase
+          .from('notifications')
+          .update({
+            is_read: true,
+            read_at: new Date().toISOString(),
+          })
+          .eq('id', id)
+          .eq('recipient_id', userId);
 
+        if (updateError) throw updateError;
+
+        // ローカル状態を更新
+        setNotifications(prev =>
+          prev.map(notification =>
+            notification.id === id
+              ? {
+                  ...notification,
+                  is_read: true,
+                  read_at: new Date().toISOString(),
+                }
+              : notification
+          )
+        );
+      } catch (err) {
+        console.error('📱 Notifications: Mark as read error:', err);
+        throw err;
+      }
+    },
+    [userId]
+  );
+
+  // 全て既読にする
+  const markAllAsRead = useCallback(async () => {
     try {
       const { error: updateError } = await supabase
         .from('notifications')
@@ -135,279 +104,202 @@ export function useNotifications(
       if (updateError) throw updateError;
 
       // ローカル状態を更新
-      const now = new Date().toISOString();
       setNotifications(prev =>
         prev.map(notification => ({
           ...notification,
           is_read: true,
-          read_at: notification.read_at || now,
+          read_at: new Date().toISOString(),
         }))
       );
-
-      return true;
     } catch (err) {
-      console.error('❌ Error marking all notifications as read:', err);
-      setError(
-        err instanceof Error ? err.message : 'Failed to mark all as read'
-      );
-      return false;
+      console.error('📱 Notifications: Mark all as read error:', err);
+      throw err;
     }
-  };
+  }, [userId]);
 
-  const deleteNotification = async (
-    notificationId: string
-  ): Promise<boolean> => {
+  // リフレッシュ
+  const refreshNotifications = useCallback(async () => {
     try {
-      const { error: deleteError } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', notificationId)
-        .eq('recipient_id', userId);
-
-      if (deleteError) throw deleteError;
-
-      // ローカル状態から削除
-      setNotifications(prev =>
-        prev.filter(notification => notification.id !== notificationId)
-      );
-
-      return true;
-    } catch (err) {
-      console.error('❌ Error deleting notification:', err);
-      setError(
-        err instanceof Error ? err.message : 'Failed to delete notification'
-      );
-      return false;
-    }
-  };
-
-  const refreshNotifications = async (): Promise<void> => {
-    if (!userId) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const { data, error: fetchError } = await supabase
-        .from('notifications')
-        .select(
-          `
-          *,
-          sender:profiles(id, name, avatar_url),
-          related_post:posts(id, title)
-        `
-        )
-        .eq('recipient_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (fetchError) throw fetchError;
-
-      setNotifications(data || []);
-    } catch (err) {
-      console.error('❌ Error loading notifications:', err);
-      setError(
-        err instanceof Error ? err.message : 'Failed to load notifications'
-      );
+      setIsRefreshing(true);
+      await loadNotifications();
     } finally {
-      setLoading(false);
+      setIsRefreshing(false);
     }
-  };
+  }, [loadNotifications]);
 
+  // 未読数を計算
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   return {
     notifications,
-    unreadCount,
     loading,
     error,
+    unreadCount,
     markAsRead,
     markAllAsRead,
-    deleteNotification,
     refreshNotifications,
+    isRefreshing,
   };
 }
 
-// 通知設定管理用のフック
-export function useNotificationSettings(userId: string | undefined) {
-  const [settings, setSettings] = useState<
-    Database['public']['Tables']['notification_settings']['Row'] | null
-  >(null);
+// 通知設定管理フック
+interface NotificationSettings {
+  push_likes: boolean;
+  push_comments: boolean;
+  push_mentions: boolean;
+  email_likes: boolean;
+  email_comments: boolean;
+  email_mentions: boolean;
+  weekly_digest: boolean;
+  important_updates: boolean;
+  system_notifications: boolean;
+}
+
+interface UseNotificationSettingsReturn {
+  settings: NotificationSettings | null;
+  loading: boolean;
+  error: string | null;
+  updateSettings: (settings: Partial<NotificationSettings>) => Promise<boolean>;
+}
+
+export function useNotificationSettings(
+  userId: string
+): UseNotificationSettingsReturn {
+  const [settings, setSettings] = useState<NotificationSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
-
-    const loadSettings = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const { data, error: fetchError } = await supabase
-          .from('notification_settings')
-          .select('*')
-          .eq('user_id', userId)
-          .maybeSingle();
-
-        if (fetchError) throw fetchError;
-
-        setSettings(data);
-      } catch (err) {
-        console.error('❌ Error loading notification settings:', err);
-        setError(
-          err instanceof Error ? err.message : 'Failed to load settings'
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadSettings();
-  }, [userId]);
-
-  const updateSettings = async (
-    updates: Partial<
-      Database['public']['Tables']['notification_settings']['Update']
-    >
-  ): Promise<boolean> => {
-    if (!userId) return false;
-
-    try {
-      setError(null);
-
-      // 設定が存在しない場合は作成
-      if (!settings) {
-        const { data, error: insertError } = await supabase
-          .from('notification_settings')
-          .insert({
-            user_id: userId,
-            ...updates,
-          })
-          .select()
-          .single();
-
-        if (insertError) throw insertError;
-        setSettings(data);
-      } else {
-        // 既存設定を更新
-        const { data, error: updateError } = await supabase
-          .from('notification_settings')
-          .update(updates)
-          .eq('user_id', userId)
-          .select()
-          .single();
-
-        if (updateError) throw updateError;
-        setSettings(data);
-      }
-
-      return true;
-    } catch (err) {
-      console.error('❌ Error updating notification settings:', err);
-      setError(
-        err instanceof Error ? err.message : 'Failed to update settings'
-      );
-      return false;
-    }
-  };
-
-  const refreshSettings = async () => {
+  // 設定の読み込み
+  const loadSettings = useCallback(async () => {
     if (!userId) return;
 
     try {
       setLoading(true);
       setError(null);
 
+      // 通知設定テーブルから設定を取得
       const { data, error: fetchError } = await supabase
         .from('notification_settings')
-        .select('*')
+        .select(
+          `
+          push_likes,
+          push_comments,
+          push_mentions,
+          email_likes,
+          email_comments,
+          email_mentions,
+          weekly_digest,
+          important_updates,
+          system_notifications
+        `
+        )
         .eq('user_id', userId)
-        .maybeSingle();
+        .single();
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        // 設定が存在しない場合はデフォルト値で作成
+        if (fetchError.code === 'PGRST116') {
+          console.log('📱 NotificationSettings: Creating default settings');
+          const defaultSettings = {
+            user_id: userId,
+            push_likes: true,
+            push_comments: true,
+            push_mentions: true,
+            email_likes: false,
+            email_comments: true,
+            email_mentions: false,
+            weekly_digest: false,
+            important_updates: true,
+            system_notifications: true,
+          };
 
-      setSettings(data);
+          const { data: createdData, error: createError } = await supabase
+            .from('notification_settings')
+            .insert(defaultSettings)
+            .select()
+            .single();
+
+          if (createError) throw createError;
+
+          if (createdData) {
+            setSettings({
+              push_likes: createdData.push_likes,
+              push_comments: createdData.push_comments,
+              push_mentions: createdData.push_mentions,
+              email_likes: createdData.email_likes,
+              email_comments: createdData.email_comments,
+              email_mentions: createdData.email_mentions,
+              weekly_digest: createdData.weekly_digest,
+              important_updates: createdData.important_updates,
+              system_notifications: createdData.system_notifications,
+            });
+          }
+        } else {
+          throw fetchError;
+        }
+      } else if (data) {
+        setSettings({
+          push_likes: data.push_likes ?? true,
+          push_comments: data.push_comments ?? true,
+          push_mentions: data.push_mentions ?? true,
+          email_likes: data.email_likes ?? false,
+          email_comments: data.email_comments ?? true,
+          email_mentions: data.email_mentions ?? false,
+          weekly_digest: data.weekly_digest ?? false,
+          important_updates: data.important_updates ?? true,
+          system_notifications: data.system_notifications ?? true,
+        });
+      }
     } catch (err) {
-      console.error('❌ Error loading notification settings:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load settings');
+      console.error('📱 NotificationSettings: Load error:', err);
+      setError(
+        err instanceof Error ? err.message : '通知設定の読み込みに失敗しました'
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
+
+  // 設定の更新
+  const updateSettings = useCallback(
+    async (newSettings: Partial<NotificationSettings>): Promise<boolean> => {
+      if (!userId || !settings) return false;
+
+      try {
+        // upsert（存在しない場合は作成、存在する場合は更新）
+        const { error: upsertError } = await supabase
+          .from('notification_settings')
+          .upsert({
+            user_id: userId,
+            ...newSettings,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (upsertError) throw upsertError;
+
+        // ローカル状態を更新
+        setSettings(prev => (prev ? { ...prev, ...newSettings } : null));
+        return true;
+      } catch (err) {
+        console.error('📱 NotificationSettings: Update error:', err);
+        setError(
+          err instanceof Error ? err.message : '通知設定の更新に失敗しました'
+        );
+        return false;
+      }
+    },
+    [userId, settings]
+  );
+
+  // 初期読み込み
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
 
   return {
     settings,
     loading,
     error,
     updateSettings,
-    refreshSettings,
   };
 }
-
-// 通知作成用のヘルパー関数
-export const createNotification = async (
-  notification: NotificationInsert
-): Promise<boolean> => {
-  try {
-    const { error } = await supabase.from('notifications').insert(notification);
-
-    if (error) throw error;
-    return true;
-  } catch (err) {
-    console.error('❌ Error creating notification:', err);
-    return false;
-  }
-};
-
-// 通知タイプに応じたアイコンとカラーを取得
-export const getNotificationStyle = (type: Notification['type']) => {
-  switch (type) {
-    case 'like':
-      return {
-        icon: '❤️',
-        color: 'text-red-500',
-        bgColor: 'bg-red-50',
-        borderColor: 'border-red-200',
-      };
-    case 'comment':
-      return {
-        icon: '💬',
-        color: 'text-blue-500',
-        bgColor: 'bg-blue-50',
-        borderColor: 'border-blue-200',
-      };
-
-    case 'mention':
-      return {
-        icon: '📢',
-        color: 'text-purple-500',
-        bgColor: 'bg-purple-50',
-        borderColor: 'border-purple-200',
-      };
-    case 'system':
-      return {
-        icon: '🔔',
-        color: 'text-gray-500',
-        bgColor: 'bg-gray-50',
-        borderColor: 'border-gray-200',
-      };
-    case 'weekly_digest':
-      return {
-        icon: '📊',
-        color: 'text-teal-500',
-        bgColor: 'bg-teal-50',
-        borderColor: 'border-teal-200',
-      };
-    default:
-      return {
-        icon: '🔔',
-        color: 'text-gray-500',
-        bgColor: 'bg-gray-50',
-        borderColor: 'border-gray-200',
-      };
-  }
-};

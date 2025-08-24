@@ -23,6 +23,7 @@ export default function InboxView({
     unreadCount,
     loading,
     error,
+    isRefreshing: inboxRefreshing,
     markAsRead,
     markAllAsRead,
     refreshInbox,
@@ -141,11 +142,11 @@ export default function InboxView({
               {/* 更新ボタン */}
               <button
                 onClick={handleRefresh}
-                disabled={isRefreshing}
+                disabled={isRefreshing || inboxRefreshing}
                 className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50"
               >
                 <RefreshCw
-                  className={`w-4 h-4 text-gray-600 ${isRefreshing ? 'animate-spin' : ''}`}
+                  className={`w-4 h-4 text-gray-600 ${isRefreshing || inboxRefreshing ? 'animate-spin' : ''}`}
                 />
               </button>
             </div>

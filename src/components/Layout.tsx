@@ -6,6 +6,7 @@ interface LayoutProps {
   currentView: 'home' | 'map' | 'inbox' | 'profile';
   onViewChange: (view: 'home' | 'map' | 'inbox' | 'profile') => void;
   className?: string;
+  unreadCount?: number;
 }
 
 export default function Layout({
@@ -13,6 +14,7 @@ export default function Layout({
   currentView,
   onViewChange,
   className = '',
+  unreadCount = 0,
 }: LayoutProps) {
   const navItems = [
     { id: 'home' as const, icon: Home, label: 'ホーム' },
@@ -54,15 +56,23 @@ export default function Layout({
                 <button
                   key={item.id}
                   onClick={() => onViewChange(item.id)}
-                  className={`flex-1 flex flex-col items-center space-y-1 sm:space-y-1.5 px-1.5 sm:px-2 py-2 sm:py-2.5 rounded-lg transition-all duration-200 min-w-0 ${
+                  className={`relative flex-1 flex flex-col items-center space-y-1 sm:space-y-1.5 px-1.5 sm:px-2 py-2 sm:py-2.5 rounded-lg transition-all duration-200 min-w-0 ${
                     isActive
                       ? 'text-coral-600 bg-coral-50 scale-105'
                       : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  <IconComponent
-                    className={`w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0 ${isActive ? 'text-coral-600' : ''}`}
-                  />
+                  <div className="relative">
+                    <IconComponent
+                      className={`w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0 ${isActive ? 'text-coral-600' : ''}`}
+                    />
+                    {/* 未読バッジ（受信トレイのみ） */}
+                    {item.id === 'inbox' && unreadCount > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-coral-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
+                  </div>
                   <span
                     className={`text-[11px] sm:text-xs font-medium leading-tight text-center truncate w-full ${isActive ? 'text-coral-600' : ''}`}
                   >
