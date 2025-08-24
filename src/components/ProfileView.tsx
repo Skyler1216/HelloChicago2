@@ -235,7 +235,7 @@ export default function ProfileView({
         </div>
       </div>
 
-      {/* Enhanced Quick Actions */}
+      {/* Enhanced Quick Actions (theme simplified to coral) */}
       <div className="bg-white rounded-2xl p-5 mb-6 shadow-sm border border-gray-100">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-gray-900">クイックアクション</h3>
@@ -245,7 +245,7 @@ export default function ProfileView({
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => setCurrentView('posts')}
-              className="group flex flex-col items-center p-4 bg-gradient-to-br from-coral-50 to-coral-100/50 rounded-xl hover:from-coral-100 hover:to-coral-200/50 transition-all duration-300 hover:shadow-lg hover:scale-105 active:scale-95"
+              className="group flex flex-col items-center p-4 bg-coral-50 rounded-xl hover:bg-coral-100 transition-all duration-300 hover:shadow-lg hover:scale-105 active:scale-95"
             >
               <div className="w-10 h-10 bg-coral-500 rounded-lg flex items-center justify-center mb-2 group-hover:scale-110 transition-transform duration-300 shadow-sm">
                 <MessageSquare className="w-5 h-5 text-white" />
@@ -259,24 +259,24 @@ export default function ProfileView({
             </button>
             <button
               onClick={() => setCurrentView('favorites')}
-              className="group flex flex-col items-center p-4 bg-gradient-to-br from-teal-50 to-teal-100/50 rounded-xl hover:from-teal-100 hover:to-teal-200/50 transition-all duration-300 hover:shadow-lg hover:scale-105 active:scale-95"
+              className="group flex flex-col items-center p-4 bg-coral-50 rounded-xl hover:bg-coral-100 transition-all duration-300 hover:shadow-lg hover:scale-105 active:scale-95"
             >
-              <div className="w-10 h-10 bg-teal-500 rounded-lg flex items-center justify-center mb-2 group-hover:scale-110 transition-transform duration-300 shadow-sm">
+              <div className="w-10 h-10 bg-coral-500 rounded-lg flex items-center justify-center mb-2 group-hover:scale-110 transition-transform duration-300 shadow-sm">
                 <Heart className="w-5 h-5 text-white" />
               </div>
-              <span className="text-sm font-medium text-teal-700">
-                お気に入り
+              <span className="text-sm font-medium text-coral-700">
+                いいねした投稿
               </span>
-              <span className="text-xs text-teal-600 mt-1">
+              <span className="text-xs text-coral-600 mt-1">
                 {userStats.favoritesCount}件
               </span>
             </button>
           </div>
           <button
             onClick={() => setShowEditModal(true)}
-            className="group w-full flex items-center p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl hover:from-blue-100 hover:to-purple-100 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+            className="group w-full flex items-center p-4 bg-coral-50 rounded-xl hover:bg-coral-100 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
           >
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300 shadow-sm">
+            <div className="w-12 h-12 bg-coral-500 rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300 shadow-sm">
               <User className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1 text-left">
@@ -294,7 +294,7 @@ export default function ProfileView({
         </div>
       </div>
 
-      {/* Enhanced Menu Items */}
+      {/* Enhanced Menu Items (admin aligns with inbox system notifications) */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         {menuItems.map((item, index) => (
           <button
@@ -311,8 +311,8 @@ export default function ProfileView({
           >
             <div
               className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 ${
-                item.label === '管理者用画面'
-                  ? 'bg-gradient-to-br from-coral-500 to-orange-500 group-hover:scale-110 shadow-md'
+                (item.label === '管理者用画面' || item.label === '管理ダッシュボード')
+                  ? 'bg-gradient-to-br from-blue-600 to-teal-500 group-hover:scale-110 shadow-md'
                   : item.onClick
                     ? 'bg-gray-100 group-hover:bg-gray-200 group-hover:scale-105'
                     : 'bg-gray-100'
@@ -320,7 +320,7 @@ export default function ProfileView({
             >
               <item.icon
                 className={`w-5 h-5 ${
-                  item.label === '管理者用画面'
+                  (item.label === '管理者用画面' || item.label === '管理ダッシュボード')
                     ? 'text-white'
                     : item.onClick
                       ? 'text-gray-600'
@@ -331,8 +331,8 @@ export default function ProfileView({
             <div className="flex-1 text-left">
               <div
                 className={`font-medium transition-colors duration-200 ${
-                  item.label === '管理者用画面'
-                    ? 'text-coral-900'
+                  (item.label === '管理者用画面' || item.label === '管理ダッシュボード')
+                    ? 'text-blue-800'
                     : item.onClick
                       ? 'text-gray-900 group-hover:text-gray-800'
                       : 'text-gray-500'
