@@ -13,6 +13,18 @@ interface UseNotificationsReturn {
   markAllAsRead: () => Promise<void>;
   refreshNotifications: () => Promise<void>;
   isRefreshing: boolean;
+  // キャッシュ関連の機能を追加
+  isCached: boolean;
+  cacheAge: number;
+}
+
+// キャッシュの設定
+const CACHE_KEY_PREFIX = 'notifications_cache_';
+const CACHE_TTL = 10 * 60 * 1000; // 10分
+
+interface CacheData {
+  data: Notification[];
+  timestamp: number;
 }
 
 export function useNotifications(userId: string): UseNotificationsReturn {
@@ -20,32 +32,101 @@ export function useNotifications(userId: string): UseNotificationsReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isCached, setIsCached] = useState(false);
+  const [cacheAge, setCacheAge] = useState(0);
 
-  // 通知を読み込み
-  const loadNotifications = useCallback(async () => {
+  // キャッシュからデータを取得
+  const getCachedData = useCallback((id: string): Notification[] | null => {
     try {
-      setError(null);
+      const cacheKey = CACHE_KEY_PREFIX + id;
+      const cached = localStorage.getItem(cacheKey);
 
-      const { data, error: fetchError } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('recipient_id', userId)
-        .is('deleted_at', null)
-        .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
-        .order('created_at', { ascending: false });
+      if (!cached) return null;
 
-      if (fetchError) throw fetchError;
+      const cacheData: CacheData = JSON.parse(cached);
+      const now = Date.now();
 
-      setNotifications(data || []);
+      // キャッシュが有効期限切れかチェック
+      if (now - cacheData.timestamp > CACHE_TTL) {
+        localStorage.removeItem(cacheKey);
+        return null;
+      }
+
+      const age = Math.floor((now - cacheData.timestamp) / 1000);
+      setCacheAge(age);
+      setIsCached(true);
+
+      console.log('📱 useNotifications: Cache hit', { age: age + 's' });
+      return cacheData.data;
     } catch (err) {
-      console.error('📱 Notifications: Load error:', err);
-      setError(
-        err instanceof Error ? err.message : '通知の読み込みに失敗しました'
-      );
-    } finally {
-      setLoading(false);
+      console.warn('📱 useNotifications: Cache read error', err);
+      return null;
     }
-  }, [userId]);
+  }, []);
+
+  // データをキャッシュに保存
+  const setCachedData = useCallback((id: string, data: Notification[]) => {
+    try {
+      const cacheKey = CACHE_KEY_PREFIX + id;
+      const cacheData: CacheData = {
+        data,
+        timestamp: Date.now(),
+      };
+
+      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+      console.log('📱 useNotifications: Data cached');
+    } catch (err) {
+      console.warn('📱 useNotifications: Cache write error', err);
+    }
+  }, []);
+
+  // 通知を読み込み（キャッシュ優先）
+  const loadNotifications = useCallback(
+    async (forceRefresh = false) => {
+      if (!userId) return;
+
+      try {
+        setError(null);
+
+        // キャッシュから取得を試行（強制更新でない場合）
+        if (!forceRefresh) {
+          const cachedData = getCachedData(userId);
+          if (cachedData) {
+            setNotifications(cachedData);
+            setLoading(false);
+            return;
+          }
+        }
+
+        console.log('📱 useNotifications: Fetching from database...');
+
+        const { data, error: fetchError } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('recipient_id', userId)
+          .is('deleted_at', null)
+          .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
+          .order('created_at', { ascending: false });
+
+        if (fetchError) throw fetchError;
+
+        setNotifications(data || []);
+
+        // データをキャッシュに保存
+        if (data) {
+          setCachedData(userId, data);
+        }
+      } catch (err) {
+        console.error('📱 Notifications: Load error:', err);
+        setError(
+          err instanceof Error ? err.message : '通知の読み込みに失敗しました'
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [userId, getCachedData, setCachedData]
+  );
 
   // 初期読み込み
   useEffect(() => {
@@ -139,6 +220,8 @@ export function useNotifications(userId: string): UseNotificationsReturn {
     markAllAsRead,
     refreshNotifications,
     isRefreshing,
+    isCached,
+    cacheAge,
   };
 }
 

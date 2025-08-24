@@ -2,25 +2,18 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { Database } from '../types/database';
 
-type Comment = Database['public']['Tables']['comments']['Row'];
-
-// Comment with profile and read status
-type CommentWithProfileAndReadStatus = Comment & {
-  profiles: {
+type Message = Database['public']['Tables']['comments']['Row'] & {
+  profiles?: {
     name: string;
-    avatar_url: string | null;
+    avatar_url?: string;
   };
-  comment_reads:
-    | {
-        read_at: string;
-      }[]
-    | null;
   post_title?: string;
   post_type?: string;
+  comment_reads?: Array<{ id: string; read_at: string }>;
 };
 
 interface UseMessagesReturn {
-  messages: CommentWithProfileAndReadStatus[];
+  messages: Message[];
   loading: boolean;
   error: string | null;
   unreadCount: number;
@@ -28,73 +21,134 @@ interface UseMessagesReturn {
   markAllAsRead: () => Promise<void>;
   refreshMessages: () => Promise<void>;
   isRefreshing: boolean;
+  // キャッシュ関連の機能を追加
+  isCached: boolean;
+  cacheAge: number;
+}
+
+// キャッシュの設定
+const CACHE_KEY_PREFIX = 'messages_cache_';
+const CACHE_TTL = 10 * 60 * 1000; // 10分
+
+interface CacheData {
+  data: Message[];
+  timestamp: number;
 }
 
 export function useMessages(userId: string): UseMessagesReturn {
-  const [messages, setMessages] = useState<CommentWithProfileAndReadStatus[]>(
-    []
-  );
+  const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isCached, setIsCached] = useState(false);
+  const [cacheAge, setCacheAge] = useState(0);
 
-  // メッセージを読み込み
-  const loadMessages = useCallback(async () => {
+  // キャッシュからデータを取得
+  const getCachedData = useCallback((id: string): Message[] | null => {
     try {
-      setError(null);
+      const cacheKey = CACHE_KEY_PREFIX + id;
+      const cached = localStorage.getItem(cacheKey);
 
-      // ユーザーの投稿を取得
-      const { data: userPosts, error: postsError } = await supabase
-        .from('posts')
-        .select('id, title, type')
-        .eq('author_id', userId);
+      if (!cached) return null;
 
-      if (postsError) throw postsError;
+      const cacheData: CacheData = JSON.parse(cached);
+      const now = Date.now();
 
-      if (userPosts && userPosts.length > 0) {
-        const postIds = userPosts.map(post => post.id);
+      // キャッシュが有効期限切れかチェック
+      if (now - cacheData.timestamp > CACHE_TTL) {
+        localStorage.removeItem(cacheKey);
+        return null;
+      }
 
-        // ユーザーの投稿へのコメントを取得
-        const { data: comments, error: commentsError } = await supabase
+      const age = Math.floor((now - cacheData.timestamp) / 1000);
+      setCacheAge(age);
+      setIsCached(true);
+
+      console.log('📱 useMessages: Cache hit', { age: age + 's' });
+      return cacheData.data;
+    } catch (err) {
+      console.warn('📱 useMessages: Cache read error', err);
+      return null;
+    }
+  }, []);
+
+  // データをキャッシュに保存
+  const setCachedData = useCallback((id: string, data: Message[]) => {
+    try {
+      const cacheKey = CACHE_KEY_PREFIX + id;
+      const cacheData: CacheData = {
+        data,
+        timestamp: Date.now(),
+      };
+
+      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+      console.log('📱 useMessages: Data cached');
+    } catch (err) {
+      console.warn('📱 useMessages: Cache write error', err);
+    }
+  }, []);
+
+  // メッセージを読み込み（キャッシュ優先）
+  const loadMessages = useCallback(
+    async (forceRefresh = false) => {
+      if (!userId) return;
+
+      try {
+        setError(null);
+
+        // キャッシュから取得を試行（強制更新でない場合）
+        if (!forceRefresh) {
+          const cachedData = getCachedData(userId);
+          if (cachedData) {
+            setMessages(cachedData);
+            setLoading(false);
+            return;
+          }
+        }
+
+        console.log('📱 useMessages: Fetching from database...');
+
+        const { data, error: fetchError } = await supabase
           .from('comments')
           .select(
             `
-            *,
-            profiles!comments_author_id_fkey(name, avatar_url),
-            comment_reads!left(read_at)
-          `
+          *,
+          profiles:profiles(name, avatar_url),
+          posts:posts(title, type)
+        `
           )
-          .in('post_id', postIds)
-          .eq('is_approved', true)
+          .eq('author_id', userId)
+          .eq('approved', true)
           .order('created_at', { ascending: false });
 
-        if (commentsError) throw commentsError;
+        if (fetchError) throw fetchError;
 
-        // 投稿タイトルとタイプを追加
-        const messagesWithPostInfo = (comments || []).map(comment => {
-          const post = userPosts.find(p => p.id === comment.post_id);
-          return {
-            ...comment,
-            post_title: post?.title || '投稿',
-            post_type: post?.type || 'post',
-          };
-        });
+        // データを整形
+        const formattedMessages: Message[] = (data || []).map(message => ({
+          ...message,
+          post_title: message.posts?.title,
+          post_type: message.posts?.type,
+        }));
 
-        setMessages(messagesWithPostInfo);
-      } else {
-        setMessages([]);
+        setMessages(formattedMessages);
+
+        // データをキャッシュに保存
+        if (formattedMessages.length > 0) {
+          setCachedData(userId, formattedMessages);
+        }
+      } catch (err) {
+        console.error('📱 Messages: Load error:', err);
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'メッセージの読み込みに失敗しました'
+        );
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error('📱 Messages: Load error:', err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'メッセージの読み込みに失敗しました'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [userId]);
+    },
+    [userId, getCachedData, setCachedData]
+  );
 
   // 初期読み込み
   useEffect(() => {
@@ -122,7 +176,7 @@ export function useMessages(userId: string): UseMessagesReturn {
           prev.map(message => ({
             ...message,
             comment_reads: message.comment_reads || [
-              { read_at: new Date().toISOString() },
+              { id, read_at: new Date().toISOString() },
             ],
           }))
         );
@@ -159,7 +213,7 @@ export function useMessages(userId: string): UseMessagesReturn {
           prev.map(message => ({
             ...message,
             comment_reads: message.comment_reads || [
-              { read_at: new Date().toISOString() },
+              { id: message.id, read_at: new Date().toISOString() },
             ],
           }))
         );
@@ -174,7 +228,7 @@ export function useMessages(userId: string): UseMessagesReturn {
   const refreshMessages = useCallback(async () => {
     try {
       setIsRefreshing(true);
-      await loadMessages();
+      await loadMessages(true); // forceRefreshをtrueに設定
     } finally {
       setIsRefreshing(false);
     }
@@ -195,5 +249,7 @@ export function useMessages(userId: string): UseMessagesReturn {
     markAllAsRead,
     refreshMessages,
     isRefreshing,
+    isCached,
+    cacheAge,
   };
 }

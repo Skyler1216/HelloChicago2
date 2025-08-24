@@ -153,6 +153,7 @@ export default function InboxView({
                 onClick={handleRefresh}
                 disabled={isRefreshing || inboxRefreshing}
                 className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50"
+                title="更新"
               >
                 <RefreshCw
                   className={`w-4 h-4 text-gray-600 ${isRefreshing || inboxRefreshing ? 'animate-spin' : ''}`}

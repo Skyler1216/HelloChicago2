@@ -87,12 +87,16 @@ export function useInbox(userId: string): UseInboxReturn {
       if (loading) {
         console.warn('📱 Inbox: Loading timeout reached, forcing completion');
         setForceLoading(true);
-        setError('読み込みがタイムアウトしました。再試行してください。');
+        setError(
+          notificationsError ||
+            messagesError ||
+            '読み込みがタイムアウトしました。再試行してください。'
+        );
       }
     }, 15000); // 15秒でタイムアウト
 
     return () => clearTimeout(timeoutId);
-  }, [userId, loading]);
+  }, [userId, loading, notificationsError, messagesError]);
 
   // エラーの統合
   useEffect(() => {
@@ -113,33 +117,37 @@ export function useInbox(userId: string): UseInboxReturn {
   // 通知をInboxItem形式に変換
   const notificationItems = useMemo((): InboxItem[] => {
     return notifications.map(notification => ({
-      id: notification.id,
+      id: notification.id as string,
       type: 'notification' as const,
-      title: notification.title,
-      message: notification.message,
-      timestamp: notification.created_at,
-      isRead: notification.is_read,
-      actionUrl: notification.action_url || undefined,
-      actionText: notification.action_text || undefined,
-      metadata: notification.metadata,
+      title: notification.title as string,
+      message: notification.message as string,
+      timestamp: notification.created_at as string,
+      isRead: notification.is_read as boolean,
+      actionUrl: (notification.action_url as string) || undefined,
+      actionText: (notification.action_text as string) || undefined,
+      metadata: notification.metadata as Record<string, unknown>,
     }));
   }, [notifications]);
 
   // メッセージをInboxItem形式に変換
   const messageItems = useMemo((): InboxItem[] => {
     return messages.map(message => ({
-      id: message.id,
+      id: message.id as string,
       type: 'message' as const,
-      title: `${message.profiles?.name || 'ユーザー'}からのコメント`,
-      message: message.content,
-      timestamp: message.created_at,
-      isRead: !!(message.comment_reads && message.comment_reads.length > 0),
-      postId: message.post_id,
-      postTitle: message.post_title || '投稿',
-      postType: message.post_type || 'post',
-      authorName: message.profiles?.name || 'ユーザー',
-      authorAvatar: message.profiles?.avatar_url || '',
-      commentContent: message.content,
+      title: `${(message.profiles as { name?: string })?.name || 'ユーザー'}からのコメント`,
+      message: message.content as string,
+      timestamp: message.created_at as string,
+      isRead: !!(
+        (message.comment_reads as Array<{ id: string }>) &&
+        (message.comment_reads as Array<{ id: string }>).length > 0
+      ),
+      postId: message.post_id as string,
+      postTitle: (message.post_title as string) || '投稿',
+      postType: (message.post_type as string) || 'post',
+      authorName: (message.profiles as { name?: string })?.name || 'ユーザー',
+      authorAvatar:
+        (message.profiles as { avatar_url?: string })?.avatar_url || '',
+      commentContent: message.content as string,
       hasReplies: false, // TODO: Implement reply detection
     }));
   }, [messages]);
@@ -209,7 +217,7 @@ export function useInbox(userId: string): UseInboxReturn {
 
       console.log('📱 Inbox: Refresh completed');
     } catch (err) {
-      console.error('📱 Inbox: Refresh error:', err);
+      console.error('📱 Inbox: Refresh error', err);
       setError(err instanceof Error ? err.message : 'エラーが発生しました');
     }
   }, [refreshNotifications, refreshMessages]);
