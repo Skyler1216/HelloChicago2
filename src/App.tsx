@@ -18,6 +18,29 @@ import { useAuth } from './hooks/useAuth';
 import { useToast } from './hooks/useToast';
 import { validateConfig } from './lib/config';
 
+// Prevent page bounce on mobile
+function preventPageBounce() {
+  // Prevent pull-to-refresh
+  document.addEventListener('touchstart', (e) => {
+    if (e.touches.length > 1) return;
+  }, { passive: false });
+
+  document.addEventListener('touchmove', (e) => {
+    const scrollElement = document.documentElement;
+    if (scrollElement.scrollTop === 0 && e.touches[0].clientY > 0) {
+      e.preventDefault();
+    }
+    if (scrollElement.scrollTop + scrollElement.clientHeight >= scrollElement.scrollHeight && e.touches[0].clientY < 0) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  // Prevent context menu on long press
+  document.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+  });
+}
+
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [currentView, setCurrentView] = useState<
@@ -47,6 +70,11 @@ export default function App() {
     if (!validateConfig()) {
       console.error('❌ App configuration is invalid');
     }
+  }, []);
+
+  // Prevent page bounce on mobile
+  useEffect(() => {
+    preventPageBounce();
   }, []);
 
   // Splash screen timer

@@ -20,7 +20,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png?v=3" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png?v=3" />
     
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#ffffff" />
     <meta
       name="description"
@@ -38,6 +38,42 @@
     <meta name="application-name" content="HelloChicago" />
 
     <title>HelloChicago - シカゴ駐在妻コミュニティ</title>
+    
+    <!-- Prevent page bounce/pull-to-refresh on mobile -->
+    <style>
+      html, body {
+        height: 100%;
+        overflow: hidden;
+        overscroll-behavior: none;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-x pan-y;
+        position: fixed;
+        width: 100%;
+      }
+      
+      #root {
+        height: 100vh;
+        overflow: auto;
+        overscroll-behavior: none;
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      /* Prevent pull-to-refresh */
+      body {
+        overscroll-behavior-y: none;
+      }
+      
+      /* iOS specific fixes */
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+      
+      /* Disable bounce effect */
+      * {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: none;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
