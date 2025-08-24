@@ -96,7 +96,7 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
   }
 
   return (
-    <div className="pb-8 relative">
+    <div className="pb-10 relative">
       {/* Post Type Tabs */}
       <TabNavigation
         tabs={postTypeTabs}
