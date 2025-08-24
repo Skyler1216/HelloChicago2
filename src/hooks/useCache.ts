@@ -97,6 +97,7 @@ export function useCache<T>(key: string, options: CacheOptions = {}) {
       const item = cacheRef.current.get(cacheKey);
 
       if (!item) {
+        console.log('📱 useCache: Cache miss', { cacheKey, key });
         setCacheStats(prev => ({ ...prev, misses: prev.misses + 1 }));
         return null;
       }
@@ -109,9 +110,16 @@ export function useCache<T>(key: string, options: CacheOptions = {}) {
           // 古いデータでも返す（Stale-While-Revalidateパターン）
           item.lastAccessed = now;
           item.accessCount++;
+          console.log('📱 useCache: Stale cache hit', {
+            cacheKey,
+            key,
+            age: Math.floor((now - item.timestamp) / 1000) + 's',
+            ttl: Math.floor(ttl / 1000) + 's',
+          });
           setCacheStats(prev => ({ ...prev, staleHits: prev.staleHits + 1 }));
           return item.data;
         } else {
+          console.log('📱 useCache: Cache expired', { cacheKey, key });
           cacheRef.current.delete(cacheKey);
           setCacheStats(prev => ({ ...prev, misses: prev.misses + 1 }));
           return null;
@@ -121,16 +129,29 @@ export function useCache<T>(key: string, options: CacheOptions = {}) {
       // アクセス情報を更新
       item.lastAccessed = now;
       item.accessCount++;
+      console.log('📱 useCache: Cache hit', {
+        cacheKey,
+        key,
+        age: Math.floor((now - item.timestamp) / 1000) + 's',
+        remaining: Math.floor((item.expiresAt - now) / 1000) + 's',
+      });
       setCacheStats(prev => ({ ...prev, hits: prev.hits + 1 }));
       return item.data;
     },
-    [staleWhileRevalidate]
+    [staleWhileRevalidate, ttl]
   );
 
   // キャッシュの設定
   const set = useCallback(
     (cacheKey: string, data: T): void => {
       const now = Date.now();
+      console.log('📱 useCache: Setting cache', {
+        cacheKey,
+        key,
+        dataSize: Array.isArray(data) ? data.length : 'single',
+        ttl: Math.floor(ttl / 1000) + 's',
+        priority,
+      });
 
       // 最大サイズチェック
       if (cacheRef.current.size >= maxSize) {
@@ -151,6 +172,11 @@ export function useCache<T>(key: string, options: CacheOptions = {}) {
         }
 
         if (candidateKey) {
+          console.log('📱 useCache: Evicting cache item', {
+            evictedKey: candidateKey,
+            key,
+            reason: 'maxSize reached',
+          });
           cacheRef.current.delete(candidateKey);
         }
       }
@@ -226,11 +252,28 @@ export function useCache<T>(key: string, options: CacheOptions = {}) {
   }, []);
 
   // データが古いかチェック
-  const isStale = useCallback((cacheKey: string): boolean => {
-    const item = cacheRef.current.get(cacheKey);
-    if (!item) return true;
-    return Date.now() > item.expiresAt;
-  }, []);
+  const isStale = useCallback(
+    (cacheKey: string): boolean => {
+      const item = cacheRef.current.get(cacheKey);
+      if (!item) {
+        console.log('📱 useCache: isStale check - no item found', {
+          cacheKey,
+          key,
+        });
+        return true;
+      }
+      const isStaleResult = Date.now() > item.expiresAt;
+      console.log('📱 useCache: isStale check', {
+        cacheKey,
+        key,
+        isStale: isStaleResult,
+        age: Math.floor((Date.now() - item.timestamp) / 1000) + 's',
+        ttl: Math.floor(ttl / 1000) + 's',
+      });
+      return isStaleResult;
+    },
+    [ttl]
+  );
 
   // キャッシュの効率的な一括更新
   const setMultiple = useCallback(

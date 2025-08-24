@@ -11,14 +11,39 @@ type Post = Database['public']['Tables']['posts']['Row'] & {
   comments_count?: number;
 };
 
+interface UsePostsReturn {
+  posts: Post[];
+  loading: boolean;
+  error: string | null;
+  isRefreshing: boolean;
+  createPost: (
+    postData: Database['public']['Tables']['posts']['Insert']
+  ) => Promise<Post>;
+  updatePostStatus: (
+    postId: string,
+    status: 'open' | 'in_progress' | 'closed'
+  ) => Promise<{ status: string }>;
+  updatePost: (
+    postId: string,
+    updates: Database['public']['Tables']['posts']['Update']
+  ) => Promise<Post>;
+  refetch: () => Promise<void>;
+  deletePost: (id: string) => Promise<void>;
+  // キャッシュ状態を追加
+  isCached: boolean;
+  cacheAge: number;
+}
+
 export function usePosts(
   type?: 'post' | 'consultation' | 'transfer',
   categoryId?: string
-) {
+): UsePostsReturn {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isCached, setIsCached] = useState(false);
+  const [cacheAge, setCacheAge] = useState(0);
 
   // キャッシュキーを生成
   const cacheKey = `posts_${type || 'all'}_${categoryId || 'all'}`;
@@ -52,29 +77,60 @@ export function usePosts(
         if (!forceRefresh) {
           const cachedPosts = cache.get(cacheKey);
           if (cachedPosts) {
+            console.log('📱 usePosts: Cache hit', {
+              cacheKey,
+              postsCount: cachedPosts.length,
+              type: type || 'all',
+              categoryId: categoryId || 'all',
+            });
             setPosts(cachedPosts);
             setLoading(false);
+            setIsCached(true);
+            setCacheAge(Math.floor((Date.now() - Date.now()) / 1000)); // キャッシュヒット時は0秒
 
             // 古いデータの場合はバックグラウンドで更新
             if (cache.isStale(cacheKey)) {
+              console.log(
+                '📱 usePosts: Cache is stale, updating in background'
+              );
               setIsRefreshing(true);
               // バックグラウンド更新は続行
             } else {
+              console.log('📱 usePosts: Using fresh cached data');
               return; // 有効なキャッシュがあるので終了
             }
+          } else {
+            console.log('📱 usePosts: Cache miss', {
+              cacheKey,
+              type: type || 'all',
+              categoryId: categoryId || 'all',
+            });
+            setIsCached(false);
+            setCacheAge(0);
           }
+        } else {
+          console.log('📱 usePosts: Force refresh requested');
+          setIsCached(false);
+          setCacheAge(0);
         }
 
         // ネットワークが利用できない場合はオフラインデータを使用
         if (!canFetchData) {
           const offlineData = cache.getOfflineData(cacheKey);
           if (offlineData) {
+            console.log('📱 usePosts: Using offline cached data', {
+              postsCount: offlineData.length,
+            });
             setPosts(offlineData);
             setLoading(false);
             return;
           }
         }
 
+        console.log('📱 usePosts: Fetching from database...', {
+          type: type || 'all',
+          categoryId: categoryId || 'all',
+        });
         setLoading(true);
 
         let query = supabase
@@ -161,6 +217,10 @@ export function usePosts(
 
         // キャッシュに保存
         cache.set(cacheKey, postsWithCounts);
+        console.log('📱 usePosts: Data cached successfully', {
+          postsCount: postsWithCounts.length,
+          cacheKey,
+        });
 
         setPosts(postsWithCounts);
         setError(null); // エラーをクリア
@@ -171,8 +231,10 @@ export function usePosts(
         // エラー時はキャッシュからフォールバック
         const fallbackData = cache.getOfflineData(cacheKey);
         if (fallbackData) {
+          console.log('📱 usePosts: Using cached data as fallback', {
+            postsCount: fallbackData.length,
+          });
           setPosts(fallbackData);
-          console.log('📱 Using cached data as fallback');
         }
       } finally {
         setLoading(false);
@@ -325,7 +387,7 @@ export function usePosts(
     }
   };
 
-  const deletePost = async (postId: string) => {
+  const deletePost = async (postId: string): Promise<void> => {
     try {
       const { error } = await supabase.from('posts').delete().eq('id', postId);
       if (error) throw error;
@@ -336,8 +398,6 @@ export function usePosts(
 
       // キャッシュも更新
       cache.set(cacheKey, updatedPosts);
-
-      return true;
     } catch (err) {
       throw err instanceof Error ? err : new Error('Failed to delete post');
     }
@@ -353,6 +413,7 @@ export function usePosts(
     updatePost,
     deletePost,
     refetch: () => loadPosts(true),
-    cacheStats: cache.stats,
+    isCached,
+    cacheAge,
   };
 }

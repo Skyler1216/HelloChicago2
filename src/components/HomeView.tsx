@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Camera, HelpCircle, Gift, Plus, X } from 'lucide-react';
 import PostCard from './PostCard';
 import { useAuth } from '../hooks/useAuth';
@@ -21,12 +21,26 @@ interface HomeViewProps {
 
 export default function HomeView({ onShowPostForm }: HomeViewProps) {
   const { user } = useAuth();
+
+  // localStorageからタブ状態を復元、デフォルトは'post'
   const [selectedPostType, setSelectedPostType] = useState<
     'post' | 'consultation' | 'transfer'
-  >('post');
+  >(() => {
+    const saved = localStorage.getItem('home_selected_tab');
+    return (saved as 'post' | 'consultation' | 'transfer') || 'post';
+  });
+
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [showPostModal, setShowPostModal] = useState(false);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
+
+  // タブ状態をlocalStorageに保存
+  const updateSelectedPostType = (
+    type: 'post' | 'consultation' | 'transfer'
+  ) => {
+    setSelectedPostType(type);
+    localStorage.setItem('home_selected_tab', type);
+  };
 
   const {
     posts,
@@ -34,7 +48,30 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
     isRefreshing,
     refetch,
     deletePost,
+    isCached,
+    cacheAge,
   } = usePosts(selectedPostType);
+
+  // キャッシュが有効な場合はローディングを表示しない
+  const effectiveLoading = postsLoading && !isCached;
+
+  // キャッシュ状態のデバッグ表示
+  useEffect(() => {
+    console.log('📱 HomeView: Cache status', {
+      selectedPostType,
+      isCached,
+      cacheAge: cacheAge > 0 ? `${cacheAge}s` : 'N/A',
+      postsCount: posts.length,
+      effectiveLoading,
+    });
+
+    if (isCached) {
+      console.log('📱 HomeView: Using cached posts data', {
+        age: cacheAge + 's',
+        type: selectedPostType,
+      });
+    }
+  }, [selectedPostType, isCached, cacheAge, posts.length, effectiveLoading]);
 
   const postTypeTabs: TabItem[] = [
     {
@@ -80,7 +117,7 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
   };
 
   const handlePostTypeSelect = (type: 'post' | 'consultation' | 'transfer') => {
-    setSelectedPostType(type);
+    updateSelectedPostType(type);
     setShowPostModal(false);
     // 投稿フォームを表示
     onShowPostForm(type);
@@ -103,7 +140,7 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
         tabs={postTypeTabs}
         activeTab={selectedPostType}
         onTabChange={tabId =>
-          setSelectedPostType(tabId as 'post' | 'consultation' | 'transfer')
+          updateSelectedPostType(tabId as 'post' | 'consultation' | 'transfer')
         }
         className="sticky top-16 z-30"
       />
@@ -125,7 +162,7 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
             </div>
           )}
 
-          {postsLoading && !isRefreshing ? (
+          {effectiveLoading ? (
             <div className="text-center py-8">
               <div className="w-8 h-8 border-2 border-coral-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
               <p className="text-gray-500">読み込み中...</p>
