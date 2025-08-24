@@ -278,7 +278,13 @@ export default function SpotBottomSheet({
     };
     fetchCategories();
     return () => controller.abort();
-  }, [open, location?.lat, location?.lng, location]);
+  }, [
+    open,
+    location?.lat,
+    location?.lng,
+    location?.address,
+    location?.category_hints,
+  ]);
 
   // Strict mapping: provider categories and hints only, precedence by rule
   const suggestedCategoryId = useMemo(() => {

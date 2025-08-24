@@ -137,7 +137,7 @@ export function useInbox(userId: string): UseInboxReturn {
         return;
       }
       // Skip deleted notifications
-      if ((notification as any).deleted_at) {
+      if ((notification as { deleted_at?: string | null }).deleted_at) {
         return;
       }
       items.push({

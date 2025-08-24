@@ -25,7 +25,6 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
   const [activeTab, setActiveTab] = useState<'map' | 'spots'>('map');
   const [searchQuery, setSearchQuery] = useState('');
   const [distanceFilter] = useState<number>(10); // 固定: 上部フィルター撤去に伴い内部のみ
-  const [sortBy] = useState<'recent' | 'popular' | 'rating'>('recent');
   // POIクリックで表示するアクションモーダルの状態
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
   const [actionsLocation, setActionsLocation] = useState<{
