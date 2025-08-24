@@ -46,8 +46,11 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
   const { categories, loading: categoriesLoading } = useCategories();
   // expose categories globally for MapboxMap to pick exact colors
   try {
-    (window as any).__app_categories__ = categories;
-  } catch {}
+    (window as { __app_categories__?: typeof categories }).__app_categories__ =
+      categories;
+  } catch {
+    // Ignore errors when setting global variable
+  }
   const { spots: mapSpots, loading: mapSpotsLoading } = useMapSpots();
 
   // モーダルは廃止（ページ遷移に変更）

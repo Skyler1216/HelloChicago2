@@ -59,17 +59,29 @@ export default function PopularSpots({
 
           // カテゴリの色をDBのカテゴリカラーに合わせる（MapboxMap と統一）
           const lookupColor = (id?: string) => {
-            const defaults = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'];
+            const defaults = [
+              '#FF6B6B',
+              '#4ECDC4',
+              '#45B7D1',
+              '#96CEB4',
+              '#FFEAA7',
+            ];
             if (!id) return defaults[0];
             try {
-              const list = (window as any).__app_categories__ as Array<{
-                id: string;
-                color: string;
-                name_ja: string;
-              }> | undefined;
+              const list = (
+                window as {
+                  __app_categories__?: Array<{
+                    id: string;
+                    color: string;
+                    name_ja: string;
+                  }>;
+                }
+              ).__app_categories__;
               const found = list?.find(c => c.id === id);
               if (found?.color) return found.color;
-            } catch {}
+            } catch {
+              // Ignore errors when accessing global categories
+            }
             const code = id.charCodeAt(0) || 0;
             return defaults[code % defaults.length];
           };
@@ -127,17 +139,18 @@ export default function PopularSpots({
               </div>
 
               {/* カテゴリタグ */}
-                  <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
                 {Array.from(spot.categories)
                   .slice(0, 3)
                   .map(categoryId => (
                     <span
                       key={categoryId}
-                          className="px-2 py-1 text-gray-700 text-xs rounded-full"
-                          style={{
-                            backgroundColor: (lookupColor(categoryId) + '26') as string,
-                            border: `1px solid ${lookupColor(categoryId)}55`,
-                          }}
+                      className="px-2 py-1 text-gray-700 text-xs rounded-full"
+                      style={{
+                        backgroundColor: (lookupColor(categoryId) +
+                          '26') as string,
+                        border: `1px solid ${lookupColor(categoryId)}55`,
+                      }}
                     >
                       {categoryId}
                     </span>
