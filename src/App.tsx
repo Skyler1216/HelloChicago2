@@ -16,6 +16,7 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useAuth } from './hooks/useAuth';
 import { useToast } from './hooks/useToast';
+import { useAppLifecycle } from './hooks/useAppLifecycle';
 import { validateConfig } from './lib/config';
 
 // Prevent page bounce on mobile while preserving scroll
@@ -70,6 +71,29 @@ export default function App() {
   >('post');
   const { user, profile, loading, isAuthenticated, isApproved } = useAuth();
   const { ToastContainer } = useToast();
+
+  // アプリライフサイクル管理
+  const { isOnline, inactiveTime } = useAppLifecycle({
+    onAppVisible: () => {
+      console.log('📱 App became visible');
+      // 長時間非アクティブだった場合は認証状態を再確認
+      if (inactiveTime > 30 * 60 * 1000) {
+        // 30分以上
+        console.log('📱 Long inactive period detected, checking auth state');
+        // useAuthのreloadProfileを呼ぶ場合はここで実行
+      }
+    },
+    onAppHidden: () => {
+      console.log('📱 App hidden');
+    },
+    onAppOnline: () => {
+      console.log('📱 App came online');
+    },
+    onAppOffline: () => {
+      console.log('📱 App went offline');
+    },
+    refreshThreshold: 5 * 60 * 1000, // 5分以上非アクティブだったら再読み込み
+  });
 
   // Validate configuration on app start
   useEffect(() => {
@@ -306,11 +330,19 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+      {/* オフライン状態のバナー */}
+      {!isOnline && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500 text-white text-center py-2 text-sm font-medium">
+          📵 オフライン - 一部機能が制限されます
+        </div>
+      )}
+
       <Layout
         currentView={currentView}
         onViewChange={(view: 'home' | 'map' | 'inbox' | 'profile') =>
           setCurrentView(view)
         }
+        className={!isOnline ? 'pt-10' : ''}
       >
         {renderCurrentView()}
       </Layout>

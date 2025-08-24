@@ -31,6 +31,7 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
   const {
     posts,
     loading: postsLoading,
+    isRefreshing,
     refetch,
     deletePost,
   } = usePosts(selectedPostType);
@@ -114,7 +115,17 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
           {selectedPostType === 'transfer' && '最新の譲渡'}
         </h2>
         <div className="space-y-4">
-          {postsLoading ? (
+          {/* リフレッシュインジケーター */}
+          {isRefreshing && !postsLoading && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-blue-700 text-sm">最新の情報を取得中...</p>
+              </div>
+            </div>
+          )}
+
+          {postsLoading && !isRefreshing ? (
             <div className="text-center py-8">
               <div className="w-8 h-8 border-2 border-coral-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
               <p className="text-gray-500">読み込み中...</p>

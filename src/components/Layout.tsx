@@ -5,12 +5,14 @@ interface LayoutProps {
   children: React.ReactNode;
   currentView: 'home' | 'map' | 'inbox' | 'profile';
   onViewChange: (view: 'home' | 'map' | 'inbox' | 'profile') => void;
+  className?: string;
 }
 
 export default function Layout({
   children,
   currentView,
   onViewChange,
+  className = '',
 }: LayoutProps) {
   const navItems = [
     { id: 'home' as const, icon: Home, label: 'ホーム' },
@@ -20,7 +22,7 @@ export default function Layout({
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className={`min-h-screen bg-gray-50 flex flex-col ${className}`}>
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-40">
         <div className="max-w-md mx-auto px-4 py-4">

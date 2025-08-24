@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { Database } from '../types/database';
+import { useCache } from './useCache';
+import { useAppLifecycle } from './useAppLifecycle';
 
 type Post = Database['public']['Tables']['posts']['Row'] & {
   profiles: Database['public']['Tables']['profiles']['Row'];
@@ -16,19 +18,69 @@ export function usePosts(
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // キャッシュキーを生成
+  const cacheKey = `posts_${type || 'all'}_${categoryId || 'all'}`;
+
+  // キャッシュと App Lifecycle の管理
+  const cache = useCache<Post[]>(`posts`, {
+    ttl: 3 * 60 * 1000, // 3分のTTL
+    priority: 8, // 投稿は高優先度
+    staleWhileRevalidate: true,
+  });
+
+  const { canFetchData, shouldRefreshData } = useAppLifecycle({
+    onAppVisible: () => {
+      // アプリがフォアグラウンドに戻ったとき
+      if (shouldRefreshData()) {
+        console.log('📱 App visible: refreshing posts data');
+        loadPosts(true); // 強制リフレッシュ
+      }
+    },
+    refreshThreshold: 2 * 60 * 1000, // 2分以上非アクティブだったら再読み込み
+  });
 
   useEffect(() => {
     loadPosts();
   }, [type, categoryId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const loadPosts = async () => {
-    try {
-      setLoading(true);
+  const loadPosts = useCallback(
+    async (forceRefresh = false) => {
+      try {
+        // キャッシュをチェック
+        if (!forceRefresh) {
+          const cachedPosts = cache.get(cacheKey);
+          if (cachedPosts) {
+            setPosts(cachedPosts);
+            setLoading(false);
 
-      let query = supabase
-        .from('posts')
-        .select(
-          `
+            // 古いデータの場合はバックグラウンドで更新
+            if (cache.isStale(cacheKey)) {
+              setIsRefreshing(true);
+              // バックグラウンド更新は続行
+            } else {
+              return; // 有効なキャッシュがあるので終了
+            }
+          }
+        }
+
+        // ネットワークが利用できない場合はオフラインデータを使用
+        if (!canFetchData) {
+          const offlineData = cache.getOfflineData(cacheKey);
+          if (offlineData) {
+            setPosts(offlineData);
+            setLoading(false);
+            return;
+          }
+        }
+
+        setLoading(true);
+
+        let query = supabase
+          .from('posts')
+          .select(
+            `
           *,
           profiles (
             id,
@@ -43,78 +95,92 @@ export function usePosts(
             color
           )
         `
-        )
-        .eq('approved', true)
-        .order('created_at', { ascending: false });
+          )
+          .eq('approved', true)
+          .order('created_at', { ascending: false });
 
-      if (type) {
-        query = query.eq('type', type);
+        if (type) {
+          query = query.eq('type', type);
+        }
+
+        if (categoryId) {
+          query = query.eq('category_id', categoryId);
+        }
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+
+        // 投稿IDのリストを作成
+        const postIds = (data || []).map(post => post.id);
+
+        if (postIds.length === 0) {
+          setPosts(data || []);
+          return;
+        }
+
+        // いいね数とコメント数を一括取得
+        const [likesResult, commentsResult] = await Promise.all([
+          // いいね数を一括取得
+          supabase.from('likes').select('post_id').in('post_id', postIds),
+
+          // コメント数を一括取得
+          supabase
+            .from('comments')
+            .select('post_id')
+            .in('post_id', postIds)
+            .eq('approved', true),
+        ]);
+
+        // いいね数とコメント数をカウント
+        const likesCountMap = new Map<string, number>();
+        const commentsCountMap = new Map<string, number>();
+
+        // いいね数をカウント
+        if (likesResult.data) {
+          likesResult.data.forEach(like => {
+            const count = likesCountMap.get(like.post_id) || 0;
+            likesCountMap.set(like.post_id, count + 1);
+          });
+        }
+
+        // コメント数をカウント
+        if (commentsResult.data) {
+          commentsResult.data.forEach(comment => {
+            const count = commentsCountMap.get(comment.post_id) || 0;
+            commentsCountMap.set(comment.post_id, count + 1);
+          });
+        }
+
+        // 投稿データにいいね数とコメント数を追加
+        const postsWithCounts = (data || []).map(post => ({
+          ...post,
+          likes_count: likesCountMap.get(post.id) || 0,
+          comments_count: commentsCountMap.get(post.id) || 0,
+        }));
+
+        // キャッシュに保存
+        cache.set(cacheKey, postsWithCounts);
+
+        setPosts(postsWithCounts);
+        setError(null); // エラーをクリア
+      } catch (err) {
+        console.error('❌ Error loading posts:', err);
+        setError(err instanceof Error ? err.message : 'An error occurred');
+
+        // エラー時はキャッシュからフォールバック
+        const fallbackData = cache.getOfflineData(cacheKey);
+        if (fallbackData) {
+          setPosts(fallbackData);
+          console.log('📱 Using cached data as fallback');
+        }
+      } finally {
+        setLoading(false);
+        setIsRefreshing(false);
       }
-
-      if (categoryId) {
-        query = query.eq('category_id', categoryId);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      // 投稿IDのリストを作成
-      const postIds = (data || []).map(post => post.id);
-
-      if (postIds.length === 0) {
-        setPosts(data || []);
-        return;
-      }
-
-      // いいね数とコメント数を一括取得
-      const [likesResult, commentsResult] = await Promise.all([
-        // いいね数を一括取得
-        supabase.from('likes').select('post_id').in('post_id', postIds),
-
-        // コメント数を一括取得
-        supabase
-          .from('comments')
-          .select('post_id')
-          .in('post_id', postIds)
-          .eq('approved', true),
-      ]);
-
-      // いいね数とコメント数をカウント
-      const likesCountMap = new Map<string, number>();
-      const commentsCountMap = new Map<string, number>();
-
-      // いいね数をカウント
-      if (likesResult.data) {
-        likesResult.data.forEach(like => {
-          const count = likesCountMap.get(like.post_id) || 0;
-          likesCountMap.set(like.post_id, count + 1);
-        });
-      }
-
-      // コメント数をカウント
-      if (commentsResult.data) {
-        commentsResult.data.forEach(comment => {
-          const count = commentsCountMap.get(comment.post_id) || 0;
-          commentsCountMap.set(comment.post_id, count + 1);
-        });
-      }
-
-      // 投稿データにいいね数とコメント数を追加
-      const postsWithCounts = (data || []).map(post => ({
-        ...post,
-        likes_count: likesCountMap.get(post.id) || 0,
-        comments_count: commentsCountMap.get(post.id) || 0,
-      }));
-
-      setPosts(postsWithCounts);
-    } catch (err) {
-      console.error('❌ Error loading posts:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [cacheKey, cache, canFetchData, categoryId, type]
+  );
 
   const createPost = async (
     postData: Database['public']['Tables']['posts']['Insert']
@@ -151,7 +217,11 @@ export function usePosts(
           likes_count: 0,
           comments_count: 0,
         };
-        setPosts(prev => [postWithCounts, ...prev]);
+        const updatedPosts = [postWithCounts, ...posts];
+        setPosts(updatedPosts);
+
+        // キャッシュも更新
+        cache.set(cacheKey, updatedPosts);
       }
 
       return data;
@@ -191,11 +261,13 @@ export function usePosts(
       if (error) throw error;
 
       // Update local state
-      setPosts(prev =>
-        prev.map(post =>
-          post.id === postId ? { ...post, status: data.status } : post
-        )
+      const updatedPosts = posts.map(post =>
+        post.id === postId ? { ...post, status: data.status } : post
       );
+      setPosts(updatedPosts);
+
+      // キャッシュも更新
+      cache.set(cacheKey, updatedPosts);
 
       return data;
     } catch (err) {
@@ -239,11 +311,13 @@ export function usePosts(
       if (error) throw error;
 
       // Update local state with the full updated record
-      setPosts(prev =>
-        prev.map(post =>
-          post.id === postId ? (data as unknown as Post) : post
-        )
+      const updatedPosts = posts.map(post =>
+        post.id === postId ? (data as unknown as Post) : post
       );
+      setPosts(updatedPosts);
+
+      // キャッシュも更新
+      cache.set(cacheKey, updatedPosts);
 
       return data as unknown as Post;
     } catch (err) {
@@ -257,7 +331,12 @@ export function usePosts(
       if (error) throw error;
 
       // Remove from local state
-      setPosts(prev => prev.filter(post => post.id !== postId));
+      const updatedPosts = posts.filter(post => post.id !== postId);
+      setPosts(updatedPosts);
+
+      // キャッシュも更新
+      cache.set(cacheKey, updatedPosts);
+
       return true;
     } catch (err) {
       throw err instanceof Error ? err : new Error('Failed to delete post');
@@ -268,10 +347,12 @@ export function usePosts(
     posts,
     loading,
     error,
+    isRefreshing,
     createPost,
     updatePostStatus,
     updatePost,
     deletePost,
-    refetch: loadPosts,
+    refetch: () => loadPosts(true),
+    cacheStats: cache.stats,
   };
 }

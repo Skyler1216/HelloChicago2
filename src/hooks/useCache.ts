@@ -4,27 +4,39 @@ interface CacheItem<T> {
   data: T;
   timestamp: number;
   expiresAt: number;
+  priority: number; // 優先度（高いほど削除されにくい）
+  accessCount: number; // アクセス回数
+  lastAccessed: number; // 最後のアクセス時間
 }
 
 interface CacheOptions {
   ttl?: number; // Time to live in milliseconds
   maxSize?: number; // Maximum number of items in cache
+  staleWhileRevalidate?: boolean; // 古いデータを返しつつバックグラウンドで更新
+  priority?: number; // キャッシュの優先度（0-10、デフォルト5）
 }
 
 interface CacheStats {
   size: number;
   hits: number;
   misses: number;
+  staleHits: number; // 古いデータのヒット数
   hitRate: number;
 }
 
 export function useCache<T>(key: string, options: CacheOptions = {}) {
-  const { ttl = 5 * 60 * 1000, maxSize = 100 } = options; // デフォルト5分
+  const {
+    ttl = 5 * 60 * 1000,
+    maxSize = 100,
+    staleWhileRevalidate = true,
+    priority = 5,
+  } = options;
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [cacheStats, setCacheStats] = useState<CacheStats>({
     size: 0,
     hits: 0,
     misses: 0,
+    staleHits: 0,
     hitRate: 0,
   });
 
@@ -44,12 +56,23 @@ export function useCache<T>(key: string, options: CacheOptions = {}) {
     };
   }, []);
 
-  // キャッシュの初期化
+  // 統計情報の更新
+  const updateStats = useCallback(() => {
+    const size = cacheRef.current.size;
+    const hits = cacheStats.hits;
+    const misses = cacheStats.misses;
+    const staleHits = cacheStats.staleHits;
+    const hitRate = hits + misses > 0 ? (hits / (hits + misses)) * 100 : 0;
+
+    setCacheStats({ size, hits, misses, staleHits, hitRate });
+  }, [cacheStats.hits, cacheStats.misses, cacheStats.staleHits]);
+
+  // 初期化時にキャッシュを復元
   useEffect(() => {
     try {
-      const cached = localStorage.getItem(`cache_${key}`);
-      if (cached) {
-        const parsed = JSON.parse(cached);
+      const stored = localStorage.getItem(`cache_${key}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
         cacheRef.current = new Map(parsed);
         updateStats();
       }
@@ -68,59 +91,84 @@ export function useCache<T>(key: string, options: CacheOptions = {}) {
     }
   }, [key]);
 
-  // 統計情報の更新
-  const updateStats = useCallback(() => {
-    const size = cacheRef.current.size;
-    const hits = cacheStats.hits;
-    const misses = cacheStats.misses;
-    const hitRate = hits + misses > 0 ? (hits / (hits + misses)) * 100 : 0;
-
-    setCacheStats({ size, hits, misses, hitRate });
-  }, [cacheStats.hits, cacheStats.misses]);
-
   // キャッシュの取得
-  const get = useCallback((cacheKey: string): T | null => {
-    const item = cacheRef.current.get(cacheKey);
+  const get = useCallback(
+    (cacheKey: string): T | null => {
+      const item = cacheRef.current.get(cacheKey);
 
-    if (!item) {
-      setCacheStats(prev => ({ ...prev, misses: prev.misses + 1 }));
-      return null;
-    }
+      if (!item) {
+        setCacheStats(prev => ({ ...prev, misses: prev.misses + 1 }));
+        return null;
+      }
 
-    // TTLチェック
-    if (Date.now() > item.expiresAt) {
-      cacheRef.current.delete(cacheKey);
-      setCacheStats(prev => ({ ...prev, misses: prev.misses + 1 }));
-      return null;
-    }
+      const now = Date.now();
 
-    setCacheStats(prev => ({ ...prev, hits: prev.hits + 1 }));
-    return item.data;
-  }, []);
+      // TTLチェック
+      if (now > item.expiresAt) {
+        if (staleWhileRevalidate) {
+          // 古いデータでも返す（Stale-While-Revalidateパターン）
+          item.lastAccessed = now;
+          item.accessCount++;
+          setCacheStats(prev => ({ ...prev, staleHits: prev.staleHits + 1 }));
+          return item.data;
+        } else {
+          cacheRef.current.delete(cacheKey);
+          setCacheStats(prev => ({ ...prev, misses: prev.misses + 1 }));
+          return null;
+        }
+      }
+
+      // アクセス情報を更新
+      item.lastAccessed = now;
+      item.accessCount++;
+      setCacheStats(prev => ({ ...prev, hits: prev.hits + 1 }));
+      return item.data;
+    },
+    [staleWhileRevalidate]
+  );
 
   // キャッシュの設定
   const set = useCallback(
     (cacheKey: string, data: T): void => {
+      const now = Date.now();
+
       // 最大サイズチェック
       if (cacheRef.current.size >= maxSize) {
-        // LRU方式で古いアイテムを削除
-        const oldestKey = cacheRef.current.keys().next().value;
-        if (oldestKey) {
-          cacheRef.current.delete(oldestKey);
+        // 優先度とアクセス頻度を考慮したLRU方式で削除
+        let candidateKey: string | null = null;
+        let lowestScore = Infinity;
+
+        for (const [key, item] of cacheRef.current.entries()) {
+          // スコア計算：優先度が低く、アクセス頻度が少なく、最近アクセスされていないほど削除候補
+          const timeSinceAccess = now - item.lastAccessed;
+          const score =
+            item.priority * 1000 + item.accessCount - timeSinceAccess / 10000;
+
+          if (score < lowestScore) {
+            lowestScore = score;
+            candidateKey = key;
+          }
+        }
+
+        if (candidateKey) {
+          cacheRef.current.delete(candidateKey);
         }
       }
 
       const item: CacheItem<T> = {
         data,
-        timestamp: Date.now(),
-        expiresAt: Date.now() + ttl,
+        timestamp: now,
+        expiresAt: now + ttl,
+        priority,
+        accessCount: 1,
+        lastAccessed: now,
       };
 
       cacheRef.current.set(cacheKey, item);
       updateStats();
       persistCache();
     },
-    [maxSize, ttl, updateStats, persistCache]
+    [maxSize, ttl, priority, updateStats, persistCache]
   );
 
   // キャッシュの削除
@@ -177,13 +225,59 @@ export function useCache<T>(key: string, options: CacheOptions = {}) {
     };
   }, []);
 
+  // データが古いかチェック
+  const isStale = useCallback((cacheKey: string): boolean => {
+    const item = cacheRef.current.get(cacheKey);
+    if (!item) return true;
+    return Date.now() > item.expiresAt;
+  }, []);
+
+  // キャッシュの効率的な一括更新
+  const setMultiple = useCallback(
+    (entries: Array<{ key: string; data: T }>): void => {
+      entries.forEach(({ key, data }) => {
+        set(key, data);
+      });
+    },
+    [set]
+  );
+
+  // 期限切れのアイテムをクリーンアップ
+  const cleanup = useCallback((): number => {
+    let cleanedCount = 0;
+    const now = Date.now();
+
+    for (const [key, item] of cacheRef.current.entries()) {
+      if (now > item.expiresAt && !staleWhileRevalidate) {
+        cacheRef.current.delete(key);
+        cleanedCount++;
+      }
+    }
+
+    if (cleanedCount > 0) {
+      updateStats();
+      persistCache();
+    }
+
+    return cleanedCount;
+  }, [staleWhileRevalidate, updateStats, persistCache]);
+
+  // 定期的なクリーンアップ
+  useEffect(() => {
+    const interval = setInterval(cleanup, 60000); // 1分ごと
+    return () => clearInterval(interval);
+  }, [cleanup]);
+
   return {
     // 基本操作
     get,
     set,
+    setMultiple,
     remove,
     clear,
     isValid,
+    isStale,
+    cleanup,
 
     // オフライン対応
     isOnline,
