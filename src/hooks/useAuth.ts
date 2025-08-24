@@ -241,6 +241,7 @@ export function useAuth() {
     user,
     profile,
     loading,
+    initialized,
     isAuthenticated,
     isApproved,
     updateProfile,

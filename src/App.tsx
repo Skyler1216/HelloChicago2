@@ -116,16 +116,8 @@ export default function App() {
             '📱 App visible but stuck in loading, attempting recovery'
           );
         }
-        // モバイルでは復旧時間を短縮（1秒）、PCでは2秒
-        const recoveryDelay = isMobile.current ? 1000 : 2000;
-        setTimeout(() => {
-          if (shouldShowLoading) {
-            if (!isMobile.current) {
-              console.log('📱 Still loading, forcing initialization');
-            }
-            forceInitialization();
-          }
-        }, recoveryDelay);
+        // 強制初期化を即座に実行
+        forceInitialization();
       }
     },
     onAppHidden: () => {
@@ -183,7 +175,7 @@ export default function App() {
     return (
       <LoadingScreen
         onForceRefresh={forceInitialization}
-        maxLoadingTime={15000} // 15秒で復旧オプションを表示
+        maxLoadingTime={5000} // 5秒で復旧オプションを表示
       />
     );
   }
