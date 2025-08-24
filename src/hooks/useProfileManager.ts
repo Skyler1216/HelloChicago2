@@ -6,6 +6,13 @@ import { useToast } from './useToast';
 type Profile = Database['public']['Tables']['profiles']['Row'];
 type ProfileDetails = Database['public']['Tables']['profile_details']['Row'];
 
+// キャッシュ用のデータ型
+interface ProfileCacheData {
+  profile: Profile | null;
+  profileDetails: ProfileDetails | null;
+  timestamp: number;
+}
+
 interface SaveHistory {
   id: string;
   timestamp: Date;
@@ -46,51 +53,135 @@ export function useProfileManager(userId: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [forceLoading, setForceLoading] = useState(false);
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
-  // プロフィールデータの読み込み
-  const loadProfileData = useCallback(async () => {
-    // ユーザーIDが無効な場合は何もしない
-    if (!userId || userId.trim() === '' || userId.length < 36) {
-      setLoading(false);
-      setError(null);
-      return;
-    }
+  // キャッシュの有効期限（30分）
+  const CACHE_TTL = 30 * 60 * 1000; // 30分
 
-    setLoading(true);
-    setError(null);
-    setForceLoading(false);
+  // キャッシュからデータを取得
+  const getCachedProfileData = useCallback((): ProfileCacheData | null => {
+    if (!userId) return null;
 
     try {
-      // プロフィール基本情報と詳細情報を並行して取得
-      const [profileResult, detailsResult] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', userId).single(),
-        supabase
-          .from('profile_details')
-          .select('*')
-          .eq('user_id', userId)
-          .single(),
-      ]);
+      const cacheKey = `profile_${userId}`;
+      const cached = localStorage.getItem(cacheKey);
+      if (!cached) return null;
 
-      if (profileResult.error) throw profileResult.error;
+      const data: ProfileCacheData = JSON.parse(cached);
+      const now = Date.now();
 
-      setState(prev => ({
-        ...prev,
-        profile: profileResult.data,
-        profileDetails: detailsResult.data || null,
-        lastSaved: new Date(),
-      }));
-    } catch (err) {
-      console.error('Failed to load profile data:', err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'プロフィールデータの読み込みに失敗しました'
-      );
-      addToast('error', 'プロフィールデータの読み込みに失敗しました');
-    } finally {
-      setLoading(false);
+      // キャッシュが有効期限内かチェック
+      if (now - data.timestamp < CACHE_TTL) {
+        console.log('📱 ProfileManager: Using cached data');
+        return data;
+      }
+
+      // 期限切れのキャッシュを削除
+      localStorage.removeItem(cacheKey);
+      return null;
+    } catch (error) {
+      console.warn('Failed to read profile cache:', error);
+      return null;
     }
-  }, [userId, addToast]);
+  }, [userId]);
+
+  // キャッシュにデータを保存
+  const setCachedProfileData = useCallback(
+    (data: Omit<ProfileCacheData, 'timestamp'>) => {
+      if (!userId) return;
+
+      try {
+        const cacheKey = `profile_${userId}`;
+        const cacheData: ProfileCacheData = {
+          ...data,
+          timestamp: Date.now(),
+        };
+        localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+        console.log('📱 ProfileManager: Data cached successfully');
+      } catch (error) {
+        console.warn('Failed to write profile cache:', error);
+      }
+    },
+    [userId]
+  );
+
+  // プロフィールデータの読み込み（キャッシュ優先）
+  const loadProfileData = useCallback(
+    async (forceRefresh = false) => {
+      // ユーザーIDが無効な場合は何もしない
+      if (!userId || userId.trim() === '' || userId.length < 36) {
+        setLoading(false);
+        setError(null);
+        return;
+      }
+
+      // キャッシュが有効で、強制更新でない場合はキャッシュを使用
+      if (!forceRefresh) {
+        const cachedData = getCachedProfileData();
+        if (cachedData) {
+          setState(prev => ({
+            ...prev,
+            profile: cachedData.profile,
+            profileDetails: cachedData.profileDetails,
+            lastSaved: new Date(cachedData.timestamp),
+          }));
+          setLastFetchTime(cachedData.timestamp);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // キャッシュが無効または強制更新の場合はAPIから取得
+      console.log('📱 ProfileManager: Fetching fresh data');
+      setLoading(true);
+      setError(null);
+      setForceLoading(false);
+
+      try {
+        // プロフィール基本情報と詳細情報を並行して取得
+        const [profileResult, detailsResult] = await Promise.all([
+          supabase.from('profiles').select('*').eq('id', userId).single(),
+          supabase
+            .from('profile_details')
+            .select('*')
+            .eq('user_id', userId)
+            .single(),
+        ]);
+
+        if (profileResult.error) throw profileResult.error;
+
+        const newProfile = profileResult.data;
+        const newProfileDetails = detailsResult.data || null;
+        const now = Date.now();
+
+        setState(prev => ({
+          ...prev,
+          profile: newProfile,
+          profileDetails: newProfileDetails,
+          lastSaved: new Date(),
+        }));
+
+        setLastFetchTime(now);
+
+        // キャッシュに保存
+        setCachedProfileData({
+          profile: newProfile,
+          profileDetails: newProfileDetails,
+        });
+      } catch (err) {
+        console.error('Failed to load profile data:', err);
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'プロフィールデータの読み込みに失敗しました'
+        );
+        addToast('error', 'プロフィールデータの読み込みに失敗しました');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [userId, addToast, getCachedProfileData, setCachedProfileData]
+  );
 
   // タイムアウト機能（無限ローディング防止）
   useEffect(() => {
@@ -358,11 +449,48 @@ export function useProfileManager(userId: string) {
     [state.hasUnsavedChanges, state.isDirty]
   );
 
+  // 手動更新（強制）
+  const refresh = useCallback(() => {
+    console.log('📱 ProfileManager: Manual refresh triggered');
+    loadProfileData(true); // 強制更新
+  }, [loadProfileData]);
+
+  // キャッシュ情報を取得
+  const getCacheInfo = useCallback(() => {
+    const cachedData = getCachedProfileData();
+    if (!cachedData) return null;
+
+    const now = Date.now();
+    const age = now - cachedData.timestamp;
+    const isValid = age < CACHE_TTL;
+
+    return {
+      isStale: !isValid,
+      age: Math.round(age / 1000), // 秒単位
+      expiresIn: Math.round((CACHE_TTL - age) / 1000), // 秒単位
+      lastUpdated: cachedData.timestamp,
+    };
+  }, [getCachedProfileData]);
+
+  // キャッシュをクリア
+  const clearCache = useCallback(() => {
+    if (!userId) return;
+
+    try {
+      const cacheKey = `profile_${userId}`;
+      localStorage.removeItem(cacheKey);
+      console.log('📱 ProfileManager: Cache cleared');
+    } catch (error) {
+      console.warn('Failed to clear profile cache:', error);
+    }
+  }, [userId]);
+
   return {
     // 状態
     ...state,
     loading: effectiveLoading,
     error,
+    lastFetchTime,
 
     // アクション
     updateProfile,
@@ -382,5 +510,8 @@ export function useProfileManager(userId: string) {
     enableAutoSave,
     reload: loadProfileData,
     forceReset, // 強制リセット機能
+    refresh, // 手動更新機能
+    getCacheInfo, // キャッシュ情報を取得
+    clearCache, // キャッシュをクリア
   };
 }
