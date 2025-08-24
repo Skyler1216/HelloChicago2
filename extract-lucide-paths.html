@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Extract Lucide SVG Paths</title>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body>
+    <h1>Lucide Icons SVG Path Extraction</h1>
+    
+    <div>
+        <h3>Heart Icon</h3>
+        <div id="heart-container"></div>
+        <textarea id="heart-path" style="width: 100%; height: 60px;" readonly></textarea>
+    </div>
+    
+    <div>
+        <h3>MapPin Icon</h3>
+        <div id="mappin-container"></div>
+        <textarea id="mappin-path" style="width: 100%; height: 60px;" readonly></textarea>
+    </div>
+    
+    <div>
+        <h3>Generated Icon Preview</h3>
+        <canvas id="preview" width="180" height="180" style="border: 2px solid #ccc;"></canvas>
+        <br>
+        <a id="download" download="exact-match-icon.png">Download Exact Match Icon</a>
+    </div>
+
+    <script>
+        // Create Heart icon
+        const heartContainer = document.getElementById('heart-container');
+        lucide.createIcons({
+            icons: {
+                Heart: lucide.Heart
+            },
+            nameAttr: 'data-lucide'
+        });
+        
+        const heartSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        heartSvg.setAttribute('width', '24');
+        heartSvg.setAttribute('height', '24');
+        heartSvg.setAttribute('viewBox', '0 0 24 24');
+        heartSvg.setAttribute('fill', 'none');
+        heartSvg.setAttribute('stroke', 'currentColor');
+        heartSvg.setAttribute('stroke-width', '2');
+        
+        const heartPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        heartPath.setAttribute('d', 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z');
+        heartPath.setAttribute('fill', 'currentColor');
+        
+        heartSvg.appendChild(heartPath);
+        heartContainer.appendChild(heartSvg);
+        document.getElementById('heart-path').value = 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';
+        
+        // Create MapPin icon
+        const mappinContainer = document.getElementById('mappin-container');
+        const mappinSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        mappinSvg.setAttribute('width', '24');
+        mappinSvg.setAttribute('height', '24');
+        mappinSvg.setAttribute('viewBox', '0 0 24 24');
+        mappinSvg.setAttribute('fill', 'none');
+        mappinSvg.setAttribute('stroke', 'currentColor');
+        mappinSvg.setAttribute('stroke-width', '2');
+        
+        const mappinPath1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        mappinPath1.setAttribute('d', 'M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z');
+        mappinPath1.setAttribute('fill', 'currentColor');
+        
+        const mappinPath2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        mappinPath2.setAttribute('cx', '12');
+        mappinPath2.setAttribute('cy', '10');
+        mappinPath2.setAttribute('r', '3');
+        mappinPath2.setAttribute('fill', 'white');
+        
+        mappinSvg.appendChild(mappinPath1);
+        mappinSvg.appendChild(mappinPath2);
+        mappinContainer.appendChild(mappinSvg);
+        document.getElementById('mappin-path').value = 'Path1: M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z | Circle: cx=12 cy=10 r=3';
+        
+        // Generate exact match icon using the extracted paths
+        function generateExactMatchIcon() {
+            const canvas = document.getElementById('preview');
+            const ctx = canvas.getContext('2d');
+            const size = 180;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, size, size);
+            
+            // White rounded background (rounded-3xl = border-radius: 1.5rem = 24px for w-24)
+            const cornerRadius = size / 7.5; // 24px equivalent for 180px canvas
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.roundRect(0, 0, size, size, cornerRadius);
+            ctx.fill();
+            
+            // Add shadow effect
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
+            ctx.shadowBlur = size * 0.1;
+            ctx.shadowOffsetY = size * 0.05;
+            ctx.shadowOffsetX = 0;
+            
+            // Heart is perfectly centered in the white box
+            const centerX = size / 2;
+            const centerY = size / 2;
+            
+            // Heart icon (w-10 h-10 relative to w-24 h-24 = 40px relative to 96px)
+            const heartSize = (40 / 96) * size; // Exact proportion = 75px for 180px canvas
+            
+            ctx.fillStyle = '#ff6b6b'; // coral-500
+            ctx.shadowColor = 'transparent';
+            
+            ctx.save();
+            // Heart is perfectly centered - translate to exact center
+            ctx.translate(centerX, centerY);
+            ctx.scale(heartSize / 24, heartSize / 24);
+            
+            // Use exact Lucide Heart path - centered at (12, 12) in 24x24 viewBox
+            ctx.translate(-12, -12); // Center the heart path
+            
+            ctx.beginPath();
+            const heartPath = new Path2D('M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z');
+            ctx.fill(heartPath);
+            
+            ctx.restore();
+            
+            // MapPin icon (w-6 h-6 relative to w-24 h-24 = 24px relative to 96px)
+            const pinSize = (24 / 96) * size; // Exact proportion = 45px for 180px canvas
+            
+            // Simple approach: position pin relative to heart center
+            // Based on visual inspection of LoadingScreen:
+            // Pin appears in the bottom-right area of the heart, slightly overlapping
+            
+            const pinX = centerX + (heartSize * 0.25); // Slightly right of heart center
+            const pinY = centerY + (heartSize * 0.25); // Slightly below heart center
+            
+            ctx.fillStyle = '#14b8a6'; // teal-500
+            
+            ctx.save();
+            ctx.translate(pinX, pinY);
+            ctx.scale(pinSize / 24, pinSize / 24);
+            
+            // Center the MapPin path
+            ctx.translate(-12, -12);
+            
+            ctx.beginPath();
+            const pinPath = new Path2D('M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z');
+            ctx.fill(pinPath);
+            
+            // White circle in center
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(12, 10, 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+            
+            // Generate download
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                document.getElementById('download').href = url;
+            }, 'image/png', 1.0);
+        }
+        
+        // Generate when page loads
+        window.onload = generateExactMatchIcon;
+    </script>
+</body>
+</html>
