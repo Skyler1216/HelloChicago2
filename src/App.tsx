@@ -138,6 +138,21 @@ export default function App() {
     refreshThreshold: 5 * 60 * 1000, // 5分以上非アクティブだったら再読み込み
   });
 
+  // 無限ローディング防止のための追加チェック
+  useEffect(() => {
+    // 5秒後にローディング状態をチェック
+    const checkTimer = setTimeout(() => {
+      if (shouldShowLoading && !authLoading) {
+        console.warn(
+          '📱 App: Loading timeout detected, forcing initialization'
+        );
+        forceInitialization();
+      }
+    }, 5000);
+
+    return () => clearTimeout(checkTimer);
+  }, [shouldShowLoading, authLoading, forceInitialization]);
+
   // Validate configuration on app start
   useEffect(() => {
     if (!validateConfig()) {
@@ -171,6 +186,7 @@ export default function App() {
       authLoading,
       isAuthenticated,
       isApproved,
+      timestamp: new Date().toISOString(),
     });
     return (
       <LoadingScreen

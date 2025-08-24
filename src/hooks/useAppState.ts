@@ -41,6 +41,7 @@ export function useAppState(): UseAppStateReturn {
 
   const initializationRef = useRef(false);
   const isMobile = useRef(false);
+  const timeoutRef = useRef<NodeJS.Timeout>();
 
   // モバイルデバイス判定
   useEffect(() => {
@@ -49,6 +50,47 @@ export function useAppState(): UseAppStateReturn {
         navigator.userAgent
       );
   }, []);
+
+  // 強制初期化（デバッグ・復旧用）
+  const forceInitialization = useCallback(() => {
+    console.log('📱 AppState: Force initialization triggered');
+
+    // 初期化フラグをリセット
+    initializationRef.current = false;
+
+    // 状態をリセット
+    setAppState(prev => ({
+      ...prev,
+      isInitialized: false,
+      hasShownInitialLoading: false,
+    }));
+
+    // 即座に初期化完了（setTimeoutを使わない）
+    console.log('📱 AppState: Force initialization completed immediately');
+    initializationRef.current = true;
+    setAppState(prev => ({
+      ...prev,
+      isInitialized: true,
+      lastRefreshTime: Date.now(),
+    }));
+  }, []);
+
+  // タイムアウト機能（無限ローディング防止）
+  useEffect(() => {
+    // 10秒後に強制初期化
+    timeoutRef.current = setTimeout(() => {
+      if (!initializationRef.current) {
+        console.warn('📱 AppState: Timeout reached, forcing initialization');
+        forceInitialization();
+      }
+    }, 10000);
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [forceInitialization]);
 
   // シンプルで確実な初期化判定
   useEffect(() => {
@@ -78,6 +120,23 @@ export function useAppState(): UseAppStateReturn {
       console.log('📱 AppState: Initialization completed');
     }
   }, [authLoading, isAuthenticated, isApproved, authInitialized]);
+
+  // フォールバック初期化（認証完了後も初期化されていない場合）
+  useEffect(() => {
+    // 認証が完了しているのに初期化されていない場合
+    if (authInitialized && !authLoading && !initializationRef.current) {
+      console.log('📱 AppState: Fallback initialization triggered');
+
+      initializationRef.current = true;
+      setAppState(prev => ({
+        ...prev,
+        isInitialized: true,
+        lastRefreshTime: Date.now(),
+      }));
+
+      console.log('📱 AppState: Fallback initialization completed');
+    }
+  }, [authInitialized, authLoading, initializationRef.current]);
 
   // 初回ローディング完了フラグの管理
   useEffect(() => {
@@ -126,32 +185,6 @@ export function useAppState(): UseAppStateReturn {
       ...prev,
       backgroundRefreshing: refreshing,
     }));
-  }, []);
-
-  // 強制初期化（デバッグ・復旧用）
-  const forceInitialization = useCallback(() => {
-    console.log('📱 AppState: Force initialization triggered');
-
-    // 初期化フラグをリセット
-    initializationRef.current = false;
-
-    // 状態をリセット
-    setAppState(prev => ({
-      ...prev,
-      isInitialized: false,
-      hasShownInitialLoading: false,
-    }));
-
-    // 強制的に初期化完了
-    setTimeout(() => {
-      console.log('📱 AppState: Force initialization completed');
-      initializationRef.current = true;
-      setAppState(prev => ({
-        ...prev,
-        isInitialized: true,
-        lastRefreshTime: Date.now(),
-      }));
-    }, 100);
   }, []);
 
   // デバッグ用：現在の状態をログ出力
