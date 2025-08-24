@@ -21,22 +21,30 @@ import { validateConfig } from './lib/config';
 // Prevent page bounce on mobile while preserving scroll
 function preventPageBounce() {
   let startY = 0;
-  
-  // Prevent pull-to-refresh only at the top of the page
-  document.addEventListener('touchstart', (e) => {
-    startY = e.touches[0].clientY;
-  }, { passive: true });
 
-  document.addEventListener('touchmove', (e) => {
-    const currentY = e.touches[0].clientY;
-    const isScrollingDown = currentY > startY;
-    const isAtTop = window.scrollY === 0;
-    
-    // Only prevent if at top and trying to pull down (refresh)
-    if (isAtTop && isScrollingDown) {
-      e.preventDefault();
-    }
-  }, { passive: false });
+  // Prevent pull-to-refresh only at the top of the page
+  document.addEventListener(
+    'touchstart',
+    e => {
+      startY = e.touches[0].clientY;
+    },
+    { passive: true }
+  );
+
+  document.addEventListener(
+    'touchmove',
+    e => {
+      const currentY = e.touches[0].clientY;
+      const isScrollingDown = currentY > startY;
+      const isAtTop = window.scrollY === 0;
+
+      // Only prevent if at top and trying to pull down (refresh)
+      if (isAtTop && isScrollingDown) {
+        e.preventDefault();
+      }
+    },
+    { passive: false }
+  );
 }
 
 export default function App() {

@@ -96,7 +96,7 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
   }
 
   return (
-    <div className="pb-6 relative">
+    <div className="pb-8 relative">
       {/* Post Type Tabs */}
       <TabNavigation
         tabs={postTypeTabs}
@@ -175,7 +175,11 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => handlePostTypeSelect(tab.id)}
+                    onClick={() =>
+                      handlePostTypeSelect(
+                        tab.id as 'post' | 'consultation' | 'transfer'
+                      )
+                    }
                     className="w-full flex items-center space-x-4 p-4 rounded-xl border border-gray-200 hover:border-coral-300 hover:bg-coral-50 transition-all duration-200"
                   >
                     <div className="p-3">
