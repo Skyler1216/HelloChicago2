@@ -1,0 +1,19 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- White rounded background -->
+  <rect width="32" height="32" rx="8" fill="#ffffff"/>
+  
+  <!-- Main heart icon -->
+  <g transform="translate(16, 16)">
+    <!-- Heart shape (scaled and centered) -->
+    <path d="M0 17.35l-7.25-6.58C-20.5 1.36-30 -7.72-30 -19.5c0-9.08 7.42-16.5 16.5-16.5 4.74 0 9.31 2.21 12.5 5.59C2.19-27.79 6.76-36 12.5-36 21.58-36 30-28.58 30-19.5c0 11.78-9.5 20.86-22.75 30.43L0 17.35z" 
+          fill="#ff6b6b" 
+          transform="scale(0.25)"/>
+    
+    <!-- Map pin icon (positioned at bottom right of heart) -->
+    <g transform="translate(3.5, 3.5) scale(0.2)">
+      <path d="M0-12c3.31 0 6 2.69 6 6 0 4.5-6 12-6 12s-6-7.5-6-12c0-3.31 2.69-6 6-6z" 
+            fill="#14b8a6"/>
+      <circle cx="0" cy="-6" r="2" fill="#ffffff"/>
+    </g>
+  </g>
+</svg>
