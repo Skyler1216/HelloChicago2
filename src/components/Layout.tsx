@@ -39,7 +39,9 @@ export default function Layout({
       <main className="flex-1 max-w-md mx-auto w-full pb-20">{children}</main>
 
       {/* Bottom Navigation */}
-      <nav className="bg-white border-t border-gray-200 fixed bottom-0 z-40 w-full">
+      <nav className="bg-white border-t border-gray-200 fixed bottom-4 z-40 w-full">
+        {/* 隙間を埋める背景 */}
+        <div className="absolute -bottom-5 left-0 right-0 h-6 bg-white"></div>
         <div className="w-full px-3 sm:px-4">
           <div className="flex justify-between py-2 sm:py-3 gap-1">
             {navItems.map(item => {
