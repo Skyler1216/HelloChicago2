@@ -19,7 +19,7 @@ export default function ReviewsBottomSheet({
   const { spots } = useMapSpots();
   const sheetRef = useRef<HTMLDivElement>(null);
   const { reviews, loading } = useSpotReviews(spotId);
-  const [height, setHeight] = useState<number>(360);
+  const [height, setHeight] = useState<number>(520);
 
   const spot = useMemo(
     () => spots.find(s => s.id === spotId) || null,
@@ -27,7 +27,7 @@ export default function ReviewsBottomSheet({
   );
 
   useEffect(() => {
-    if (open) setHeight(360);
+    if (open) setHeight(520);
     else setHeight(0);
   }, [open]);
 
@@ -38,8 +38,9 @@ export default function ReviewsBottomSheet({
         className="mx-auto max-w-md pointer-events-auto bg-white rounded-t-2xl shadow-2xl border-t border-gray-200 relative"
         style={{
           height: `${open ? height : 0}px`,
+          minHeight: open ? '400px' : '0px',
           overflow: 'hidden',
-          transition: 'height 200ms ease',
+          transition: 'height 220ms cubic-bezier(0.2, 0.8, 0.2, 1)',
         }}
         aria-live="polite"
         aria-label="口コミ一覧"
@@ -56,10 +57,6 @@ export default function ReviewsBottomSheet({
         <div className="px-4 pt-4">
           <div className="text-sm text-gray-700 font-medium truncate">
             {spot?.location_address || location?.address || '名称未設定の場所'}
-          </div>
-          <div className="text-xs text-gray-500 mt-1">
-            緯度: {(spot?.location_lat ?? location?.lat)?.toFixed(5)} / 経度:{' '}
-            {(spot?.location_lng ?? location?.lng)?.toFixed(5)}
           </div>
         </div>
 
