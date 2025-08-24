@@ -305,10 +305,19 @@ export function useInbox(userId: string): UseInboxReturn {
   const loadInbox = useCallback(
     async (forceRefresh = false) => {
       // 初期読み込み時のみローディング表示
-      if (!notifications.length && !messages.length) {
+      const shouldShowLoading = !notifications.length && !messages.length;
+      if (shouldShowLoading) {
         setLoading(true);
       }
       setError(null);
+
+      // タイムアウト処理
+      const timeoutId = setTimeout(() => {
+        if (shouldShowLoading) {
+          console.log('📱 Inbox: Load timeout, completing with cached data');
+          setLoading(false);
+        }
+      }, 10000); // 10秒でタイムアウト
 
       try {
         await Promise.all([
@@ -319,6 +328,7 @@ export function useInbox(userId: string): UseInboxReturn {
         logError(err, 'useInbox.loadInbox');
         setError(formatSupabaseError(err));
       } finally {
+        clearTimeout(timeoutId);
         setLoading(false);
       }
     },

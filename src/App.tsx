@@ -18,6 +18,7 @@ import { useAuth } from './hooks/useAuth';
 import { useToast } from './hooks/useToast';
 import { useAppLifecycle } from './hooks/useAppLifecycle';
 import { useAppState } from './hooks/useAppState';
+import { useAppStateManager } from './hooks/useAppStateManager';
 import { validateConfig } from './lib/config';
 import AppStateDebug from './components/debug/AppStateDebug';
 
@@ -83,6 +84,10 @@ export default function App() {
   // アプリ状態管理
   const { shouldShowLoading, backgroundRefreshing } = useAppState();
 
+  // 状態異常検知・回復
+  const { recordSnapshot, forceRecovery, currentAnomaly } =
+    useAppStateManager();
+
   // アプリライフサイクル管理
   const { isOnline } = useAppLifecycle({
     onAppVisible: () => {
@@ -112,6 +117,58 @@ export default function App() {
     preventPageBounce();
   }, []);
 
+  // 状態記録
+  useEffect(() => {
+    recordSnapshot({
+      loading: shouldShowLoading || authLoading,
+      initialized: !shouldShowLoading,
+      authenticated: isAuthenticated,
+      approved: isApproved,
+      reason: 'APP_STATE_UPDATE',
+    });
+  }, [
+    shouldShowLoading,
+    authLoading,
+    isAuthenticated,
+    isApproved,
+    recordSnapshot,
+  ]);
+
+  // Debug event handling
+  useEffect(() => {
+    const handleDebugReset = () => {
+      console.log('🐛 Debug: Resetting loading states');
+      setShowSplash(false);
+      forceRecovery('DEBUG_MANUAL_RESET');
+    };
+
+    const handleStateRecovery = (event: CustomEvent) => {
+      console.log('📱 App: State recovery triggered:', event.detail);
+      switch (event.detail.action) {
+        case 'FORCE_COMPLETE':
+          setShowSplash(false);
+          break;
+        case 'FORCE_RESET':
+          setShowSplash(false);
+          break;
+      }
+    };
+
+    window.addEventListener('debug-reset-loading', handleDebugReset);
+    window.addEventListener(
+      'app-state-recovery',
+      handleStateRecovery as EventListener
+    );
+
+    return () => {
+      window.removeEventListener('debug-reset-loading', handleDebugReset);
+      window.removeEventListener(
+        'app-state-recovery',
+        handleStateRecovery as EventListener
+      );
+    };
+  }, [forceRecovery]);
+
   // Splash screen timer
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -126,7 +183,14 @@ export default function App() {
   }
 
   // Show loading screen - only show when actually needed
+  // デバッグログ
   if (shouldShowLoading || authLoading) {
+    console.log('📱 App: Showing loading screen', {
+      shouldShowLoading,
+      authLoading,
+      isAuthenticated,
+      isApproved,
+    });
     return <LoadingScreen />;
   }
 
@@ -349,12 +413,25 @@ export default function App() {
         </div>
       )}
 
+      {/* 異常状態警告 */}
+      {currentAnomaly && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-red-500 text-white text-center py-1 text-xs font-medium">
+          ⚠️ {currentAnomaly.message}
+          <button
+            onClick={() => forceRecovery('USER_MANUAL_RECOVERY')}
+            className="ml-2 bg-red-700 px-2 py-0.5 rounded text-xs"
+          >
+            修復
+          </button>
+        </div>
+      )}
+
       <Layout
         currentView={currentView}
         onViewChange={(view: 'home' | 'map' | 'inbox' | 'profile') =>
           setCurrentView(view)
         }
-        className={`${!isOnline ? 'pt-10' : ''} ${backgroundRefreshing ? 'pt-6' : ''}`}
+        className={`${!isOnline ? 'pt-10' : ''} ${backgroundRefreshing ? 'pt-6' : ''} ${currentAnomaly ? 'pt-8' : ''}`}
       >
         {renderCurrentView()}
       </Layout>

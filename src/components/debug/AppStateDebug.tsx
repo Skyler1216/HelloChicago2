@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { usePageVisibility } from '../../hooks/usePageVisibility';
 import { useAppLifecycle } from '../../hooks/useAppLifecycle';
 import { useCache } from '../../hooks/useCache';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function AppStateDebug() {
   const [isVisible, setIsVisible] = useState(false);
@@ -9,6 +10,7 @@ export default function AppStateDebug() {
   const pageVisibility = usePageVisibility();
   const appLifecycle = useAppLifecycle();
   const cache = useCache('debug', { ttl: 60000 });
+  const { loading: authLoading, isAuthenticated, isApproved } = useAuth();
 
   if (!isVisible) {
     return (
@@ -83,6 +85,16 @@ export default function AppStateDebug() {
             </div>
           </div>
 
+          {/* Auth State */}
+          <div>
+            <h4 className="font-semibold text-red-600">🔐 Auth State</h4>
+            <div className="pl-2 space-y-1">
+              <div>Loading: {authLoading ? '⏳' : '✅'}</div>
+              <div>Authenticated: {isAuthenticated ? '✅' : '❌'}</div>
+              <div>Approved: {isApproved ? '✅' : '❌'}</div>
+            </div>
+          </div>
+
           {/* Cache Stats */}
           <div>
             <h4 className="font-semibold text-orange-600">💾 Cache Stats</h4>
@@ -140,6 +152,17 @@ export default function AppStateDebug() {
                 className="bg-gray-500 text-white px-2 py-1 rounded text-xs"
               >
                 Reload
+              </button>
+              <button
+                onClick={() => {
+                  // ローディング状態をリセット（デバッグ用）
+                  const event = new CustomEvent('debug-reset-loading');
+                  window.dispatchEvent(event);
+                  console.log('🐛 Reset loading triggered');
+                }}
+                className="bg-purple-500 text-white px-2 py-1 rounded text-xs"
+              >
+                Reset Loading
               </button>
             </div>
           </div>

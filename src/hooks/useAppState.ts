@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from './useAuth';
 import { useAppLifecycle } from './useAppLifecycle';
 
@@ -76,21 +76,19 @@ export function useAppState(): UseAppStateReturn {
     }
   }, [authLoading, isAuthenticated, isApproved]);
 
-  // 初回ローディング表示の制御
-  const shouldShowLoading = useCallback(() => {
-    // まだ初期化されていない場合は常にローディング表示
-    if (!appState.isInitialized) {
-      return true;
-    }
-
-    // 初期化完了後、まだ初回ローディングを表示していない場合
-    if (!appState.hasShownInitialLoading) {
+  // 初回ローディング完了フラグの管理
+  useEffect(() => {
+    if (appState.isInitialized && !appState.hasShownInitialLoading) {
+      // 初期化完了時に一度だけフラグを更新
       setAppState(prev => ({ ...prev, hasShownInitialLoading: true }));
-      return false; // 初期化完了したのでローディングを非表示
     }
-
-    return false;
   }, [appState.isInitialized, appState.hasShownInitialLoading]);
+
+  // ローディング表示の判定（副作用なし）
+  const shouldShowLoading = useMemo(() => {
+    // まだ初期化されていない場合は常にローディング表示
+    return !appState.isInitialized;
+  }, [appState.isInitialized]);
 
   // データ更新が必要かの判定
   const shouldRefreshData = useCallback(() => {
@@ -128,7 +126,7 @@ export function useAppState(): UseAppStateReturn {
 
   return {
     isInitialized: appState.isInitialized,
-    shouldShowLoading: shouldShowLoading(),
+    shouldShowLoading,
     shouldRefreshData: shouldRefreshData(),
     backgroundRefreshing: appState.backgroundRefreshing,
     markDataRefreshed,

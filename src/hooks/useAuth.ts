@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase, getProfile } from '../lib/supabase';
 import { Database } from '../types/database';
+import { useFailsafe } from './useFailsafe';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
@@ -14,13 +15,29 @@ export function useAuth() {
   const initializationRef = useRef(false);
   const profileLoadingRef = useRef(false);
   const authStateChangingRef = useRef(false);
+  const timeoutIdRef = useRef<NodeJS.Timeout>();
+
+  // フェイルセーフ機能
+  const authFailsafe = useFailsafe({
+    name: 'Auth',
+    timeout: 15000, // 15秒
+    onTimeout: () => {
+      console.warn('📱 Auth: Initialization timeout, forcing completion');
+      setLoading(false);
+      setInitialized(true);
+    },
+  });
 
   useEffect(() => {
     if (initializationRef.current) return;
     initializationRef.current = true;
 
     const initializeAuth = async () => {
+      authFailsafe.startLoading();
+
       try {
+        console.log('📱 Auth: Starting initialization');
+
         // Get initial session
         const {
           data: { session },
@@ -29,20 +46,27 @@ export function useAuth() {
 
         if (error) {
           console.error('❌ Session error:', error);
+          authFailsafe.handleError(error);
           setLoading(false);
           setInitialized(true);
           return;
         }
 
         if (session?.user) {
+          console.log('📱 Auth: User session found');
           setUser(session.user);
           await loadUserProfile(session.user.id);
+        } else {
+          console.log('📱 Auth: No user session');
         }
 
         setInitialized(true);
         setLoading(false);
+        authFailsafe.stopLoading();
+        console.log('📱 Auth: Initialization completed');
       } catch (error) {
         console.error('❌ Auth initialization error:', error);
+        authFailsafe.handleError(error as Error);
         setLoading(false);
         setInitialized(true);
       }
@@ -94,8 +118,9 @@ export function useAuth() {
     });
 
     // Force completion after timeout
-    const timeout = setTimeout(() => {
+    timeoutIdRef.current = setTimeout(() => {
       if (!initialized) {
+        console.log('📱 Auth: Timeout reached, forcing completion');
         setLoading(false);
         setInitialized(true);
       }
@@ -103,7 +128,9 @@ export function useAuth() {
 
     return () => {
       subscription.unsubscribe();
-      clearTimeout(timeout);
+      if (timeoutIdRef.current) {
+        clearTimeout(timeoutIdRef.current);
+      }
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
