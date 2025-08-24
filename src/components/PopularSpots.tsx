@@ -57,11 +57,23 @@ export default function PopularSpots({
               new Date(a.created_at).getTime()
           )[0];
 
-          // カテゴリの色を地図ピンと一致させる: カテゴリの先頭文字コードで決定（useMapMarkers と同等ロジック）
-          const idString = (spot.posts[0]?.category_id || '').toString();
-          const defaultColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'];
-          const code = idString.length > 0 ? idString.charCodeAt(0) : 0;
-          const categoryColor = defaultColors[code % defaultColors.length];
+          // カテゴリの色をDBのカテゴリカラーに合わせる（MapboxMap と統一）
+          const lookupColor = (id?: string) => {
+            const defaults = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'];
+            if (!id) return defaults[0];
+            try {
+              const list = (window as any).__app_categories__ as Array<{
+                id: string;
+                color: string;
+                name_ja: string;
+              }> | undefined;
+              const found = list?.find(c => c.id === id);
+              if (found?.color) return found.color;
+            } catch {}
+            const code = id.charCodeAt(0) || 0;
+            return defaults[code % defaults.length];
+          };
+          const categoryColor = lookupColor(spot.posts[0]?.category_id);
 
           return (
             <div
@@ -123,14 +135,8 @@ export default function PopularSpots({
                       key={categoryId}
                           className="px-2 py-1 text-gray-700 text-xs rounded-full"
                           style={{
-                            backgroundColor:
-                              ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'][
-                                (categoryId.charCodeAt(0) || 0) % 5
-                              ] + '26', // 15% opacity approx
-                            border: '1px solid ' +
-                              ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'][
-                                (categoryId.charCodeAt(0) || 0) % 5
-                              ] + '55',
+                            backgroundColor: (lookupColor(categoryId) + '26') as string,
+                            border: `1px solid ${lookupColor(categoryId)}55`,
                           }}
                     >
                       {categoryId}
