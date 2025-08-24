@@ -237,10 +237,6 @@ export default function ProfileView({
 
       {/* Enhanced Quick Actions (theme simplified to coral) */}
       <div className="bg-white rounded-2xl p-5 mb-6 shadow-sm border border-gray-100">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-gray-900">クイックアクション</h3>
-          <div className="w-2 h-2 bg-coral-500 rounded-full animate-pulse"></div>
-        </div>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -311,7 +307,8 @@ export default function ProfileView({
           >
             <div
               className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 ${
-                (item.label === '管理者用画面' || item.label === '管理ダッシュボード')
+                item.label === '管理者用画面' ||
+                item.label === '管理ダッシュボード'
                   ? 'bg-gradient-to-br from-blue-600 to-teal-500 group-hover:scale-110 shadow-md'
                   : item.onClick
                     ? 'bg-gray-100 group-hover:bg-gray-200 group-hover:scale-105'
@@ -320,7 +317,8 @@ export default function ProfileView({
             >
               <item.icon
                 className={`w-5 h-5 ${
-                  (item.label === '管理者用画面' || item.label === '管理ダッシュボード')
+                  item.label === '管理者用画面' ||
+                  item.label === '管理ダッシュボード'
                     ? 'text-white'
                     : item.onClick
                       ? 'text-gray-600'
@@ -331,7 +329,8 @@ export default function ProfileView({
             <div className="flex-1 text-left">
               <div
                 className={`font-medium transition-colors duration-200 ${
-                  (item.label === '管理者用画面' || item.label === '管理ダッシュボード')
+                  item.label === '管理者用画面' ||
+                  item.label === '管理ダッシュボード'
                     ? 'text-blue-800'
                     : item.onClick
                       ? 'text-gray-900 group-hover:text-gray-800'
