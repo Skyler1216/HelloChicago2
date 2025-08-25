@@ -132,8 +132,8 @@ export default function App() {
         );
       // モバイルでは2時間、デスクトップでは30分以上の非表示でアプリ再起動とみなす
       const restartThreshold = isMobileDevice
-        ? 2 * 60 * 60 * 1000
-        : 30 * 60 * 1000;
+        ? 8 * 60 * 60 * 1000
+        : 4 * 60 * 60 * 1000; // モバイル8時間、デスクトップ4時間に大幅延長
 
       if (lastVisibleTime) {
         const timeDiff = currentTime - parseInt(lastVisibleTime);
