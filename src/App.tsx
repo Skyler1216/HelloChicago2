@@ -54,7 +54,6 @@ function preventPageBounce() {
 }
 
 export default function App() {
-export default function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [currentView, setCurrentView] = useState<'home' | 'map' | 'inbox' | 'profile'>('home');
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
