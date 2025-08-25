@@ -221,9 +221,6 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
                     ? '読み込み中...'
                     : 'オフライン - 接続を確認中...'}
                 </p>
-                <p className="text-xs text-gray-400">
-                  {isCached ? `キャッシュ: ${cacheAge}秒前` : '初回読み込み'}
-                </p>
                 {!navigator.onLine && (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mx-4">
                     <p className="text-amber-700 text-sm">
