@@ -15,11 +15,10 @@ import AdminApprovalView from './components/AdminApprovalView';
 import AdminDashboard from './components/admin/AdminDashboard';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useAuth } from './hooks/useAuth';
-import { useToast } from './hooks/useToast';
 import { useInbox } from './hooks/useInbox';
 import { useAppStateManager } from './hooks/useAppStateManager';
 import { useCacheManager } from './hooks/useCacheManager';
-import { ToastContainer } from './components/Toast';
+import { useToast } from './hooks/useToast';
 import { validateConfig } from './lib/config';
 
 // Prevent page bounce on mobile while preserving scroll
@@ -52,6 +51,7 @@ function preventPageBounce() {
 }
 
 export default function App() {
+  const { ToastContainer } = useToast();
   const [showSplash, setShowSplash] = useState(true);
   const [currentView, setCurrentView] = useState<'home' | 'map' | 'inbox' | 'profile'>('home');
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
