@@ -194,11 +194,6 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
       />
 
       <div className="px-4">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">
-          {selectedPostType === 'post' && '最新の体験'}
-          {selectedPostType === 'consultation' && '最新の相談'}
-          {selectedPostType === 'transfer' && '最新の譲渡'}
-        </h2>
         <div className="space-y-4">
           {/* リフレッシュインジケーター */}
           {isRefreshing && !postsLoading && (
