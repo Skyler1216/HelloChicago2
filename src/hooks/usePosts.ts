@@ -126,6 +126,36 @@ export function usePosts(
   const loadPosts = useCallback(
     async (forceRefresh = false) => {
       try {
+        // 即座にキャッシュをチェック（モバイル最適化）
+        if (!forceRefresh) {
+          const cachedPosts = cache.get(cacheKey);
+          if (cachedPosts) {
+            console.log('📱 usePosts: Immediate cache hit', {
+              postsCount: cachedPosts.length,
+              device: isMobileDevice ? 'mobile' : 'desktop',
+            });
+            setPosts(cachedPosts);
+            setLoading(false);
+            setIsCached(true);
+            setError(null);
+            
+            // モバイルでは古いデータでもバックグラウンド更新を控えめに
+            if (isMobileDevice && !cache.isStale(cacheKey)) {
+              console.log('📱 usePosts: Fresh cache on mobile, skipping background update');
+              return;
+            }
+            
+            // バックグラウンド更新（デスクトップまたは古いキャッシュの場合）
+            if (cache.isStale(cacheKey)) {
+              console.log('📱 usePosts: Cache is stale, updating in background');
+              setIsRefreshing(true);
+              // バックグラウンド更新は続行
+            } else {
+              return; // 新しいキャッシュなので終了
+            }
+          }
+        }
+
         // キャッシュをチェック
         if (!forceRefresh) {
           const cachedPosts = cache.get(cacheKey);
@@ -176,15 +206,16 @@ export function usePosts(
             });
             setPosts(offlineData);
             setLoading(false);
+            setIsCached(true);
             return;
           }
         }
 
         console.log('📱 usePosts: Fetching from database...');
 
-        // モバイル環境に最適化されたタイムアウト付きAPIリクエスト
+        // モバイル環境に最適化されたタイムアウト付きAPIリクエスト（短縮）
         const controller = new AbortController();
-        const timeoutDuration = isMobileDevice ? 15000 : 10000; // モバイルでは15秒
+        const timeoutDuration = isMobileDevice ? 8000 : 6000; // モバイルでは8秒に短縮
         const timeoutId = setTimeout(() => {
           console.warn('📱 usePosts: Request timeout, aborting...');
           controller.abort();

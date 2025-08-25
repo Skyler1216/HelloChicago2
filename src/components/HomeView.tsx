@@ -211,8 +211,25 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
 
           {effectiveLoading ? (
             <div className="text-center py-8">
-              <div className="w-8 h-8 border-2 border-coral-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-              <p className="text-gray-500">読み込み中...</p>
+              <div className="space-y-4">
+                <div className="w-8 h-8 border-2 border-coral-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                <p className="text-gray-500">
+                  {navigator.onLine ? '読み込み中...' : 'オフライン - 接続を確認中...'}
+                </p>
+                {!navigator.onLine && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mx-4">
+                    <p className="text-amber-700 text-sm">
+                      📵 インターネット接続を確認してください
+                    </p>
+                    <button
+                      onClick={forceReset}
+                      className="mt-2 px-3 py-1 bg-amber-200 text-amber-800 rounded text-xs hover:bg-amber-300"
+                    >
+                      キャッシュから復元
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           ) : posts.length > 0 ? (
             posts.map(post => (
