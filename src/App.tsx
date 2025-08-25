@@ -17,6 +17,9 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { useAuth } from './hooks/useAuth';
 import { useToast } from './hooks/useToast';
 import { useInbox } from './hooks/useInbox';
+import { useAppStateManager } from './hooks/useAppStateManager';
+import { useCacheManager } from './hooks/useCacheManager';
+import { ToastContainer } from './components/Toast';
 import { validateConfig } from './lib/config';
 
 // Prevent page bounce on mobile while preserving scroll
