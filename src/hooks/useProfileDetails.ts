@@ -16,78 +16,67 @@ interface UseProfileDetailsReturn {
   updateProfileDetails: (updates: ProfileDetailsUpdate) => Promise<boolean>;
   createProfileDetails: (details: ProfileDetailsInsert) => Promise<boolean>;
   reload: () => Promise<void>;
-  // キャッシュ関連の機能を追加
   isCached: boolean;
   cacheAge: number;
   forceRefresh: () => Promise<void>;
 }
 
-// キャッシュの設定
-const CACHE_KEY_PREFIX = 'profile_details_cache_';
-const CACHE_TTL = 8 * 60 * 60 * 1000; // 8時間に延長（プロフィール情報は変更頻度が低い）
-
-interface CacheData {
+// シンプルなグローバルキャッシュ（ページ切り替えで消えない）
+const profileDetailsCache = new Map<string, {
   data: ProfileDetails;
   timestamp: number;
-}
+}>();
 
 export function useProfileDetails(
   profileId: string | undefined
 ): UseProfileDetailsReturn {
-  const [profileDetails, setProfileDetails] = useState<ProfileDetails | null>(
-    null
-  );
+  const [profileDetails, setProfileDetails] = useState<ProfileDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCached, setIsCached] = useState(false);
   const [cacheAge, setCacheAge] = useState(0);
 
+  // モバイル環境の検出
+  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+
+  // キャッシュの有効期限（モバイルでは長めに設定）
+  const CACHE_TTL = isMobileDevice ? 2 * 60 * 60 * 1000 : 30 * 60 * 1000; // モバイル2時間、デスクトップ30分
+
   // キャッシュからデータを取得
   const getCachedData = useCallback((id: string): ProfileDetails | null => {
-    try {
-      const cacheKey = CACHE_KEY_PREFIX + id;
-      const cached = localStorage.getItem(cacheKey);
+    const cached = profileDetailsCache.get(id);
+    if (!cached) return null;
 
-      if (!cached) return null;
+    const now = Date.now();
+    const age = now - cached.timestamp;
 
-      const cacheData: CacheData = JSON.parse(cached);
-      const now = Date.now();
-
-      // キャッシュが有効期限切れかチェック
-      if (now - cacheData.timestamp > CACHE_TTL) {
-        localStorage.removeItem(cacheKey);
-        return null;
-      }
-
-      const age = Math.floor((now - cacheData.timestamp) / 1000);
-      setCacheAge(age);
+    // キャッシュが有効期限内かチェック
+    if (age < CACHE_TTL) {
+      setCacheAge(Math.floor(age / 1000));
       setIsCached(true);
-
-      console.log('📱 useProfileDetails: Cache hit', { age: age + 's' });
-      return cacheData.data;
-    } catch (err) {
-      console.warn('📱 useProfileDetails: Cache read error', err);
-      return null;
+      console.log('📱 useProfileDetails: Cache hit', {
+        age: Math.floor(age / 1000) + 's',
+        profileId: id,
+      });
+      return cached.data;
     }
-  }, []);
 
-  // データをキャッシュに保存
+    // 期限切れのキャッシュを削除
+    profileDetailsCache.delete(id);
+    return null;
+  }, [CACHE_TTL]);
+
+  // キャッシュにデータを保存
   const setCachedData = useCallback((id: string, data: ProfileDetails) => {
-    try {
-      const cacheKey = CACHE_KEY_PREFIX + id;
-      const cacheData: CacheData = {
-        data,
-        timestamp: Date.now(),
-      };
-
-      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
-      setIsCached(false);
-      setCacheAge(0);
-
-      console.log('📱 useProfileDetails: Data cached');
-    } catch (err) {
-      console.warn('📱 useProfileDetails: Cache write error', err);
-    }
+    profileDetailsCache.set(id, {
+      data,
+      timestamp: Date.now(),
+    });
+    setIsCached(false);
+    setCacheAge(0);
+    console.log('📱 useProfileDetails: Data cached for profile:', id);
   }, []);
 
   // データ読み込み（キャッシュ優先）
@@ -99,13 +88,13 @@ export function useProfileDetails(
       }
 
       try {
-        setLoading(true);
         setError(null);
 
         // キャッシュから取得を試行（強制更新でない場合）
         if (!forceRefresh) {
           const cachedData = getCachedData(profileId);
           if (cachedData) {
+            console.log('📱 useProfileDetails: Using cached data immediately');
             setProfileDetails(cachedData);
             setLoading(false);
             return;
@@ -113,20 +102,45 @@ export function useProfileDetails(
         }
 
         console.log('📱 useProfileDetails: Fetching from database...');
+        setLoading(true);
 
-        const { data, error: fetchError } = await supabase
-          .from('profile_details')
-          .select('*')
-          .eq('profile_id', profileId)
-          .maybeSingle();
+        // タイムアウト付きでデータを取得
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          controller.abort();
+        }, isMobileDevice ? 8000 : 5000);
 
-        if (fetchError) throw fetchError;
+        try {
+          const { data, error: fetchError } = await supabase
+            .from('profile_details')
+            .select('*')
+            .eq('profile_id', profileId)
+            .maybeSingle()
+            .abortSignal(controller.signal);
 
-        setProfileDetails(data);
+          clearTimeout(timeoutId);
 
-        // データをキャッシュに保存
-        if (data) {
-          setCachedData(profileId, data);
+          if (fetchError) throw fetchError;
+
+          setProfileDetails(data);
+
+          // データをキャッシュに保存
+          if (data) {
+            setCachedData(profileId, data);
+          }
+        } catch (err) {
+          clearTimeout(timeoutId);
+          
+          if (err instanceof Error && err.name === 'AbortError') {
+            console.warn('📱 useProfileDetails: Request timeout, using cached data');
+            const cachedData = getCachedData(profileId);
+            if (cachedData) {
+              setProfileDetails(cachedData);
+              setLoading(false);
+              return;
+            }
+          }
+          throw err;
         }
       } catch (err) {
         logError(err, 'useProfileDetails.loadData');
@@ -135,12 +149,37 @@ export function useProfileDetails(
         setLoading(false);
       }
     },
-    [profileId, getCachedData, setCachedData]
+    [profileId, getCachedData, setCachedData, isMobileDevice]
   );
 
+  // 初期化時の処理
   useEffect(() => {
-    loadData(false); // 初回はキャッシュ優先
-  }, [loadData]);
+    if (!profileId) {
+      setLoading(false);
+      return;
+    }
+
+    // まずキャッシュをチェック
+    const cachedData = getCachedData(profileId);
+    if (cachedData) {
+      console.log('📱 useProfileDetails: Initial load from cache');
+      setProfileDetails(cachedData);
+      setLoading(false);
+      
+      // バックグラウンドで更新（古いキャッシュの場合のみ）
+      const now = Date.now();
+      const cached = profileDetailsCache.get(profileId);
+      if (cached && now - cached.timestamp > CACHE_TTL * 0.5) {
+        console.log('📱 useProfileDetails: Background refresh (cache is getting old)');
+        setTimeout(() => {
+          loadData(true);
+        }, 100);
+      }
+    } else {
+      console.log('📱 useProfileDetails: Initial load from database');
+      loadData();
+    }
+  }, [profileId, getCachedData, loadData, CACHE_TTL]);
 
   // 強制更新（キャッシュを無視）
   const forceRefresh = useCallback(async () => {
@@ -164,8 +203,8 @@ export function useProfileDetails(
       setProfileDetails(data);
 
       // 新しく作成されたデータをキャッシュに保存
-      if (data) {
-        setCachedData(profileId!, data);
+      if (data && profileId) {
+        setCachedData(profileId, data);
       }
 
       return true;
@@ -209,32 +248,7 @@ export function useProfileDetails(
   };
 
   const reload = async (): Promise<void> => {
-    if (!profileId) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const { data, error: fetchError } = await supabase
-        .from('profile_details')
-        .select('*')
-        .eq('profile_id', profileId)
-        .maybeSingle();
-
-      if (fetchError) throw fetchError;
-
-      setProfileDetails(data);
-
-      // データをキャッシュに保存
-      if (data) {
-        setCachedData(profileId, data);
-      }
-    } catch (err) {
-      logError(err, 'useProfileDetails.updateProfileDetails');
-      setError(formatSupabaseError(err));
-    } finally {
-      setLoading(false);
-    }
+    await loadData(true);
   };
 
   return {
@@ -244,7 +258,6 @@ export function useProfileDetails(
     updateProfileDetails,
     createProfileDetails,
     reload,
-    // キャッシュ関連の情報を追加
     isCached,
     cacheAge,
     forceRefresh,

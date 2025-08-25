@@ -42,82 +42,32 @@ export default function ProfileView({
     'profile' | 'posts' | 'favorites' | 'settings' | 'details' | 'edit-details'
   >('profile');
 
-  // useAuthの状態を使用
-  const { profile: authProfile, reloadProfile } = useAuth();
+  // 現在のプロフィールデータを使用
+  const activeProfile = profile;
 
-  // 現在のプロフィールデータを使用（useAuthの状態を優先）
-  const activeProfile = authProfile || profile;
-
-  // 元の動作していたuseProfileDetailsを使用
+  // プロフィール詳細情報とユーザー統計を取得
   const {
     profileDetails,
     loading: profileDetailsLoading,
-    reload: reloadProfileDetails,
-    // キャッシュ関連の情報を追加
     isCached,
     cacheAge,
   } = useProfileDetails(activeProfile?.id || '');
 
-  // プロフィール更新後の強制再読み込み
-  const handleProfileUpdate = async () => {
-    console.log('🔄 Profile update detected, reloading auth state...');
-    await reloadProfile();
-    // プロフィール詳細情報も再読み込み
-    await reloadProfileDetails();
-  };
-
-  // キャッシュ情報をデバッグ表示
   const {
     stats: userStats,
     isCached: statsCached,
     cacheAge: statsCacheAge,
   } = useUserStats(activeProfile?.id);
 
-  // プロフィールデータの詳細をデバッグ表示
-  console.log('📱 ProfileView: Profile data debug', {
-    activeProfile: activeProfile
-      ? {
-          id: activeProfile.id,
-          name: activeProfile.name,
-          created_at: activeProfile.created_at,
-        }
-      : null,
-    profileDetails: profileDetails
-      ? {
-          profile_id: profileDetails.profile_id,
-          arrival_date: profileDetails.arrival_date,
-          bio: profileDetails.bio,
-          location_area: profileDetails.location_area,
-        }
-      : null,
-    profileDetailsLoading,
-    // キャッシュ情報を追加
-    isCached,
-    cacheAge: cacheAge > 0 ? `${cacheAge}s` : 'N/A',
-    // 統計情報のキャッシュ状態も追加
-    statsCached,
-    statsCacheAge: statsCacheAge > 0 ? `${statsCacheAge}s` : 'N/A',
-  });
-
-  // キャッシュ情報をデバッグ表示
-  if (isCached) {
-    console.log('📱 ProfileView: Using cached profile data', {
-      age: cacheAge + 's',
-    });
-  }
-  if (statsCached) {
-    console.log('📱 ProfileView: Using cached stats data', {
-      age: statsCacheAge + 's',
-    });
-  }
-
-  // プロフィール更新後の強制再読み込み
-  // const handleProfileUpdate = async () => { // この行は削除
-  //   console.log('🔄 Profile update detected, reloading auth state...'); // この行は削除
-  //   await reloadProfile(); // この行は削除
-  //   // プロフィール詳細情報も再読み込み // この行は削除
-  //   await refreshProfile(); // この行は削除
-  // }; // この行は削除
+  // プロフィール更新後の処理
+  const handleProfileUpdate = async () => {
+    console.log('🔄 Profile update detected, clearing cache...');
+    // キャッシュをクリアして最新データを取得
+    if (activeProfile?.id) {
+      profileDetailsCache.delete(activeProfile.id);
+      userStatsCache.delete(activeProfile.id);
+    }
+  };
 
   const {
     communityInfo,
@@ -201,7 +151,6 @@ export default function ProfileView({
         onProfileUpdate={updatedProfile => {
           // プロフィール更新後の処理
           console.log('Profile updated from settings:', updatedProfile);
-          // 強制再読み込みで状態を同期
           handleProfileUpdate();
         }}
       />
@@ -266,8 +215,8 @@ export default function ProfileView({
                   if (diffDays < 30) {
                     return `${diffDays}日`;
                   } else if (diffDays < 365) {
-                    const months = Math.floor(diffDays / 30);
-                    return `約${months}ヶ月`;
+                  // プロフィール詳細情報の読み込み中でキャッシュがない場合のみローディング表示
+                  if (profileDetailsLoading && !isCached) {
                   } else {
                     const years = Math.floor(diffDays / 365);
                     const remainingMonths = Math.floor((diffDays % 365) / 30);
@@ -509,7 +458,6 @@ export default function ProfileView({
               onBack={() => setShowEditModal(false)}
               onSave={() => {
                 setShowEditModal(false);
-                // 強制再読み込みで状態を同期
                 handleProfileUpdate();
               }}
             />
