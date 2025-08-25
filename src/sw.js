@@ -18,7 +18,7 @@ const CACHE_STRATEGIES = {
   // API: ネットワークファースト（Stale While Revalidate）
   API: 'network-first',
   // 画像: キャッシュファースト（長期間）
-  IMAGES: 'cache-first'
+  IMAGES: 'cache-first',
 };
 
 // キャッシュの有効期限設定
@@ -29,10 +29,10 @@ const CACHE_EXPIRY = {
 };
 
 // インストール時
-self.addEventListener('install', (event) => {
+self.addEventListener('install', event => {
   console.log('📱 SW: Installing...');
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
+    caches.open(CACHE_NAME).then(cache => {
       console.log('📱 SW: Caching static assets');
       return cache.addAll(STATIC_ASSETS);
     })
@@ -41,14 +41,14 @@ self.addEventListener('install', (event) => {
 });
 
 // アクティベーション時
-self.addEventListener('activate', (event) => {
+self.addEventListener('activate', event => {
   console.log('📱 SW: Activating...');
   event.waitUntil(
     Promise.all([
       // 古いキャッシュを削除
-      caches.keys().then((cacheNames) => {
+      caches.keys().then(cacheNames => {
         return Promise.all(
-          cacheNames.map((cacheName) => {
+          cacheNames.map(cacheName => {
             if (![CACHE_NAME, API_CACHE_NAME].includes(cacheName)) {
               console.log('📱 SW: Deleting old cache:', cacheName);
               return caches.delete(cacheName);
@@ -57,7 +57,7 @@ self.addEventListener('activate', (event) => {
         );
       }),
       // 期限切れのキャッシュエントリを削除
-      cleanExpiredCache()
+      cleanExpiredCache(),
     ])
   );
   self.clients.claim();
@@ -68,7 +68,7 @@ async function cleanExpiredCache() {
   try {
     const cache = await caches.open(API_CACHE_NAME);
     const requests = await cache.keys();
-    
+
     for (const request of requests) {
       const response = await cache.match(request);
       if (response) {
@@ -91,11 +91,11 @@ async function cleanExpiredCache() {
 function addCacheHeaders(response, cacheTime = Date.now()) {
   const headers = new Headers(response.headers);
   headers.set('sw-cached-time', cacheTime.toString());
-  
+
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
-    headers: headers
+    headers: headers,
   });
 }
 
@@ -103,7 +103,7 @@ function addCacheHeaders(response, cacheTime = Date.now()) {
 async function staleWhileRevalidate(request, cacheName) {
   const cache = await caches.open(cacheName);
   const cachedResponse = await cache.match(request);
-  
+
   // キャッシュがある場合は即座に返し、バックグラウンドで更新
   if (cachedResponse) {
     // バックグラウンドで更新
@@ -117,10 +117,10 @@ async function staleWhileRevalidate(request, cacheName) {
       .catch(error => {
         console.log('📱 SW: Background update failed:', error);
       });
-    
+
     return cachedResponse;
   }
-  
+
   // キャッシュがない場合はネットワークから取得
   try {
     const response = await fetch(request);
@@ -135,7 +135,7 @@ async function staleWhileRevalidate(request, cacheName) {
 }
 
 // フェッチ時
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', event => {
   // GET リクエストのみ処理
   if (event.request.method !== 'GET') return;
 
@@ -144,27 +144,29 @@ self.addEventListener('fetch', (event) => {
   // Supabase API の場合は Stale While Revalidate
   if (url.hostname.includes('supabase.co')) {
     event.respondWith(
-      staleWhileRevalidate(event.request, API_CACHE_NAME)
-        .catch(() => {
-          // 完全にネットワークが使えない場合は古いキャッシュでも返す
-          return caches.match(event.request);
-        })
+      staleWhileRevalidate(event.request, API_CACHE_NAME).catch(() => {
+        // 完全にネットワークが使えない場合は古いキャッシュでも返す
+        return caches.match(event.request);
+      })
     );
     return;
   }
 
   // 画像ファイルの場合はキャッシュ優先（長期間）
-  if (event.request.destination === 'image' || url.pathname.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)$/i)) {
+  if (
+    event.request.destination === 'image' ||
+    url.pathname.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)$/i)
+  ) {
     event.respondWith(
-      caches.match(event.request).then((cachedResponse) => {
+      caches.match(event.request).then(cachedResponse => {
         if (cachedResponse) {
           return cachedResponse;
         }
 
-        return fetch(event.request).then((response) => {
+        return fetch(event.request).then(response => {
           if (response.status === 200) {
             const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
+            caches.open(CACHE_NAME).then(cache => {
               cache.put(event.request, responseClone);
             });
           }
@@ -177,16 +179,16 @@ self.addEventListener('fetch', (event) => {
 
   // 静的アセットの場合はキャッシュ優先
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
+    caches.match(event.request).then(cachedResponse => {
       if (cachedResponse) {
         return cachedResponse;
       }
 
-      return fetch(event.request).then((response) => {
+      return fetch(event.request).then(response => {
         // 成功したレスポンスをキャッシュ
         if (response.status === 200) {
           const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
+          caches.open(CACHE_NAME).then(cache => {
             cache.put(event.request, responseClone);
           });
         }
@@ -197,7 +199,7 @@ self.addEventListener('fetch', (event) => {
 });
 
 // アプリライフサイクル管理のためのメッセージハンドリング
-self.addEventListener('message', (event) => {
+self.addEventListener('message', event => {
   if (event.data && event.data.type) {
     switch (event.data.type) {
       case 'SKIP_WAITING':
@@ -205,20 +207,53 @@ self.addEventListener('message', (event) => {
         break;
       case 'CLEAR_CACHE':
         event.waitUntil(
-          caches.keys().then((cacheNames) => {
-            return Promise.all(
-              cacheNames.map((cacheName) => caches.delete(cacheName))
-            );
-          })
+          caches
+            .keys()
+            .then(cacheNames => {
+              console.log('📱 SW: Clearing all caches:', cacheNames);
+              return Promise.all(
+                cacheNames.map(cacheName => {
+                  console.log('📱 SW: Deleting cache:', cacheName);
+                  return caches.delete(cacheName);
+                })
+              );
+            })
+            .then(() => {
+              console.log('📱 SW: All caches cleared successfully');
+            })
+            .catch(error => {
+              console.error('📱 SW: Error clearing caches:', error);
+            })
         );
         break;
       case 'CLEAR_API_CACHE':
-        event.waitUntil(caches.delete(API_CACHE_NAME));
+        event.waitUntil(
+          caches
+            .delete(API_CACHE_NAME)
+            .then(() => {
+              console.log('📱 SW: API cache cleared successfully');
+            })
+            .catch(error => {
+              console.error('📱 SW: Error clearing API cache:', error);
+            })
+        );
+        break;
+      case 'CLEAR_APP_CACHE':
+        event.waitUntil(
+          caches
+            .delete(CACHE_NAME)
+            .then(() => {
+              console.log('📱 SW: App cache cleared successfully');
+            })
+            .catch(error => {
+              console.error('📱 SW: Error clearing app cache:', error);
+            })
+        );
         break;
       case 'CACHE_URLS':
         if (event.data.urls) {
           event.waitUntil(
-            caches.open(CACHE_NAME).then((cache) => {
+            caches.open(CACHE_NAME).then(cache => {
               return cache.addAll(event.data.urls);
             })
           );
@@ -229,9 +264,10 @@ self.addEventListener('message', (event) => {
         if (event.data.urls) {
           event.waitUntil(
             Promise.all(
-              event.data.urls.map(url => 
-                staleWhileRevalidate(new Request(url), API_CACHE_NAME)
-                  .catch(error => console.log('📱 SW: Preload failed for', url, error))
+              event.data.urls.map(url =>
+                staleWhileRevalidate(new Request(url), API_CACHE_NAME).catch(
+                  error => console.log('📱 SW: Preload failed for', url, error)
+                )
               )
             )
           );
@@ -242,12 +278,28 @@ self.addEventListener('message', (event) => {
         console.log('📱 SW: App focused, running cleanup');
         event.waitUntil(cleanExpiredCache());
         break;
+      case 'APP_RESTART':
+        // アプリ再起動時の処理
+        console.log('📱 SW: App restart detected, clearing all caches');
+        event.waitUntil(
+          caches
+            .keys()
+            .then(cacheNames => {
+              return Promise.all(
+                cacheNames.map(cacheName => caches.delete(cacheName))
+              );
+            })
+            .then(() => {
+              console.log('📱 SW: All caches cleared for app restart');
+            })
+        );
+        break;
     }
   }
 });
 
 // バックグラウンド同期のサポート
-self.addEventListener('sync', (event) => {
+self.addEventListener('sync', event => {
   if (event.tag === 'background-sync') {
     console.log('📱 SW: Background sync triggered');
     event.waitUntil(
@@ -258,11 +310,11 @@ self.addEventListener('sync', (event) => {
 });
 
 // プッシュ通知のサポート（将来的な拡張用）
-self.addEventListener('push', (event) => {
+self.addEventListener('push', event => {
   if (event.data) {
     const data = event.data.json();
     console.log('📱 SW: Push received:', data);
-    
+
     // 通知の表示は必要に応じて実装
   }
 });

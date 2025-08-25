@@ -65,39 +65,24 @@ export function useProfileManager(userId: string) {
     try {
       const cacheKey = `profile_${userId}`;
       const cached = localStorage.getItem(cacheKey);
-      if (!cached) {
-        console.log('📱 ProfileManager: No cache found');
-        return null;
-      }
+      if (!cached) return null;
 
       const data: ProfileCacheData = JSON.parse(cached);
       const now = Date.now();
       const age = now - data.timestamp;
       const isValid = age < CACHE_TTL;
 
-      console.log('📱 ProfileManager: Cache check', {
-        age: Math.round(age / 1000) + 's',
-        ttl: Math.round(CACHE_TTL / 1000) + 's',
-        isValid,
-        hasProfile: !!data.profile,
-        hasDetails: !!data.profileDetails,
-      });
-
-      // キャッシュが有効期限内かチェック
-      if (isValid) {
-        console.log('📱 ProfileManager: Using cached data');
-        return data;
+      if (!isValid) {
+        localStorage.removeItem(cacheKey);
+        return null;
       }
 
-      // 期限切れのキャッシュを削除
-      console.log('📱 ProfileManager: Cache expired, removing');
-      localStorage.removeItem(cacheKey);
-      return null;
+      return data;
     } catch (error) {
       console.warn('Failed to read profile cache:', error);
       return null;
     }
-  }, [userId]);
+  }, [userId, CACHE_TTL]); // CACHE_TTLを依存配列に追加
 
   // キャッシュにデータを保存
   const setCachedProfileData = useCallback(
@@ -320,7 +305,7 @@ export function useProfileManager(userId: string) {
       setError(null);
       setLastFetchTime(0);
     }
-  }, [userId]); // 依存関係を最小限に
+  }, [userId, CACHE_TTL, loadProfileData]); // CACHE_TTLとloadProfileDataを依存配列に追加
 
   // プロフィール基本情報の更新
   const updateProfile = useCallback(
@@ -531,7 +516,7 @@ export function useProfileManager(userId: string) {
       expiresIn: Math.round((CACHE_TTL - age) / 1000), // 秒単位
       lastUpdated: cachedData.timestamp,
     };
-  }, [getCachedProfileData]);
+  }, [getCachedProfileData, CACHE_TTL]); // CACHE_TTLを依存配列に追加
 
   // キャッシュをクリア
   const clearCache = useCallback(() => {

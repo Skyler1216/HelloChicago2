@@ -20,6 +20,7 @@ import { useAppLifecycle } from './hooks/useAppLifecycle';
 import { useAppState } from './hooks/useAppState';
 import { useAppStateManager } from './hooks/useAppStateManager';
 import { useInbox } from './hooks/useInbox';
+import { useCacheManager } from './hooks/useCacheManager';
 import { validateConfig } from './lib/config';
 import AppStateDebug from './components/debug/AppStateDebug';
 
@@ -99,6 +100,9 @@ export default function App() {
   // 状態異常検知・回復
   const { currentAnomaly } = useAppStateManager();
 
+  // キャッシュ管理（一時的に無効化）
+  const { handleAppRestart } = useCacheManager();
+
   // 受信トレイの未読数を取得（認証済みの場合のみ）
   const { unreadCount } = useInbox(isAuthenticated ? user?.id || '' : '');
 
@@ -119,11 +123,36 @@ export default function App() {
         // 強制初期化を即座に実行
         forceInitialization();
       }
+
+      // アプリ再起動の検出と処理
+      const lastVisibleTime = sessionStorage.getItem('last_visible_time');
+      const currentTime = Date.now();
+      if (lastVisibleTime) {
+        const timeDiff = currentTime - parseInt(lastVisibleTime);
+        if (timeDiff > 5 * 60 * 1000) {
+          // 5分以上経過
+          console.log(
+            '📱 App: Long hidden duration detected, treating as app restart'
+          );
+          // フラグを更新して重複実行を防ぐ
+          sessionStorage.setItem('last_visible_time', currentTime.toString());
+          handleAppRestart();
+        }
+      }
+      // 現在時刻を更新（初回または短時間の場合は更新しない）
+      if (
+        !lastVisibleTime ||
+        (lastVisibleTime &&
+          currentTime - parseInt(lastVisibleTime) > 5 * 60 * 1000)
+      ) {
+        sessionStorage.setItem('last_visible_time', currentTime.toString());
+      }
     },
     onAppHidden: () => {
       if (!isMobile.current) {
         console.log('📱 App hidden');
       }
+      sessionStorage.setItem('last_hidden_time', Date.now().toString());
     },
     onAppOnline: () => {
       if (!isMobile.current) {

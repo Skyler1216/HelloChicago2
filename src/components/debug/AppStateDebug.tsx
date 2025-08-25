@@ -4,6 +4,8 @@ import { useAppLifecycle } from '../../hooks/useAppLifecycle';
 import { useCache } from '../../hooks/useCache';
 import { useAuth } from '../../hooks/useAuth';
 import { useInbox } from '../../hooks/useInbox';
+import { useAppStateManager } from '../../hooks/useAppStateManager';
+import { useCacheManager } from '../../hooks/useCacheManager';
 
 export default function AppStateDebug() {
   const [isVisible, setIsVisible] = useState(false);
@@ -19,6 +21,15 @@ export default function AppStateDebug() {
     notifications,
     messages,
   } = useInbox(user?.id || '');
+  const {
+    // stateHistory,
+    // recordSnapshot,
+    // detectAnomalies,
+    forceRecovery,
+    clearHistory,
+  } = useAppStateManager();
+  const { clearAllCache, clearCacheByPrefix, resetAppState, fullReset } =
+    useCacheManager();
 
   if (!isVisible) {
     return (
@@ -175,15 +186,76 @@ export default function AppStateDebug() {
               </button>
               <button
                 onClick={() => {
-                  // ローディング状態をリセット（デバッグ用）
-                  const event = new CustomEvent('debug-reset-loading');
-                  window.dispatchEvent(event);
-                  console.log('🐛 Reset loading triggered');
+                  forceRecovery('Manual debug action');
+                  console.log('🐛 Force recovery triggered');
+                }}
+                className="bg-orange-500 text-white px-2 py-1 rounded text-xs"
+              >
+                Force Recovery
+              </button>
+              <button
+                onClick={() => {
+                  clearHistory();
+                  console.log('🐛 History cleared');
                 }}
                 className="bg-purple-500 text-white px-2 py-1 rounded text-xs"
               >
-                Reset Loading
+                Clear History
               </button>
+            </div>
+
+            {/* 新しいキャッシュ管理ボタン */}
+            <div className="mt-3">
+              <h5 className="font-semibold text-blue-600">
+                🗂 Cache Management
+              </h5>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <button
+                  onClick={() => {
+                    clearAllCache();
+                    console.log('🐛 All cache cleared via CacheManager');
+                  }}
+                  className="bg-red-600 text-white px-2 py-1 rounded text-xs"
+                >
+                  Clear All Cache
+                </button>
+                <button
+                  onClick={() => {
+                    clearCacheByPrefix('profile_');
+                    console.log('🐛 Profile cache cleared');
+                  }}
+                  className="bg-yellow-600 text-white px-2 py-1 rounded text-xs"
+                >
+                  Clear Profile Cache
+                </button>
+                <button
+                  onClick={() => {
+                    clearCacheByPrefix('posts_');
+                    console.log('🐛 Posts cache cleared');
+                  }}
+                  className="bg-green-600 text-white px-2 py-1 rounded text-xs"
+                >
+                  Clear Posts Cache
+                </button>
+                <button
+                  onClick={() => {
+                    resetAppState();
+                    console.log('🐛 App state reset');
+                  }}
+                  className="bg-blue-600 text-white px-2 py-1 rounded text-xs"
+                >
+                  Reset App State
+                </button>
+                <button
+                  onClick={() => {
+                    fullReset();
+                    console.log('🐛 Full reset completed');
+                  }}
+                  className="bg-red-700 text-white px-2 py-1 rounded text-xs"
+                >
+                  Full Reset
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -26,6 +26,16 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
   const [selectedPostType, setSelectedPostType] = useState<
     'post' | 'consultation' | 'transfer'
   >(() => {
+    // 手動再読み込みの場合は「体験」タブにリセット
+    const isManualReload = sessionStorage.getItem('manual_reload_detected');
+    if (isManualReload) {
+      console.log('📱 HomeView: Manual reload detected, resetting to post tab');
+      sessionStorage.removeItem('manual_reload_detected');
+      localStorage.removeItem('home_selected_tab'); // タブ状態をクリア
+      return 'post';
+    }
+
+    // 通常の場合は保存されたタブ状態またはデフォルト
     const saved = localStorage.getItem('home_selected_tab');
     return (saved as 'post' | 'consultation' | 'transfer') || 'post';
   });
@@ -41,6 +51,43 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
     setSelectedPostType(type);
     localStorage.setItem('home_selected_tab', type);
   };
+
+  // 手動再読み込み時の処理（一時的に無効化）
+  /*
+  useEffect(() => {
+    const handleManualReload = () => {
+      console.log('📱 HomeView: Manual reload detected, resetting tab state');
+      setSelectedPostType('post');
+    };
+
+    // 手動再読み込みの検出（初回のみ）
+    const isManualReload = sessionStorage.getItem('manual_reload_detected');
+    if (isManualReload) {
+      console.log('📱 HomeView: Manual reload detected, will reset tab state');
+      // フラグは即座に削除（重複実行を防ぐ）
+      sessionStorage.removeItem('manual_reload_detected');
+
+      // 少し待ってからタブ状態をリセット（コンポーネントの準備が完了してから）
+      setTimeout(() => {
+        handleManualReload();
+      }, 200);
+    }
+
+    // アプリ再起動の検出（初回のみ）
+    const lastVisibleTime = sessionStorage.getItem('last_visible_time');
+    const currentTime = Date.now();
+    if (lastVisibleTime) {
+      const timeDiff = currentTime - parseInt(lastVisibleTime);
+      if (timeDiff > 5 * 60 * 1000) {
+        // 5分以上経過
+        console.log('📱 HomeView: App restart detected, resetting tab state');
+        setTimeout(() => {
+          handleManualReload();
+        }, 200);
+      }
+    }
+  }, []); // 依存配列を空にして、初回のみ実行
+  */
 
   const {
     posts,

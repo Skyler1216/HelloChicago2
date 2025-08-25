@@ -136,7 +136,7 @@ export function useAppState(): UseAppStateReturn {
 
       console.log('📱 AppState: Fallback initialization completed');
     }
-  }, [authInitialized, authLoading, initializationRef.current]);
+  }, [authInitialized, authLoading]); // initializationRef.currentを削除
 
   // 初回ローディング完了フラグの管理
   useEffect(() => {
