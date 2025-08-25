@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { signOut } from './lib/supabase';
 import SplashScreen from './components/SplashScreen';
 import LoginScreen from './components/LoginScreen';
@@ -16,8 +16,8 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useAuth } from './hooks/useAuth';
 import { useInbox } from './hooks/useInbox';
-import { useAppStateManager } from './hooks/useAppStateManager';
-import { useCacheManager } from './hooks/useCacheManager';
+// import { useAppStateManager } from './hooks/useAppStateManager';
+// import { useCacheManager } from './hooks/useCacheManager';
 import { useToast } from './hooks/useToast';
 import { validateConfig } from './lib/config';
 
@@ -53,19 +53,35 @@ function preventPageBounce() {
 export default function App() {
   const { ToastContainer } = useToast();
   const [showSplash, setShowSplash] = useState(true);
-  const [currentView, setCurrentView] = useState<'home' | 'map' | 'inbox' | 'profile'>('home');
+  const [currentView, setCurrentView] = useState<
+    'home' | 'map' | 'inbox' | 'profile'
+  >('home');
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
-  const [selectedInboxTab, setSelectedInboxTab] = useState<'notification' | 'message'>('notification');
+  const [selectedInboxTab, setSelectedInboxTab] = useState<
+    'notification' | 'message'
+  >('notification');
   const [showAdminView, setShowAdminView] = useState(false);
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const [showPostForm, setShowPostForm] = useState(false);
   const [showReviewFormView, setShowReviewFormView] = useState(false);
-  const [reviewFormInitialLocation, setReviewFormInitialLocation] = useState<{ lat: number; lng: number; address?: string; } | null>(null);
-  const [selectedPostType, setSelectedPostType] = useState<'post' | 'consultation' | 'transfer'>('post');
+  const [reviewFormInitialLocation, setReviewFormInitialLocation] = useState<{
+    lat: number;
+    lng: number;
+    address?: string;
+  } | null>(null);
+  const [selectedPostType, setSelectedPostType] = useState<
+    'post' | 'consultation' | 'transfer'
+  >('post');
 
-  const { user, profile, loading: authLoading, isAuthenticated, isApproved } = useAuth();
-  const { currentAnomaly } = useAppStateManager();
-  const { handleAppRestart } = useCacheManager();
+  const {
+    user,
+    profile,
+    loading: authLoading,
+    isAuthenticated,
+    isApproved,
+  } = useAuth();
+  // const { currentAnomaly } = useAppStateManager();
+  // const { handleAppRestart } = useCacheManager();
   const { unreadCount } = useInbox();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
@@ -73,10 +89,10 @@ export default function App() {
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-    
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);

@@ -57,56 +57,63 @@ export function usePosts(
   const cacheKey = `posts_${type || 'all'}_${categoryId || 'all'}`;
 
   // モバイル環境の検出
-  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
-  );
+  const isMobileDevice =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    );
 
   // キャッシュの有効期限（モバイルでは長めに設定）
   const CACHE_TTL = isMobileDevice ? 30 * 60 * 1000 : 15 * 60 * 1000; // モバイル30分、デスクトップ15分
 
   // キャッシュからデータを取得
-  const getCachedData = useCallback((key: string): Post[] | null => {
-    const cached = postsCache.get(key);
-    if (!cached) return null;
+  const getCachedData = useCallback(
+    (key: string): Post[] | null => {
+      const cached = postsCache.get(key);
+      if (!cached) return null;
 
-    const now = Date.now();
-    const age = now - cached.timestamp;
+      const now = Date.now();
+      const age = now - cached.timestamp;
 
-    // キャッシュが有効期限内かチェック
-    if (age < CACHE_TTL) {
-      setCacheAge(Math.floor(age / 1000));
-      setIsCached(true);
-      console.log('📱 usePosts: Cache hit', {
-        key,
-        age: Math.floor(age / 1000) + 's',
-        postsCount: cached.posts.length,
-      });
-      return cached.posts;
-    }
+      // キャッシュが有効期限内かチェック
+      if (age < CACHE_TTL) {
+        setCacheAge(Math.floor(age / 1000));
+        setIsCached(true);
+        console.log('📱 usePosts: Cache hit', {
+          key,
+          age: Math.floor(age / 1000) + 's',
+          postsCount: cached.posts.length,
+        });
+        return cached.posts;
+      }
 
-    // 期限切れのキャッシュを削除
-    postsCache.delete(key);
-    return null;
-  }, [CACHE_TTL]);
+      // 期限切れのキャッシュを削除
+      postsCache.delete(key);
+      return null;
+    },
+    [CACHE_TTL]
+  );
 
   // キャッシュにデータを保存
-  const setCachedData = useCallback((key: string, data: Post[]) => {
-    const cacheData: CacheData = {
-      posts: data,
-      timestamp: Date.now(),
-      type: type || 'all',
-      categoryId: categoryId || 'all',
-    };
+  const setCachedData = useCallback(
+    (key: string, data: Post[]) => {
+      const cacheData: CacheData = {
+        posts: data,
+        timestamp: Date.now(),
+        type: type || 'all',
+        categoryId: categoryId || 'all',
+      };
 
-    postsCache.set(key, cacheData);
-    setIsCached(false);
-    setCacheAge(0);
+      postsCache.set(key, cacheData);
+      setIsCached(false);
+      setCacheAge(0);
 
-    console.log('📱 usePosts: Data cached', {
-      key,
-      postsCount: data.length,
-    });
-  }, [type, categoryId]);
+      console.log('📱 usePosts: Data cached', {
+        key,
+        postsCount: data.length,
+      });
+    },
+    [type, categoryId]
+  );
 
   // データを読み込み
   const loadPosts = useCallback(
@@ -130,9 +137,12 @@ export function usePosts(
 
         // タイムアウト付きでデータを取得
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
-          controller.abort();
-        }, isMobileDevice ? 8000 : 5000);
+        const timeoutId = setTimeout(
+          () => {
+            controller.abort();
+          },
+          isMobileDevice ? 8000 : 5000
+        );
 
         try {
           let query = supabase
@@ -247,7 +257,7 @@ export function usePosts(
       console.log('📱 usePosts: Initial load from cache');
       setPosts(cachedData);
       setLoading(false);
-      
+
       // バックグラウンドで更新（古いキャッシュの場合のみ）
       const now = Date.now();
       const cached = postsCache.get(cacheKey);

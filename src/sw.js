@@ -45,12 +45,7 @@ const MOBILE_CACHE_EXPIRY = {
   IMAGES: 14 * 24 * 60 * 60 * 1000, // モバイルでは14日（画像も長期キャッシュ）
 };
 
-// デバイス判定
-const isMobile = () => {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
-  );
-};
+// デバイス判定（重複削除）
 
 // デバイスに応じたキャッシュ有効期限を取得
 const getCacheExpiry = type => {

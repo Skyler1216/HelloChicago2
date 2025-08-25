@@ -44,14 +44,16 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
   try {
     (window as { __app_categories__?: typeof categories }).__app_categories__ =
       categories;
-  } catch {
+  } catch (error) {
+    // Silently handle window assignment errors
+    console.debug('Failed to assign categories to window:', error);
   }
-  const { 
-    spots: mapSpots, 
+  const {
+    spots: mapSpots,
     loading: mapSpotsLoading,
     isRefreshing: mapSpotsRefreshing,
-    isCached, 
-    cacheAge 
+    isCached,
+    cacheAge,
   } = useMapSpots();
 
   // キャッシュがある場合はローディングを表示しない
@@ -310,7 +312,9 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
               <div className="text-center space-y-3">
                 <div className="w-8 h-8 border-2 border-coral-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
                 <p className="text-gray-500">
-                  {navigator.onLine ? 'マップスポットを読み込み中...' : 'オフライン - キャッシュデータを表示中'}
+                  {navigator.onLine
+                    ? 'マップスポットを読み込み中...'
+                    : 'オフライン - キャッシュデータを表示中'}
                 </p>
                 {isCached && (
                   <p className="text-xs text-blue-600">
@@ -318,7 +322,9 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
                   </p>
                 )}
                 <p className="text-xs text-gray-400">
-                  デバッグ: loading={mapSpotsLoading ? 'true' : 'false'}, cached={isCached ? 'true' : 'false'}, effective={effectiveLoading ? 'true' : 'false'}
+                  デバッグ: loading={mapSpotsLoading ? 'true' : 'false'},
+                  cached={isCached ? 'true' : 'false'}, effective=
+                  {effectiveLoading ? 'true' : 'false'}
                 </p>
                 {!navigator.onLine && (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">

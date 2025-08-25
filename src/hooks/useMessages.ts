@@ -124,15 +124,18 @@ export function useMessages(userId: string): UseMessagesReturn {
         console.log('📱 useMessages: Fetching from database...');
 
         // モバイル環境でのタイムアウト付きクエリ
-        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const isMobileDevice =
+          /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+            navigator.userAgent
+          );
         const controller = new AbortController();
         const timeoutDuration = isMobileDevice ? 12000 : 8000;
-        
+
         const timeoutId = setTimeout(() => {
           console.warn('📱 useMessages: Query timeout, aborting...');
           controller.abort();
         }, timeoutDuration);
-        
+
         try {
           const { data, error: fetchError } = await supabase
             .from('comments')
@@ -167,7 +170,7 @@ export function useMessages(userId: string): UseMessagesReturn {
           }
         } catch (err) {
           clearTimeout(timeoutId);
-          
+
           if (err instanceof Error && err.name === 'AbortError') {
             console.warn('📱 useMessages: Request aborted due to timeout');
             // タイムアウト時はキャッシュデータを使用
@@ -185,7 +188,9 @@ export function useMessages(userId: string): UseMessagesReturn {
         setError(
           err instanceof Error && err.name === 'AbortError'
             ? 'ネットワーク接続が不安定です。画面を下に引っ張って更新してください。'
-            : err instanceof Error ? err.message : 'メッセージの読み込みに失敗しました'
+            : err instanceof Error
+              ? err.message
+              : 'メッセージの読み込みに失敗しました'
         );
       } finally {
         setLoading(false);

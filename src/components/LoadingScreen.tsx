@@ -92,7 +92,10 @@ export default function LoadingScreen({
               <button
                 onClick={() => {
                   // Service Workerのキャッシュをクリア
-                  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                  if (
+                    'serviceWorker' in navigator &&
+                    navigator.serviceWorker.controller
+                  ) {
                     navigator.serviceWorker.controller.postMessage({
                       type: 'CLEAR_CACHE',
                     });

@@ -156,15 +156,18 @@ export function useNotifications(userId: string): UseNotificationsReturn {
         console.log('📱 useNotifications: Fetching from database...');
 
         // モバイル環境でのタイムアウト付きクエリ
-        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const isMobileDevice =
+          /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+            navigator.userAgent
+          );
         const controller = new AbortController();
         const timeoutDuration = isMobileDevice ? 12000 : 8000;
-        
+
         const timeoutId = setTimeout(() => {
           console.warn('📱 useNotifications: Query timeout, aborting...');
           controller.abort();
         }, timeoutDuration);
-        
+
         try {
           const { data, error: fetchError } = await supabase
             .from('notifications')
@@ -187,7 +190,7 @@ export function useNotifications(userId: string): UseNotificationsReturn {
           }
         } catch (err) {
           clearTimeout(timeoutId);
-          
+
           if (err instanceof Error && err.name === 'AbortError') {
             console.warn('📱 useNotifications: Request aborted due to timeout');
             // タイムアウト時はキャッシュデータを使用
@@ -203,9 +206,11 @@ export function useNotifications(userId: string): UseNotificationsReturn {
       } catch (err) {
         console.error('📱 Notifications: Load error:', err);
         setError(
-          err instanceof Error && err.name === 'AbortError' 
+          err instanceof Error && err.name === 'AbortError'
             ? 'ネットワーク接続が不安定です。画面を下に引っ張って更新してください。'
-            : err instanceof Error ? err.message : '通知の読み込みに失敗しました'
+            : err instanceof Error
+              ? err.message
+              : '通知の読み込みに失敗しました'
         );
       } finally {
         setLoading(false);

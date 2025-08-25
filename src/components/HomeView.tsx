@@ -119,7 +119,14 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
         type: selectedPostType,
       });
     }
-  }, [selectedPostType, isCached, cacheAge, posts.length, effectiveLoading, postsLoading]);
+  }, [
+    selectedPostType,
+    isCached,
+    cacheAge,
+    posts.length,
+    effectiveLoading,
+    postsLoading,
+  ]);
 
   const postTypeTabs: TabItem[] = [
     {
@@ -210,7 +217,9 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
               <div className="space-y-4">
                 <div className="w-8 h-8 border-2 border-coral-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
                 <p className="text-gray-500">
-                  {navigator.onLine ? '読み込み中...' : 'オフライン - 接続を確認中...'}
+                  {navigator.onLine
+                    ? '読み込み中...'
+                    : 'オフライン - 接続を確認中...'}
                 </p>
                 <p className="text-xs text-gray-400">
                   {isCached ? `キャッシュ: ${cacheAge}秒前` : '初回読み込み'}

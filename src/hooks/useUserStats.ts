@@ -23,10 +23,13 @@ interface UseUserStatsReturn {
 }
 
 // シンプルなグローバルキャッシュ（ページ切り替えで消えない）
-const userStatsCache = new Map<string, {
-  data: UserStats;
-  timestamp: number;
-}>();
+const userStatsCache = new Map<
+  string,
+  {
+    data: UserStats;
+    timestamp: number;
+  }
+>();
 
 export function useUserStats(userId: string | undefined): UseUserStatsReturn {
   const [stats, setStats] = useState<UserStats>({
@@ -44,36 +47,40 @@ export function useUserStats(userId: string | undefined): UseUserStatsReturn {
   const [cacheAge, setCacheAge] = useState(0);
 
   // モバイル環境の検出
-  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
-  );
+  const isMobileDevice =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    );
 
   // キャッシュの有効期限（モバイルでは長めに設定）
   const CACHE_TTL = isMobileDevice ? 60 * 60 * 1000 : 30 * 60 * 1000; // モバイル60分、デスクトップ30分
 
   // キャッシュからデータを取得
-  const getCachedData = useCallback((id: string): UserStats | null => {
-    const cached = userStatsCache.get(id);
-    if (!cached) return null;
+  const getCachedData = useCallback(
+    (id: string): UserStats | null => {
+      const cached = userStatsCache.get(id);
+      if (!cached) return null;
 
-    const now = Date.now();
-    const age = now - cached.timestamp;
+      const now = Date.now();
+      const age = now - cached.timestamp;
 
-    // キャッシュが有効期限内かチェック
-    if (age < CACHE_TTL) {
-      setCacheAge(Math.floor(age / 1000));
-      setIsCached(true);
-      console.log('📱 useUserStats: Cache hit', {
-        age: Math.floor(age / 1000) + 's',
-        userId: id,
-      });
-      return cached.data;
-    }
+      // キャッシュが有効期限内かチェック
+      if (age < CACHE_TTL) {
+        setCacheAge(Math.floor(age / 1000));
+        setIsCached(true);
+        console.log('📱 useUserStats: Cache hit', {
+          age: Math.floor(age / 1000) + 's',
+          userId: id,
+        });
+        return cached.data;
+      }
 
-    // 期限切れのキャッシュを削除
-    userStatsCache.delete(id);
-    return null;
-  }, [CACHE_TTL]);
+      // 期限切れのキャッシュを削除
+      userStatsCache.delete(id);
+      return null;
+    },
+    [CACHE_TTL]
+  );
 
   // キャッシュにデータを保存
   const setCachedData = useCallback((id: string, data: UserStats) => {
@@ -113,9 +120,12 @@ export function useUserStats(userId: string | undefined): UseUserStatsReturn {
 
         // タイムアウト付きでデータを取得
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
-          controller.abort();
-        }, isMobileDevice ? 8000 : 5000);
+        const timeoutId = setTimeout(
+          () => {
+            controller.abort();
+          },
+          isMobileDevice ? 8000 : 5000
+        );
 
         try {
           // まずユーザーの投稿を取得
@@ -147,14 +157,22 @@ export function useUserStats(userId: string | undefined): UseUserStatsReturn {
           // 並行してお気に入り数と、投稿関連の統計を取得
           const promises = [
             // ユーザーがいいねした投稿数を取得
-            supabase.from('likes').select('post_id').eq('user_id', userId).abortSignal(controller.signal),
+            supabase
+              .from('likes')
+              .select('post_id')
+              .eq('user_id', userId)
+              .abortSignal(controller.signal),
           ];
 
           // 投稿がある場合のみいいね数とコメント数を取得
           if (postIds.length > 0) {
             promises.push(
               // いいね数を取得
-              supabase.from('likes').select('post_id').in('post_id', postIds).abortSignal(controller.signal),
+              supabase
+                .from('likes')
+                .select('post_id')
+                .in('post_id', postIds)
+                .abortSignal(controller.signal),
               // コメント数を取得
               supabase
                 .from('comments')
@@ -177,7 +195,7 @@ export function useUserStats(userId: string | undefined): UseUserStatsReturn {
 
           const postsData = posts || [];
           const approvedPosts = postsData.filter(post => post.approved);
-          
+
           // 人気投稿は likes テーブルから件数 >= 10 を満たす投稿を算出
           const popularPostsIds: string[] = [];
           if (postIds.length > 0 && results.length >= 2) {
@@ -257,12 +275,14 @@ export function useUserStats(userId: string | undefined): UseUserStatsReturn {
       console.log('📱 useUserStats: Initial load from cache');
       setStats(cachedData);
       setLoading(false);
-      
+
       // バックグラウンドで更新（古いキャッシュの場合のみ）
       const now = Date.now();
       const cached = userStatsCache.get(userId);
       if (cached && now - cached.timestamp > CACHE_TTL * 0.5) {
-        console.log('📱 useUserStats: Background refresh (cache is getting old)');
+        console.log(
+          '📱 useUserStats: Background refresh (cache is getting old)'
+        );
         setTimeout(() => {
           loadUserStats(true);
         }, 100);

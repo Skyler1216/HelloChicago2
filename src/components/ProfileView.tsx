@@ -15,7 +15,7 @@ import { signOut } from '../lib/supabase';
 import { Database } from '../types/database';
 import { useUserStats } from '../hooks/useUserStats';
 import { useCommunityInfo } from '../hooks/useCommunityInfo';
-import { useAuth } from '../hooks/useAuth';
+// import { useAuth } from '../hooks/useAuth';
 import { useProfileDetails } from '../hooks/useProfileDetails';
 import ProfileEditView from './profile/edit/ProfileEditView';
 import UserPostsView from './UserPostsView';
@@ -49,14 +49,14 @@ export default function ProfileView({
   const {
     profileDetails,
     loading: profileDetailsLoading,
-    isCached,
-    cacheAge,
+    // isCached,
+    // cacheAge,
   } = useProfileDetails(activeProfile?.id || '');
 
   const {
     stats: userStats,
-    isCached: statsCached,
-    cacheAge: statsCacheAge,
+    // isCached: statsCached,
+    // cacheAge: statsCacheAge,
   } = useUserStats(activeProfile?.id);
 
   // プロフィール更新後の処理

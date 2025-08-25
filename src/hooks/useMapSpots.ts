@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import {
@@ -93,28 +93,31 @@ export function useMapSpots() {
   }, []);
 
   // キャッシュにデータを保存
-  const setCachedData = useCallback((data: MapSpotWithDetails[]) => {
-    try {
-      const cacheKey = CACHE_KEY_PREFIX + 'all';
-      const cacheData: CacheData = {
-        data,
-        timestamp: Date.now(),
-        deviceId: getDeviceId(),
-      };
+  const setCachedData = useCallback(
+    (data: MapSpotWithDetails[]) => {
+      try {
+        const cacheKey = CACHE_KEY_PREFIX + 'all';
+        const cacheData: CacheData = {
+          data,
+          timestamp: Date.now(),
+          deviceId: getDeviceId(),
+        };
 
-      mapSpotsCache.set(cacheKey, cacheData);
-      setIsCached(false);
-      setCacheAge(0);
+        mapSpotsCache.set(cacheKey, cacheData);
+        setIsCached(false);
+        setCacheAge(0);
 
-      console.log('📱 useMapSpots: Data cached', {
-        spotsCount: data.length,
-        device: isMobileDevice ? 'mobile' : 'desktop',
-        deviceId: cacheData.deviceId,
-      });
-    } catch (err) {
-      console.warn('📱 useMapSpots: Cache write error', err);
-    }
-  }, [getDeviceId]);
+        console.log('📱 useMapSpots: Data cached', {
+          spotsCount: data.length,
+          device: isMobileDevice ? 'mobile' : 'desktop',
+          deviceId: cacheData.deviceId,
+        });
+      } catch (err) {
+        console.warn('📱 useMapSpots: Cache write error', err);
+      }
+    },
+    [getDeviceId]
+  );
 
   // スポット一覧を取得（キャッシュ優先）
   const fetchSpots = useCallback(
@@ -129,7 +132,9 @@ export function useMapSpots() {
             console.log('📱 useMapSpots: Using cached data immediately');
             setSpots(cachedData);
             setLoading(false);
-            console.log('📱 useMapSpots: Loading set to false (fetchSpots cache hit)');
+            console.log(
+              '📱 useMapSpots: Loading set to false (fetchSpots cache hit)'
+            );
             return;
           }
         }
@@ -249,8 +254,8 @@ export function useMapSpots() {
           err instanceof Error && err.name === 'AbortError'
             ? 'ネットワーク接続が不安定です。画面を下に引っ張って更新してください。'
             : err instanceof Error
-            ? err.message
-            : 'マップスポットの取得に失敗しました'
+              ? err.message
+              : 'マップスポットの取得に失敗しました'
         );
       } finally {
         setLoading(false);

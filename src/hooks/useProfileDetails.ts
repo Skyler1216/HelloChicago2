@@ -22,51 +22,60 @@ interface UseProfileDetailsReturn {
 }
 
 // シンプルなグローバルキャッシュ（ページ切り替えで消えない）
-const profileDetailsCache = new Map<string, {
-  data: ProfileDetails;
-  timestamp: number;
-}>();
+const profileDetailsCache = new Map<
+  string,
+  {
+    data: ProfileDetails;
+    timestamp: number;
+  }
+>();
 
 export function useProfileDetails(
   profileId: string | undefined
 ): UseProfileDetailsReturn {
-  const [profileDetails, setProfileDetails] = useState<ProfileDetails | null>(null);
+  const [profileDetails, setProfileDetails] = useState<ProfileDetails | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCached, setIsCached] = useState(false);
   const [cacheAge, setCacheAge] = useState(0);
 
   // モバイル環境の検出
-  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
-  );
+  const isMobileDevice =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    );
 
   // キャッシュの有効期限（モバイルでは長めに設定）
   const CACHE_TTL = isMobileDevice ? 2 * 60 * 60 * 1000 : 30 * 60 * 1000; // モバイル2時間、デスクトップ30分
 
   // キャッシュからデータを取得
-  const getCachedData = useCallback((id: string): ProfileDetails | null => {
-    const cached = profileDetailsCache.get(id);
-    if (!cached) return null;
+  const getCachedData = useCallback(
+    (id: string): ProfileDetails | null => {
+      const cached = profileDetailsCache.get(id);
+      if (!cached) return null;
 
-    const now = Date.now();
-    const age = now - cached.timestamp;
+      const now = Date.now();
+      const age = now - cached.timestamp;
 
-    // キャッシュが有効期限内かチェック
-    if (age < CACHE_TTL) {
-      setCacheAge(Math.floor(age / 1000));
-      setIsCached(true);
-      console.log('📱 useProfileDetails: Cache hit', {
-        age: Math.floor(age / 1000) + 's',
-        profileId: id,
-      });
-      return cached.data;
-    }
+      // キャッシュが有効期限内かチェック
+      if (age < CACHE_TTL) {
+        setCacheAge(Math.floor(age / 1000));
+        setIsCached(true);
+        console.log('📱 useProfileDetails: Cache hit', {
+          age: Math.floor(age / 1000) + 's',
+          profileId: id,
+        });
+        return cached.data;
+      }
 
-    // 期限切れのキャッシュを削除
-    profileDetailsCache.delete(id);
-    return null;
-  }, [CACHE_TTL]);
+      // 期限切れのキャッシュを削除
+      profileDetailsCache.delete(id);
+      return null;
+    },
+    [CACHE_TTL]
+  );
 
   // キャッシュにデータを保存
   const setCachedData = useCallback((id: string, data: ProfileDetails) => {
@@ -106,9 +115,12 @@ export function useProfileDetails(
 
         // タイムアウト付きでデータを取得
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
-          controller.abort();
-        }, isMobileDevice ? 8000 : 5000);
+        const timeoutId = setTimeout(
+          () => {
+            controller.abort();
+          },
+          isMobileDevice ? 8000 : 5000
+        );
 
         try {
           const { data, error: fetchError } = await supabase
@@ -130,9 +142,11 @@ export function useProfileDetails(
           }
         } catch (err) {
           clearTimeout(timeoutId);
-          
+
           if (err instanceof Error && err.name === 'AbortError') {
-            console.warn('📱 useProfileDetails: Request timeout, using cached data');
+            console.warn(
+              '📱 useProfileDetails: Request timeout, using cached data'
+            );
             const cachedData = getCachedData(profileId);
             if (cachedData) {
               setProfileDetails(cachedData);
@@ -165,12 +179,14 @@ export function useProfileDetails(
       console.log('📱 useProfileDetails: Initial load from cache');
       setProfileDetails(cachedData);
       setLoading(false);
-      
+
       // バックグラウンドで更新（古いキャッシュの場合のみ）
       const now = Date.now();
       const cached = profileDetailsCache.get(profileId);
       if (cached && now - cached.timestamp > CACHE_TTL * 0.5) {
-        console.log('📱 useProfileDetails: Background refresh (cache is getting old)');
+        console.log(
+          '📱 useProfileDetails: Background refresh (cache is getting old)'
+        );
         setTimeout(() => {
           loadData(true);
         }, 100);

@@ -169,12 +169,17 @@ export function useInbox(userId: string): UseInboxReturn {
     if (!userId) return;
 
     // モバイル環境に応じたタイムアウト時間の調整
-    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isMobileDevice =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      );
     const timeoutDuration = isMobileDevice ? 12000 : 8000; // モバイルでは12秒
 
     const timeoutId = setTimeout(() => {
       if (loading) {
-        console.warn(`📱 Inbox: Loading timeout reached (${timeoutDuration}ms), forcing completion`);
+        console.warn(
+          `📱 Inbox: Loading timeout reached (${timeoutDuration}ms), forcing completion`
+        );
         setForceLoading(true);
         setLoading(false);
         setError(
