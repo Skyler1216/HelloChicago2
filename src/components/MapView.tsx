@@ -310,13 +310,16 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
               <div className="text-center space-y-3">
                 <div className="w-8 h-8 border-2 border-coral-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
                 <p className="text-gray-500">
-                  {navigator.onLine ? 'マップを読み込み中...' : 'オフライン - キャッシュデータを表示中'}
+                  {navigator.onLine ? 'マップスポットを読み込み中...' : 'オフライン - キャッシュデータを表示中'}
                 </p>
                 {isCached && (
                   <p className="text-xs text-blue-600">
                     キャッシュデータを表示中（{cacheAge}秒前のデータ）
                   </p>
                 )}
+                <p className="text-xs text-gray-400">
+                  デバッグ: loading={mapSpotsLoading ? 'true' : 'false'}, cached={isCached ? 'true' : 'false'}, effective={effectiveLoading ? 'true' : 'false'}
+                </p>
                 {!navigator.onLine && (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
                     <p className="text-amber-700 text-xs">

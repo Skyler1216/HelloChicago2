@@ -129,6 +129,7 @@ export function useMapSpots() {
             console.log('📱 useMapSpots: Using cached data immediately');
             setSpots(cachedData);
             setLoading(false);
+            console.log('📱 useMapSpots: Loading set to false (fetchSpots cache hit)');
             return;
           }
         }
