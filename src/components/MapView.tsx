@@ -48,13 +48,31 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
   }
   const { 
     spots: mapSpots, 
-    loading: mapSpotsLoading, 
+    loading: mapSpotsLoading,
+    isRefreshing: mapSpotsRefreshing,
     isCached, 
     cacheAge 
   } = useMapSpots();
 
   // キャッシュがある場合はローディングを表示しない
   const effectiveLoading = mapSpotsLoading && !isCached;
+
+  // デバッグ情報をログ出力
+  useEffect(() => {
+    console.log('📱 MapView: Cache status', {
+      isCached,
+      cacheAge: cacheAge > 0 ? `${cacheAge}s` : 'N/A',
+      spotsCount: mapSpots.length,
+      effectiveLoading,
+      mapSpotsLoading,
+    });
+
+    if (isCached) {
+      console.log('📱 MapView: Using cached map spots data', {
+        age: cacheAge + 's',
+      });
+    }
+  }, [isCached, cacheAge, mapSpots.length, effectiveLoading, mapSpotsLoading]);
 
   const tabs: TabItem[] = [
     { id: 'map', label: 'マップ', icon: MapIcon },
@@ -232,6 +250,11 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
                     (キャッシュ: {cacheAge}秒前)
                   </span>
                 )}
+                {mapSpotsRefreshing && (
+                  <span className="ml-1 text-xs text-orange-600">
+                    (更新中...)
+                  </span>
+                )}
               </span>
             </div>
           </div>
@@ -287,7 +310,7 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
               <div className="text-center space-y-3">
                 <div className="w-8 h-8 border-2 border-coral-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
                 <p className="text-gray-500">
-                  {navigator.onLine ? '地図を読み込み中...' : 'オフライン - キャッシュデータを表示中'}
+                  {navigator.onLine ? 'マップを読み込み中...' : 'オフライン - キャッシュデータを表示中'}
                 </p>
                 {isCached && (
                   <p className="text-xs text-blue-600">
