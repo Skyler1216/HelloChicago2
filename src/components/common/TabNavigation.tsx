@@ -26,7 +26,7 @@ export default function TabNavigation({
 
   return (
     <div className={`bg-white border-b border-gray-100 ${className}`}>
-      <div className="max-w-md mx-auto px-4">
+      <div className="max-w-md mx-auto px-2 sm:px-4">
         <div className="flex space-x-1">
           {tabs.map(tab => {
             const IconComponent = tab.icon;
@@ -36,11 +36,11 @@ export default function TabNavigation({
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
-                className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
+                className={`flex-1 flex items-center justify-center space-x-2 px-2 sm:px-4 py-2 sm:py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
                   isActive
                     ? 'text-coral-600 bg-coral-50 border-b-2 border-coral-500'
                     : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                } ${isCompact ? 'py-2 text-xs' : ''}`}
+                } ${isCompact ? 'py-1.5 sm:py-2 text-xs' : ''}`}
               >
                 <IconComponent
                   className={`${isCompact ? 'w-3 h-3' : 'w-4 h-4'}`}

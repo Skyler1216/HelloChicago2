@@ -34,11 +34,11 @@ export default function CategoryFilter({
   }
 
   return (
-    <div className="px-4 py-3 bg-white border-b border-gray-100">
+    <div className="px-2 sm:px-4 py-2 sm:py-3 bg-white border-b border-gray-100">
       <div className="flex space-x-2 overflow-x-auto scrollbar-hide">
         <button
           onClick={() => onCategorySelect(null)}
-          className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+          className={`flex-shrink-0 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-sm font-medium transition-all duration-200 ${
             selectedCategory === null
               ? 'bg-coral-100 text-coral-700 border-2 border-coral-200'
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -62,7 +62,7 @@ export default function CategoryFilter({
               <button
                 key={category.id}
                 onClick={() => onCategorySelect(category.id)}
-                className={`flex-shrink-0 flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                className={`flex-shrink-0 flex items-center space-x-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                   selectedCategory === category.id
                     ? 'text-white border-2 border-transparent'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'

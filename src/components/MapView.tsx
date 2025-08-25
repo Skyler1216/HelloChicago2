@@ -206,22 +206,22 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
   return (
     <div className="h-full flex flex-col bg-gray-50">
       {/* Header with Search */}
-      <div className="bg-white border-b border-gray-100 sticky top-0 z-10 flex-shrink-0">
-        <div className="px-3 sm:px-4 py-1.5 sm:py-2">
+      <div className="bg-white border-b border-gray-100 z-20 flex-shrink-0 sticky top-0 safe-area-top">
+        <div className="px-2 sm:px-4 py-1.5 sm:py-3">
           {/* Search Bar */}
-          <div className="relative mb-0.5 sm:mb-1">
+          <div className="relative mb-1.5 sm:mb-3">
             <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
             <input
               type="text"
               placeholder="場所やスポットを検索..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-7 sm:pl-10 pr-2 sm:pr-4 py-1.5 sm:py-2 text-sm sm:text-base border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-coral-500 focus:border-transparent transition-all"
+              className="w-full pl-7 sm:pl-10 pr-2 sm:pr-4 py-1.5 sm:py-3 text-sm sm:text-base border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-coral-500 focus:border-transparent transition-all"
             />
           </div>
 
           {/* Stats (count) */}
-          <div className="flex items-center justify-end mb-0.5 sm:mb-1">
+          <div className="flex items-center justify-end mb-1.5 sm:mb-3">
             <div className="flex items-center space-x-1 sm:space-x-2">
               <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
               <span className="text-xs sm:text-sm text-gray-600">
@@ -231,7 +231,7 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
           </div>
 
           {/* Category Filter */}
-          <div className="mb-0 sm:mb-0.5">
+          <div className="mb-1.5 sm:mb-3">
             <CategoryFilter
               categories={categories}
               loading={categoriesLoading}
@@ -265,7 +265,7 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
           />
         </div>
       ) : (
-        <div className="flex-1 relative min-h-0">
+        <div className="flex-1 relative min-h-0 pt-2">
           <MapboxMap
             spots={filteredMapSpots}
             selectedCategory={selectedCategory}

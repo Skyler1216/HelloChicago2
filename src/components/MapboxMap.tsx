@@ -198,6 +198,13 @@ function MapboxMapComponent({
 
   // Initialize map
   useEffect(() => {
+    console.log('🗺️ Map initialization effect triggered', {
+      hasContainer: !!mapContainer.current,
+      hasMap: !!map.current,
+      hasInitialCenter: !!initialCenter,
+      initialCenter,
+    });
+
     if (!mapContainer.current || map.current || !initialCenter) return;
 
     // Check if Mapbox token is available
@@ -207,6 +214,8 @@ function MapboxMapComponent({
     }
 
     try {
+      console.log('🗺️ Initializing map with container:', mapContainer.current);
+
       // Initialize map
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
@@ -220,24 +229,25 @@ function MapboxMapComponent({
       lastAppliedStyleRef.current = mapStyle;
 
       // 地図コンテナのサイズを確実に設定
-      setTimeout(() => {
+      const resizeMap = () => {
         if (map.current) {
+          console.log('🗺️ Resizing map');
           map.current.resize();
         }
-      }, 200);
+      };
+
+      // 即座にリサイズ
+      resizeMap();
+
+      // 少し遅れてリサイズ
+      setTimeout(resizeMap, 100);
 
       // さらに確実にするため、少し遅れて再度リサイズ
-      setTimeout(() => {
-        if (map.current) {
-          map.current.resize();
-        }
-      }, 500);
+      setTimeout(resizeMap, 500);
 
       // ウィンドウリサイズ時の処理を追加
       const handleResize = () => {
-        if (map.current) {
-          map.current.resize();
-        }
+        resizeMap();
       };
       window.addEventListener('resize', handleResize);
 
@@ -338,8 +348,17 @@ function MapboxMapComponent({
 
       // Handle map load
       map.current.on('load', () => {
+        console.log('🗺️ Map loaded successfully');
         setMapLoaded(true);
         setMapError(null);
+
+        // 地図が読み込まれた後に再度リサイズ
+        setTimeout(() => {
+          if (map.current) {
+            console.log('🗺️ Resizing map after load');
+            map.current.resize();
+          }
+        }, 100);
 
         // Initialize building layer
         updateBuildingVisibility(map.current!, showBuildings);
@@ -580,7 +599,7 @@ function MapboxMapComponent({
       {/* Map Container */}
       <div
         ref={mapContainer}
-        className="w-full h-full min-h-[calc(100vh-310px)] sm:min-h-[500px] md:min-h-[600px] bg-gray-100"
+        className="w-full h-full min-h-[calc(100vh-320px)] sm:min-h-[500px] md:min-h-[600px] bg-gray-100"
       />
 
       {/* Custom Toolbar */}
