@@ -215,8 +215,8 @@ export default function ProfileView({
                   if (diffDays < 30) {
                     return `${diffDays}日`;
                   } else if (diffDays < 365) {
-                  // プロフィール詳細情報の読み込み中でキャッシュがない場合のみローディング表示
-                  if (profileDetailsLoading && !isCached) {
+                    const months = Math.floor(diffDays / 30);
+                    return `${months}ヶ月`;
                   } else {
                     const years = Math.floor(diffDays / 365);
                     const remainingMonths = Math.floor((diffDays % 365) / 30);
