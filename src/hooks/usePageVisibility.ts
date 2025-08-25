@@ -25,7 +25,7 @@ export function usePageVisibility(options: UsePageVisibilityOptions = {}) {
     onVisible,
     onHidden,
     staleThreshold = 2 * 60 * 1000, // 2分
-    refreshThreshold = 5 * 60 * 1000, // 5分
+    refreshThreshold = 30 * 60 * 1000, // 30分（5分から30分に延長）
   } = options;
 
   const [state, setState] = useState<VisibilityState>(() => ({
@@ -108,13 +108,20 @@ export function usePageVisibility(options: UsePageVisibilityOptions = {}) {
           });
         }
 
-        // コールバック実行（モバイルでは遅延実行）
+        // 短時間のバックグラウンド（5分未満）では読み込み処理を実行しない
+        const isShortBackground = backgroundTime < 5 * 60 * 1000;
+
+        // コールバック実行（モバイルでは遅延実行、短時間バックグラウンドでは読み込み処理を制限）
         if (isMobile.current) {
           setTimeout(() => {
-            callbacksRef.current.onVisible?.(backgroundTime);
+            if (!isShortBackground) {
+              callbacksRef.current.onVisible?.(backgroundTime);
+            }
           }, 50);
         } else {
-          callbacksRef.current.onVisible?.(backgroundTime);
+          if (!isShortBackground) {
+            callbacksRef.current.onVisible?.(backgroundTime);
+          }
         }
       } else if (!isVisible && prevState.isVisible) {
         // フォアグラウンドからバックグラウンドに移行
@@ -231,7 +238,9 @@ export function usePageVisibility(options: UsePageVisibilityOptions = {}) {
     (lastUpdateTime: number = 0) => {
       const now = Date.now();
       const timeSinceUpdate = now - lastUpdateTime;
-      return timeSinceUpdate > staleThreshold;
+      // 短時間のバックグラウンド（5分未満）では古いデータとみなさない
+      const effectiveThreshold = Math.max(staleThreshold, 5 * 60 * 1000);
+      return timeSinceUpdate > effectiveThreshold;
     },
     [staleThreshold]
   );
