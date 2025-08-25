@@ -1,5 +1,5 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import React, { Component, ReactNode, ErrorInfo } from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
@@ -64,17 +64,10 @@ export default class ErrorBoundary extends Component<Props, State> {
             )}
 
             <div className="space-y-3">
-              <button
-                onClick={this.handleRetry}
-                className="w-full bg-coral-500 text-white py-3 px-6 rounded-xl font-semibold hover:bg-coral-600 transition-all duration-200 flex items-center justify-center gap-2"
-              >
-                <RefreshCw className="w-4 h-4" />
-                再試行
-              </button>
-
+              {/* 再試行ボタンを削除 */}
               <button
                 onClick={() => window.location.reload()}
-                className="w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-xl font-semibold hover:bg-gray-200 transition-all duration-200"
+                className="w-full bg-coral-500 text-white py-3 px-6 rounded-xl font-semibold hover:bg-coral-600 transition-all duration-200"
               >
                 ページを再読み込み
               </button>

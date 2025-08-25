@@ -127,103 +127,102 @@ export function usePosts(
           }
         }
 
-        console.log('📱 usePosts: Fetching from database...', {
-          type: type || 'all',
-          categoryId: categoryId || 'all',
-        });
-        setLoading(true);
+        console.log('📱 usePosts: Fetching from database...');
 
-        let query = supabase
-          .from('posts')
-          .select(
+        // タイムアウト付きでAPIリクエストを実行
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒でタイムアウト
+
+        try {
+          let query = supabase
+            .from('posts')
+            .select(
+              `
+              *,
+              profiles:profiles(name, avatar_url),
+              categories:categories(name_ja, icon, color)
             `
-          *,
-          profiles (
-            id,
-            name,
-            avatar_url
-          ),
-          categories (
-            id,
-            name,
-            name_ja,
-            icon,
-            color
-          )
-        `
-          )
-          .eq('approved', true)
-          .order('created_at', { ascending: false });
+            )
+            .eq('approved', true)
+            .order('created_at', { ascending: false });
 
-        if (type) {
-          query = query.eq('type', type);
-        }
+          if (type) {
+            query = query.eq('type', type);
+          }
 
-        if (categoryId) {
-          query = query.eq('category_id', categoryId);
-        }
+          if (categoryId) {
+            query = query.eq('category_id', categoryId);
+          }
 
-        const { data, error } = await query;
+          const { data, error } = await query;
 
-        if (error) throw error;
+          clearTimeout(timeoutId);
 
-        // 投稿IDのリストを作成
-        const postIds = (data || []).map(post => post.id);
+          if (error) {
+            console.error('📱 usePosts: Database error:', error);
+            throw error;
+          }
 
-        if (postIds.length === 0) {
-          setPosts(data || []);
-          return;
-        }
+          const postsWithDetails = (data || []).map(post => ({
+            ...post,
+            likes_count: post.likes_count || 0,
+            comments_count: post.comments_count || 0,
+          }));
 
-        // いいね数とコメント数を一括取得
-        const [likesResult, commentsResult] = await Promise.all([
-          // いいね数を一括取得
-          supabase.from('likes').select('post_id').in('post_id', postIds),
+          setPosts(postsWithDetails);
+          setLoading(false);
+          setIsRefreshing(false);
 
-          // コメント数を一括取得
-          supabase
-            .from('comments')
-            .select('post_id')
-            .in('post_id', postIds)
-            .eq('approved', true),
-        ]);
-
-        // いいね数とコメント数をカウント
-        const likesCountMap = new Map<string, number>();
-        const commentsCountMap = new Map<string, number>();
-
-        // いいね数をカウント
-        if (likesResult.data) {
-          likesResult.data.forEach(like => {
-            const count = likesCountMap.get(like.post_id) || 0;
-            likesCountMap.set(like.post_id, count + 1);
+          // データをキャッシュに保存
+          cache.set(cacheKey, postsWithDetails);
+          console.log('📱 usePosts: Data fetched and cached successfully', {
+            postsCount: postsWithDetails.length,
+            type: type || 'all',
+            categoryId: categoryId || 'all',
           });
+        } catch (err) {
+          clearTimeout(timeoutId);
+
+          if (err instanceof Error && err.name === 'AbortError') {
+            console.warn(
+              '📱 usePosts: Request timeout, using cached data if available'
+            );
+            // タイムアウトの場合はキャッシュデータを使用
+            const cachedData = cache.get(cacheKey);
+            if (cachedData) {
+              setPosts(cachedData);
+              setLoading(false);
+              setIsRefreshing(false);
+              return;
+            }
+          }
+
+          // ネットワークエラーの場合はキャッシュデータを使用
+          if (
+            err instanceof Error &&
+            (err.message.includes('network') ||
+              err.message.includes('fetch') ||
+              err.message.includes('timeout'))
+          ) {
+            console.warn(
+              '📱 usePosts: Network error, using cached data if available'
+            );
+            const cachedData = cache.get(cacheKey);
+            if (cachedData) {
+              setPosts(cachedData);
+              setLoading(false);
+              setIsRefreshing(false);
+              return;
+            }
+          }
+
+          console.error('📱 usePosts: Fetch error:', err);
+          setError(
+            err instanceof Error ? err.message : '投稿の読み込みに失敗しました'
+          );
+          setLoading(false);
+          setIsRefreshing(false);
         }
-
-        // コメント数をカウント
-        if (commentsResult.data) {
-          commentsResult.data.forEach(comment => {
-            const count = commentsCountMap.get(comment.post_id) || 0;
-            commentsCountMap.set(comment.post_id, count + 1);
-          });
-        }
-
-        // 投稿データにいいね数とコメント数を追加
-        const postsWithCounts = (data || []).map(post => ({
-          ...post,
-          likes_count: likesCountMap.get(post.id) || 0,
-          comments_count: commentsCountMap.get(post.id) || 0,
-        }));
-
-        // キャッシュに保存
-        cache.set(cacheKey, postsWithCounts);
-        console.log('📱 usePosts: Data cached successfully', {
-          postsCount: postsWithCounts.length,
-          cacheKey,
-        });
-
-        setPosts(postsWithCounts);
-        setError(null); // エラーをクリア
       } catch (err) {
         console.error('❌ Error loading posts:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');

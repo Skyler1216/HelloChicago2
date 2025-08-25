@@ -194,7 +194,7 @@ export function useCache<T>(key: string, options: CacheOptions = {}) {
       updateStats();
       persistCache();
     },
-    [maxSize, ttl, priority, updateStats, persistCache]
+    [maxSize, ttl, priority, updateStats, persistCache, key] // keyが使用されているため追加
   );
 
   // キャッシュの削除
@@ -207,7 +207,7 @@ export function useCache<T>(key: string, options: CacheOptions = {}) {
       }
       return deleted;
     },
-    [updateStats, persistCache]
+    [updateStats, persistCache, key] // keyが使用されているため追加
   );
 
   // キャッシュのクリア
@@ -236,7 +236,7 @@ export function useCache<T>(key: string, options: CacheOptions = {}) {
 
       return null;
     },
-    [isOnline]
+    [isOnline, key] // keyが使用されているため追加
   );
 
   // キャッシュの状態を取得
