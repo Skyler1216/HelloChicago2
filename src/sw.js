@@ -6,9 +6,10 @@ const API_CACHE_NAME = 'hellochicago-api-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/src/main.tsx',
-  '/src/App.tsx',
-  // その他の重要なアセット
+  // Core app shell assets (assuming Vite build outputs to /assets and root)
+  '/assets/index.js', // Main JS bundle
+  '/assets/index.css', // Main CSS bundle
+  // Add other critical static assets if known, e.g., specific fonts, images
 ];
 
 // キャッシュ戦略の設定
@@ -129,6 +130,32 @@ async function staleWhileRevalidate(request, cacheName) {
   const cache = await caches.open(cacheName);
   const cachedResponse = await cache.match(request);
 
+  // ネットワークリクエストを非同期で実行し、キャッシュを更新
+  const networkPromise = fetch(request)
+    .then(response => {
+      // ネットワークから正常なレスポンスが返ってきた場合のみキャッシュを更新
+      if (response.status === 200) {
+        const responseWithHeaders = addCacheHeaders(response.clone());
+        cache.put(request, responseWithHeaders);
+        console.log('📱 SW: Network response cached for:', request.url);
+      }
+      return response;
+    })
+    .catch(error => {
+      console.warn('📱 SW: Network request failed for:', request.url, error);
+      // ネットワークエラー時はキャッシュを返すが、エラーは伝播させない
+      return cachedResponse || new Response(null, { status: 503, statusText: 'Service Unavailable' });
+    });
+
+  // キャッシュがあれば即座に返す。なければネットワークからのレスポンスを待つ
+  return cachedResponse || networkPromise;
+}
+
+/*
+async function staleWhileRevalidate(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cachedResponse = await cache.match(request);
+
   // キャッシュがある場合は即座に返し、有効期限をチェックしてバックグラウンド更新
   if (cachedResponse) {
     // キャッシュの新鮮さをチェック
@@ -170,6 +197,7 @@ async function staleWhileRevalidate(request, cacheName) {
     throw error;
   }
 }
+*/
 
 // フェッチ時
 self.addEventListener('fetch', event => {
@@ -331,20 +359,8 @@ self.addEventListener('message', event => {
         event.waitUntil(cleanExpiredCache());
         break;
       case 'APP_RESTART':
-        // アプリ再起動時の処理
-        console.log('📱 SW: App restart detected, clearing all caches');
-        event.waitUntil(
-          caches
-            .keys()
-            .then(cacheNames => {
-              return Promise.all(
-                cacheNames.map(cacheName => caches.delete(cacheName))
-              );
-            })
-            .then(() => {
-              console.log('📱 SW: All caches cleared for app restart');
-            })
-        );
+        // App restart handling is now managed by the client-side to preserve cache.
+        console.log('📱 SW: App restart detected, but not clearing caches.');
         break;
     }
   }

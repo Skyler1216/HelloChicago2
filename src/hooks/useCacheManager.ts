@@ -143,7 +143,7 @@ export function useCacheManager() {
     console.log(
       '📱 CacheManager: App restart detected, initializing fresh state...'
     );
-    fullReset();
+      // fullReset() は呼び出さない。キャッシュを保持する。
   }, [fullReset]);
 
   // ページ可視性変更時の処理
