@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { TrendingUp, Map as MapIcon, Search, MapPin } from 'lucide-react';
 import CategoryFilter from './CategoryFilter';
 import PopularSpots from './PopularSpots';
