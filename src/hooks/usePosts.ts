@@ -7,8 +7,9 @@ import { useAppLifecycle } from './useAppLifecycle';
 type Post = Database['public']['Tables']['posts']['Row'] & {
   profiles: Database['public']['Tables']['profiles']['Row'];
   categories: Database['public']['Tables']['categories']['Row'];
-  likes_count?: number;
-  comments_count?: number;
+  likes_count?: number; // データベースのlikesカラムは削除されたため、オプショナルに
+  comments_count?: number; // データベースのrepliesカラムは削除されたため、オプショナルに
+
 };
 
 interface UsePostsReturn {
@@ -39,8 +40,9 @@ export function usePosts(
   categoryId?: string
 ): UsePostsReturn {
   // モバイルデバイス検出
-  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
+  const isMobileDevice =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
   );
 
   const [posts, setPosts] = useState<Post[]>([]);
