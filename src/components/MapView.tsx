@@ -3,13 +3,11 @@ import { TrendingUp, Map as MapIcon, Search, MapPin } from 'lucide-react';
 import CategoryFilter from './CategoryFilter';
 import PopularSpots from './PopularSpots';
 import MapboxMap from './MapboxMap';
-// SpotFormModalはページ遷移化に伴い未使用
 import { useCategories } from '../hooks/useCategories';
 import { useMapSpots } from '../hooks/useMapSpots';
 import SpotBottomSheet from './map/SpotBottomSheet';
 import ReviewsBottomSheet from './map/ReviewsBottomSheet';
 import TabNavigation, { TabItem } from './common/TabNavigation';
-// import ReviewsBottomSheet from './map/ReviewsBottomSheet';
 
 interface MapViewProps {
   onRequestCreateSpotAt?: (location: {
@@ -36,7 +34,6 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
   } | null>(null);
   const [actionsSpotId, setActionsSpotId] = useState<string | null>(null);
   const [reviewsSheetOpen, setReviewsSheetOpen] = useState(false);
-  // 旧: 自己評価入力用の一時ratingは廃止（平均表示のみ）
   const [focusLocation, setFocusLocation] = useState<{
     lat: number;
     lng: number;
@@ -44,16 +41,20 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
   } | null>(null);
 
   const { categories, loading: categoriesLoading } = useCategories();
-  // expose categories globally for MapboxMap to pick exact colors
   try {
     (window as { __app_categories__?: typeof categories }).__app_categories__ =
       categories;
   } catch {
-    // Ignore errors when setting global variable
   }
-  const { spots: mapSpots, loading: mapSpotsLoading } = useMapSpots();
+  const { 
+    spots: mapSpots, 
+    loading: mapSpotsLoading, 
+    isCached, 
+    cacheAge 
+  } = useMapSpots();
 
-  // モーダルは廃止（ページ遷移に変更）
+  // キャッシュがある場合はローディングを表示しない
+  const effectiveLoading = mapSpotsLoading && !isCached;
 
   const tabs: TabItem[] = [
     { id: 'map', label: 'マップ', icon: MapIcon },
@@ -226,6 +227,11 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
               <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
               <span className="text-xs sm:text-sm text-gray-600">
                 {filteredMapSpots.length}件のスポット
+                {isCached && (
+                  <span className="ml-1 text-xs text-blue-600">
+                    (キャッシュ: {cacheAge}秒前)
+                  </span>
+                )}
               </span>
             </div>
           </div>
@@ -276,13 +282,18 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
             onLocationClick={handleLocationClick}
           />
 
-          {mapSpotsLoading && (
+          {effectiveLoading && (
             <div className="absolute inset-0 bg-white/90 flex items-center justify-center z-10 px-4">
               <div className="text-center space-y-3">
                 <div className="w-8 h-8 border-2 border-coral-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
                 <p className="text-gray-500">
                   {navigator.onLine ? '地図を読み込み中...' : 'オフライン - キャッシュデータを表示中'}
                 </p>
+                {isCached && (
+                  <p className="text-xs text-blue-600">
+                    キャッシュデータを表示中（{cacheAge}秒前のデータ）
+                  </p>
+                )}
                 {!navigator.onLine && (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
                     <p className="text-amber-700 text-xs">

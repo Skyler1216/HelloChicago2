@@ -21,101 +21,221 @@ type RatingRow = {
   rating: number | string | null;
 };
 
+// キャッシュの設定
+const CACHE_KEY = 'map_spots_cache';
+const isMobileDevice =
+  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+const CACHE_TTL = isMobileDevice ? 4 * 60 * 60 * 1000 : 2 * 60 * 60 * 1000; // モバイル4時間、デスクトップ2時間
+
+interface CacheData {
+  data: MapSpotWithDetails[];
+  timestamp: number;
+}
+
+// グローバルキャッシュ（ページ切り替えで消えない）
+const mapSpotsCache = new Map<string, CacheData>();
+
 export function useMapSpots() {
   const [spots, setSpots] = useState<MapSpotWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [forceLoading, setForceLoading] = useState(false);
+  const [isCached, setIsCached] = useState(false);
+  const [cacheAge, setCacheAge] = useState(0);
   const { user } = useAuth();
 
-  // スポット一覧を取得
-  const fetchSpots = async () => {
+  // キャッシュからデータを取得
+  const getCachedData = useCallback((): MapSpotWithDetails[] | null => {
     try {
-      setLoading(true);
+      const cached = mapSpotsCache.get(CACHE_KEY);
+      if (!cached) return null;
+
+      const now = Date.now();
+      const age = now - cached.timestamp;
+
+      // キャッシュが有効期限内かチェック
+      if (age < CACHE_TTL) {
+        setCacheAge(Math.floor(age / 1000));
+        setIsCached(true);
+        console.log('📱 useMapSpots: Cache hit', {
+          age: Math.floor(age / 1000) + 's',
+          spotsCount: cached.data.length,
+          device: isMobileDevice ? 'mobile' : 'desktop',
+        });
+        return cached.data;
+      }
+
+      // 期限切れのキャッシュを削除
+      mapSpotsCache.delete(CACHE_KEY);
+      return null;
+    } catch (err) {
+      console.warn('📱 useMapSpots: Cache read error', err);
+      return null;
+    }
+  }, []);
+
+  // キャッシュにデータを保存
+  const setCachedData = useCallback((data: MapSpotWithDetails[]) => {
+    try {
+      const cacheData: CacheData = {
+        data,
+        timestamp: Date.now(),
+      };
+
+      mapSpotsCache.set(CACHE_KEY, cacheData);
+      setIsCached(false);
+      setCacheAge(0);
+
+      console.log('📱 useMapSpots: Data cached', {
+        spotsCount: data.length,
+        device: isMobileDevice ? 'mobile' : 'desktop',
+      });
+    } catch (err) {
+      console.warn('📱 useMapSpots: Cache write error', err);
+    }
+  }, []);
+
+  // スポット一覧を取得（キャッシュ優先）
+  const fetchSpots = useCallback(async (forceRefresh = false) => {
+    try {
       setError(null);
-      setForceLoading(false);
 
-      // NOTE:
-      // Nested relations to favorites/ratings can fail with RLS/privilege errors
-      // on some environments (anon vs authenticated). To ensure spots render,
-      // first fetch only base spot fields; derive aggregates separately if needed.
-      const { data, error: fetchError } = await supabase
-        .from('map_spots')
-        .select('*')
-        .eq('is_public', true)
-        .order('created_at', { ascending: false });
-
-      if (fetchError) throw fetchError;
-
-      // rating集計を別クエリで取得（RLSでspot_ratingsは閲覧可）
-      const spotIds = ((data ?? []) as unknown as MapSpotRow[])
-        .map(s => s.id)
-        .filter(Boolean);
-      let spotIdToAvg: Record<string, { sum: number; count: number }> = {};
-      if (spotIds.length > 0) {
-        const { data: ratings, error: ratingsError } = await supabase
-          .from('spot_ratings')
-          .select('spot_id, rating')
-          .in('spot_id', spotIds);
-        if (ratingsError) {
-          // 集計に失敗しても表示は継続（平均は0）
-          spotIdToAvg = {};
-        } else {
-          spotIdToAvg = ((ratings ?? []) as unknown as RatingRow[]).reduce(
-            (
-              acc: Record<string, { sum: number; count: number }>,
-              r: RatingRow
-            ) => {
-              const sid = r.spot_id;
-              const ratingVal = Number(r.rating ?? 0) || 0;
-              if (!acc[sid]) acc[sid] = { sum: 0, count: 0 };
-              acc[sid].sum += ratingVal;
-              acc[sid].count += 1;
-              return acc;
-            },
-            {}
-          );
+      // キャッシュから取得を試行（強制更新でない場合）
+      if (!forceRefresh) {
+        const cachedData = getCachedData();
+        if (cachedData) {
+          console.log('📱 useMapSpots: Using cached data immediately');
+          setSpots(cachedData);
+          setLoading(false);
+          return;
         }
       }
 
-      // データを整形
-      const formattedSpots: MapSpotWithDetails[] = (
-        (data ?? []) as unknown as MapSpotRow[]
-      ).map(spot => {
-        const avgData = spotIdToAvg[spot.id] || { sum: 0, count: 0 };
-        const averageRating =
-          avgData.count > 0 ? avgData.sum / avgData.count : 0;
+      console.log('📱 useMapSpots: Fetching from database...');
+      setLoading(true);
+      setForceLoading(false);
 
-        return {
-          ...spot,
-          location_lat:
-            typeof spot.location_lat === 'string'
-              ? parseFloat(spot.location_lat)
-              : spot.location_lat,
-          location_lng:
-            typeof spot.location_lng === 'string'
-              ? parseFloat(spot.location_lng)
-              : spot.location_lng,
-          average_rating: Math.round(averageRating * 10) / 10,
-          rating_count: avgData.count,
-          favorites_count: 0, // デフォルト値として0を設定
-          user_rating: undefined, // デフォルト値としてundefinedを設定
-          user_favorite: false, // デフォルト値としてfalseを設定
-        };
-      });
+      // モバイル環境でのタイムアウト付きクエリ
+      const controller = new AbortController();
+      const timeoutDuration = isMobileDevice ? 15000 : 10000;
+      
+      const timeoutId = setTimeout(() => {
+        console.warn('📱 useMapSpots: Query timeout, aborting...');
+        controller.abort();
+      }, timeoutDuration);
 
-      setSpots(formattedSpots);
+      try {
+        // NOTE:
+        // Nested relations to favorites/ratings can fail with RLS/privilege errors
+        // on some environments (anon vs authenticated). To ensure spots render,
+        // first fetch only base spot fields; derive aggregates separately if needed.
+        const { data, error: fetchError } = await supabase
+          .from('map_spots')
+          .select('*')
+          .eq('is_public', true)
+          .order('created_at', { ascending: false })
+          .abortSignal(controller.signal);
+
+        clearTimeout(timeoutId);
+
+        if (fetchError) throw fetchError;
+
+        // rating集計を別クエリで取得（RLSでspot_ratingsは閲覧可）
+        const spotIds = ((data ?? []) as unknown as MapSpotRow[])
+          .map(s => s.id)
+          .filter(Boolean);
+        let spotIdToAvg: Record<string, { sum: number; count: number }> = {};
+        if (spotIds.length > 0) {
+          const { data: ratings, error: ratingsError } = await supabase
+            .from('spot_ratings')
+            .select('spot_id, rating')
+            .in('spot_id', spotIds)
+            .abortSignal(controller.signal);
+          if (ratingsError) {
+            // 集計に失敗しても表示は継続（平均は0）
+            spotIdToAvg = {};
+          } else {
+            spotIdToAvg = ((ratings ?? []) as unknown as RatingRow[]).reduce(
+              (
+                acc: Record<string, { sum: number; count: number }>,
+                r: RatingRow
+              ) => {
+                const sid = r.spot_id;
+                const ratingVal = Number(r.rating ?? 0) || 0;
+                if (!acc[sid]) acc[sid] = { sum: 0, count: 0 };
+                acc[sid].sum += ratingVal;
+                acc[sid].count += 1;
+                return acc;
+              },
+              {}
+            );
+          }
+        }
+
+        // データを整形
+        const formattedSpots: MapSpotWithDetails[] = (
+          (data ?? []) as unknown as MapSpotRow[]
+        ).map(spot => {
+          const avgData = spotIdToAvg[spot.id] || { sum: 0, count: 0 };
+          const averageRating =
+            avgData.count > 0 ? avgData.sum / avgData.count : 0;
+
+          return {
+            ...spot,
+            location_lat:
+              typeof spot.location_lat === 'string'
+                ? parseFloat(spot.location_lat)
+                : spot.location_lat,
+            location_lng:
+              typeof spot.location_lng === 'string'
+                ? parseFloat(spot.location_lng)
+                : spot.location_lng,
+            average_rating: Math.round(averageRating * 10) / 10,
+            rating_count: avgData.count,
+            favorites_count: 0, // デフォルト値として0を設定
+            user_rating: undefined, // デフォルト値としてundefinedを設定
+            user_favorite: false, // デフォルト値としてfalseを設定
+          };
+        });
+
+        setSpots(formattedSpots);
+
+        // データをキャッシュに保存
+        setCachedData(formattedSpots);
+
+        console.log('📱 useMapSpots: Data fetched and cached successfully', {
+          spotsCount: formattedSpots.length,
+        });
+      } catch (err) {
+        clearTimeout(timeoutId);
+        
+        if (err instanceof Error && err.name === 'AbortError') {
+          console.warn('📱 useMapSpots: Request aborted due to timeout');
+          // タイムアウト時はキャッシュデータを使用
+          const cachedData = getCachedData();
+          if (cachedData) {
+            setSpots(cachedData);
+            setLoading(false);
+            return;
+          }
+        }
+        throw err;
+      }
     } catch (err) {
       console.error('Failed to fetch map spots:', err);
       setError(
-        err instanceof Error
+        err instanceof Error && err.name === 'AbortError'
+          ? 'ネットワーク接続が不安定です。画面を下に引っ張って更新してください。'
+          : err instanceof Error
           ? err.message
           : 'マップスポットの取得に失敗しました'
       );
     } finally {
       setLoading(false);
     }
-  };
+  }, [getCachedData, setCachedData]);
 
   // タイムアウト機能（無限ローディング防止）
   useEffect(() => {
@@ -149,6 +269,30 @@ export function useMapSpots() {
     return loading;
   }, [forceLoading, loading]);
 
+  // 初期化時の処理（キャッシュ優先）
+  useEffect(() => {
+    // まずキャッシュをチェック
+    const cachedData = getCachedData();
+    if (cachedData) {
+      console.log('📱 useMapSpots: Initial load from cache');
+      setSpots(cachedData);
+      setLoading(false);
+      
+      // バックグラウンドで更新（古いキャッシュの場合のみ）
+      const now = Date.now();
+      const cached = mapSpotsCache.get(CACHE_KEY);
+      if (cached && now - cached.timestamp > CACHE_TTL * 0.5) {
+        console.log('📱 useMapSpots: Background refresh (cache is getting old)');
+        setTimeout(() => {
+          fetchSpots(true);
+        }, 100);
+      }
+    } else {
+      console.log('📱 useMapSpots: Initial load from database');
+      fetchSpots();
+    }
+  }, [getCachedData, fetchSpots, CACHE_TTL]);
+
   // 新しいスポットを作成
   const createSpot = async (
     spotData: CreateMapSpotData
@@ -170,8 +314,8 @@ export function useMapSpots() {
 
       if (createError) throw createError;
 
-      // スポット一覧を即時更新（再取得）
-      await fetchSpots();
+      // スポット一覧を即時更新（キャッシュも更新）
+      await fetchSpots(true);
       return data;
     } catch (err) {
       setError(
@@ -200,8 +344,8 @@ export function useMapSpots() {
 
       if (updateError) throw updateError;
 
-      // スポット一覧を即時更新
-      await fetchSpots();
+      // スポット一覧を即時更新（キャッシュも更新）
+      await fetchSpots(true);
       return true;
     } catch (err) {
       setError(
@@ -227,8 +371,8 @@ export function useMapSpots() {
 
       if (deleteError) throw deleteError;
 
-      // スポット一覧を即時更新
-      await fetchSpots();
+      // スポット一覧を即時更新（キャッシュも更新）
+      await fetchSpots(true);
       return true;
     } catch (err) {
       setError(
@@ -265,8 +409,8 @@ export function useMapSpots() {
 
       if (upsertError) throw upsertError;
 
-      // スポット一覧を更新
-      await fetchSpots();
+      // スポット一覧を更新（キャッシュも更新）
+      await fetchSpots(true);
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : '評価の更新に失敗しました');
@@ -296,10 +440,10 @@ export function useMapSpots() {
     }
   };
 
-  // 初期データを取得
-  useEffect(() => {
-    fetchSpots();
-  }, []);
+  // 手動リフレッシュ
+  const refetch = useCallback(async () => {
+    await fetchSpots(true);
+  }, [fetchSpots]);
 
   return {
     spots,
@@ -311,7 +455,10 @@ export function useMapSpots() {
     toggleFavorite,
     rateSpot,
     addNote,
-    refetch: fetchSpots,
+    refetch,
     forceReset,
+    // キャッシュ関連の情報を追加
+    isCached,
+    cacheAge,
   };
 }
