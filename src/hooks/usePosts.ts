@@ -70,7 +70,7 @@ export function usePosts(
         loadPosts(true); // 強制リフレッシュ
       }
     },
-    refreshThreshold: isMobileDevice ? 1 * 60 * 1000 : 2 * 60 * 1000, // モバイルでは1分、デスクトップでは2分
+    refreshThreshold: 60 * 60 * 1000, // 60分（モバイル・デスクトップ共通）
   });
 
   useEffect(() => {

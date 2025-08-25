@@ -108,18 +108,14 @@ export function usePageVisibility(options: UsePageVisibilityOptions = {}) {
           });
         }
 
-        // 短時間のバックグラウンド（5分未満）では読み込み処理を実行しない
-        const isShortBackground = backgroundTime < 5 * 60 * 1000;
-
-        // コールバック実行（モバイルでは遅延実行、短時間バックグラウンドでは読み込み処理を制限）
-        if (isMobile.current) {
-          setTimeout(() => {
-            if (!isShortBackground) {
+        // 短時間のバックグラウンド（1時間未満）は無視
+        if (backgroundTime > 60 * 60 * 1000) {
+          // コールバック実行（モバイルでは遅延実行、短時間バックグラウンドでは読み込み処理を制限）
+          if (isMobile.current) {
+            setTimeout(() => {
               callbacksRef.current.onVisible?.(backgroundTime);
-            }
-          }, 50);
-        } else {
-          if (!isShortBackground) {
+            }, 50);
+          } else {
             callbacksRef.current.onVisible?.(backgroundTime);
           }
         }
@@ -190,8 +186,8 @@ export function usePageVisibility(options: UsePageVisibilityOptions = {}) {
       const now = Date.now();
       const backgroundTime = now - stateRef.current.lastHiddenTime;
 
-      if (backgroundTime > 5000) {
-        // 5秒以上のバックグラウンド
+      if (backgroundTime > 60 * 60 * 1000) {
+        // 1時間以上のバックグラウンド
         if (!isMobile.current) {
           console.log('📱 App resume detected, triggering visibility check');
         }
