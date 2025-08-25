@@ -277,10 +277,19 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
           />
 
           {mapSpotsLoading && (
-            <div className="absolute inset-0 bg-white/90 flex items-center justify-center z-10">
-              <div className="text-center">
+            <div className="absolute inset-0 bg-white/90 flex items-center justify-center z-10 px-4">
+              <div className="text-center space-y-3">
                 <div className="w-8 h-8 border-2 border-coral-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                <p className="text-gray-500">地図を読み込み中...</p>
+                <p className="text-gray-500">
+                  {navigator.onLine ? '地図を読み込み中...' : 'オフライン - キャッシュデータを表示中'}
+                </p>
+                {!navigator.onLine && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
+                    <p className="text-amber-700 text-xs">
+                      📵 一部機能が制限されます
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}

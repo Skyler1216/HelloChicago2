@@ -1,19 +1,25 @@
 // Service Worker for HelloChicago App
 // キャッシュとオフライン対応、アプリライフサイクル管理
 
-const CACHE_NAME = 'hellochicago-v2';
-const API_CACHE_NAME = 'hellochicago-api-v2';
+const CACHE_NAME = 'hellochicago-v3';
+const API_CACHE_NAME = 'hellochicago-api-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/favicon.ico',
   '/favicon.png',
-  '/apple-touch-icon.png'
-]; // Essential app shell assets
+  '/apple-touch-icon.png',
+  '/icon-192x192.png',
+  '/icon-512x512.png'
+];
 
-// Cache all same-origin GET requests
-const SAME_ORIGIN_GET_REQUESTS = true;
+// モバイル環境の検出
+const isMobile = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+};
 
 // キャッシュ戦略の設定
 const CACHE_STRATEGIES = {
@@ -27,14 +33,14 @@ const CACHE_STRATEGIES = {
 
 // キャッシュの有効期限設定（ユーザーフレンドリーな設定）
 const CACHE_EXPIRY = {
-  API: 30 * 60 * 1000, // 30分（以前の5分から延長）
+  API: 60 * 60 * 1000, // 60分に延長
   STATIC: 7 * 24 * 60 * 60 * 1000, // 7日
   IMAGES: 30 * 24 * 60 * 60 * 1000, // 30日
 };
 
-// モバイル対応のキャッシュ設定（より長いキャッシュ時間）
+// モバイル対応のキャッシュ設定（大幅に延長）
 const MOBILE_CACHE_EXPIRY = {
-  API: 4 * 60 * 60 * 1000, // モバイルでは4時間（アプリ切り替えでキャッシュ有効活用）
+  API: 8 * 60 * 60 * 1000, // モバイルでは8時間（アプリ切り替えでキャッシュ有効活用）
   STATIC: 7 * 24 * 60 * 60 * 1000, // モバイルでは7日（静的ファイルは長期キャッシュ）
   IMAGES: 14 * 24 * 60 * 60 * 1000, // モバイルでは14日（画像も長期キャッシュ）
 };
@@ -61,10 +67,23 @@ const getCacheExpiry = type => {
 self.addEventListener('install', event => {
   console.log('📱 SW: Installing...');
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      console.log('📱 SW: Caching minimal static assets');
-      return cache.addAll(STATIC_ASSETS);
-    })
+    Promise.all([
+      // 静的アセットをキャッシュ
+      caches.open(CACHE_NAME).then(cache => {
+        console.log('📱 SW: Caching static assets');
+        return cache.addAll(STATIC_ASSETS);
+      }),
+      // 重要なAPIエンドポイントも事前キャッシュ
+      caches.open(API_CACHE_NAME).then(cache => {
+        console.log('📱 SW: Pre-caching critical API endpoints');
+        // 認証関連のエンドポイントを事前キャッシュ（空のレスポンスでも構造を準備）
+        return Promise.allSettled([
+          fetch('/auth/session').then(response => {
+            if (response.ok) cache.put('/auth/session', response.clone());
+          }).catch(() => {}),
+        ]);
+      })
+    ])
   );
   self.skipWaiting();
 });
@@ -132,15 +151,35 @@ function addCacheHeaders(response, cacheTime = Date.now()) {
 async function staleWhileRevalidate(request, cacheName) {
   const cache = await caches.open(cacheName);
   const cachedResponse = await cache.match(request);
+  
+  // モバイル環境での特別な処理
+  const isMobileEnv = isMobile();
 
   // キャッシュがある場合は即座に返し、有効期限をチェックしてバックグラウンド更新
   if (cachedResponse) {
     console.log('📱 SW: Serving from cache:', request.url);
     
-    // バックグラウンドでネットワークから最新データを取得し、キャッシュを更新
-    // ただし、ユーザーの応答をブロックしない
+    // モバイルでは更新頻度を制限してバッテリーを節約
+    const updateDelay = isMobileEnv ? 2000 : 0;
+    
     setTimeout(() => {
-      fetch(request)
+      // キャッシュの年齢をチェック
+      const cachedTime = cachedResponse.headers.get('sw-cached-time');
+      if (cachedTime) {
+        const age = Date.now() - parseInt(cachedTime);
+        const expiry = getCacheExpiry('API');
+        
+        // まだ新しい場合はバックグラウンド更新をスキップ
+        if (age < expiry * 0.5) {
+          console.log('📱 SW: Cache is still fresh, skipping background update');
+          return;
+        }
+      }
+      
+      fetch(request, { 
+        // モバイルでのタイムアウト設定
+        signal: AbortSignal.timeout(isMobileEnv ? 15000 : 10000)
+      })
         .then(response => {
           if (response.status === 200) {
             const responseWithHeaders = addCacheHeaders(response.clone());
@@ -150,13 +189,13 @@ async function staleWhileRevalidate(request, cacheName) {
           return response;
         })
         .catch(error => {
-          console.warn(
-            '📱 SW: Background network update failed for:',
-            request.url,
-            error
-          );
+          if (error.name === 'TimeoutError') {
+            console.warn('📱 SW: Background update timeout for:', request.url);
+          } else {
+            console.warn('📱 SW: Background network update failed for:', request.url, error);
+          }
         });
-    }, 0);
+    }, updateDelay);
     
     return cachedResponse;
   }
@@ -232,9 +271,9 @@ self.addEventListener('fetch', event => {
 
   // 同一オリジンのリクエストをキャッシュファーストで処理
   if (url.origin === self.location.origin) {
-    // HTMLドキュメントもキャッシュファーストに変更（高速復帰を優先）
+    // HTMLドキュメントは常にキャッシュファーストで即座に表示
     if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/index.html') {
-      event.respondWith(staleWhileRevalidate(event.request, CACHE_NAME));
+      event.respondWith(cacheFirst(event.request, CACHE_NAME));
       return;
     }
 
@@ -269,7 +308,12 @@ self.addEventListener('fetch', event => {
 
   // 外部API (Supabase) の場合は Stale While Revalidate
   if (url.hostname.includes('supabase.co')) {
-    event.respondWith(staleWhileRevalidate(event.request, API_CACHE_NAME));
+    // モバイル環境ではより積極的にキャッシュを使用
+    if (isMobile()) {
+      event.respondWith(staleWhileRevalidate(event.request, API_CACHE_NAME));
+    } else {
+      event.respondWith(networkFirst(event.request, API_CACHE_NAME));
+    }
     return;
   }
 

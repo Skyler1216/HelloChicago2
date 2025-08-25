@@ -6,10 +6,11 @@ interface LoadingScreenProps {
 }
 
 export default function LoadingScreen({
-  maxLoadingTime = 30000, // デフォルト30秒
+  maxLoadingTime = 15000, // デフォルト15秒に短縮
 }: LoadingScreenProps) {
   const [showRecovery, setShowRecovery] = useState(false);
   const [loadingTime, setLoadingTime] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -67,21 +68,49 @@ export default function LoadingScreen({
 
         {/* 状態復旧オプション */}
         {showRecovery && (
-          <div className="mt-8 p-4 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
+          <div className="mt-8 p-4 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30 space-y-3">
             <p className="text-white/90 text-sm mb-3">
-              読み込みに時間がかかっています
+              ネットワーク接続が不安定です
             </p>
-            <div className="flex justify-center">
+            <div className="flex flex-col space-y-2">
               <button
-                onClick={() => window.location.reload()}
-                className="flex items-center justify-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors"
+                onClick={() => {
+                  setIsRetrying(true);
+                  // キャッシュをクリアして再読み込み
+                  localStorage.clear();
+                  sessionStorage.clear();
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 500);
+                }}
+                disabled={isRetrying}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors disabled:opacity-50"
               >
                 <RefreshCw className="w-4 h-4" />
-                再読み込み
+                {isRetrying ? '再読み込み中...' : 'アプリを再起動'}
+              </button>
+              <button
+                onClick={() => {
+                  // Service Workerのキャッシュをクリア
+                  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({
+                      type: 'CLEAR_CACHE',
+                    });
+                  }
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 1000);
+                }}
+                className="flex items-center justify-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 text-white/80 rounded-lg transition-colors text-sm"
+              >
+                キャッシュをクリアして再起動
               </button>
             </div>
             <p className="text-white/70 text-xs mt-2">
-              ローディング時間: {Math.round(loadingTime / 1000)}秒
+              読み込み時間: {Math.round(loadingTime / 1000)}秒
+            </p>
+            <p className="text-white/60 text-xs">
+              💡 WiFiまたはモバイルデータの接続を確認してください
             </p>
           </div>
         )}

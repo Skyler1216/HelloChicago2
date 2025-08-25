@@ -85,23 +85,42 @@ export function usePosts(
 
   // 初期ローディング管理（緊急修正: シンプルに戻す）
   useEffect(() => {
-    // キャッシュから即座に読み込み、その後バックグラウンドで更新
-    const cachedData = cache.get(cacheKey);
-    if (cachedData) {
-      console.log('📱 usePosts: Using cached data immediately');
-      setPosts(cachedData);
-      setLoading(false);
-      setIsCached(true);
-      
-      // バックグラウンドで更新
-      setTimeout(() => {
-        if (cache.isStale(cacheKey)) {
-          loadPosts(true);
+    // モバイル環境での安全な初期化
+    const initializePosts = async () => {
+      try {
+        // キャッシュから即座に読み込み
+        const cachedData = cache.get(cacheKey);
+        if (cachedData) {
+          console.log('📱 usePosts: Using cached data immediately');
+          setPosts(cachedData);
+          setLoading(false);
+          setIsCached(true);
+          
+          // バックグラウンドで更新（モバイルでは控えめに）
+          if (isMobileDevice) {
+            setTimeout(() => {
+              if (cache.isStale(cacheKey)) {
+                loadPosts(true);
+              }
+            }, 2000); // モバイルでは2秒待機
+          } else {
+            setTimeout(() => {
+              if (cache.isStale(cacheKey)) {
+                loadPosts(true);
+              }
+            }, 100);
+          }
+        } else {
+          await loadPosts();
         }
-      }, 100);
-    } else {
-      loadPosts();
-    }
+      } catch (error) {
+        console.error('📱 usePosts: Initialization error:', error);
+        setError('投稿の初期化に失敗しました');
+        setLoading(false);
+      }
+    };
+    
+    initializePosts();
   }, [type, categoryId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadPosts = useCallback(
@@ -163,9 +182,13 @@ export function usePosts(
 
         console.log('📱 usePosts: Fetching from database...');
 
-        // タイムアウト付きでAPIリクエストを実行
+        // モバイル環境に最適化されたタイムアウト付きAPIリクエスト
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒でタイムアウト
+        const timeoutDuration = isMobileDevice ? 15000 : 10000; // モバイルでは15秒
+        const timeoutId = setTimeout(() => {
+          console.warn('📱 usePosts: Request timeout, aborting...');
+          controller.abort();
+        }, timeoutDuration);
 
         try {
           let query = supabase
@@ -194,6 +217,20 @@ export function usePosts(
 
           if (error) {
             console.error('📱 usePosts: Database error:', error);
+            
+            // モバイルでのネットワークエラーに対する寛容な処理
+            if (isMobileDevice) {
+              const cachedData = cache.get(cacheKey);
+              if (cachedData) {
+                console.log('📱 usePosts: Using cached data due to mobile network error');
+                setPosts(cachedData);
+                setLoading(false);
+                setIsRefreshing(false);
+                setIsCached(true);
+                return;
+              }
+            }
+            
             throw error;
           }
 
@@ -219,14 +256,24 @@ export function usePosts(
 
           if (err instanceof Error && err.name === 'AbortError') {
             console.warn(
-              '📱 usePosts: Request timeout, using cached data if available'
+              '📱 usePosts: Request timeout (mobile network issue), using cached data'
             );
             // タイムアウトの場合はキャッシュデータを使用
             const cachedData = cache.get(cacheKey);
             if (cachedData) {
+              console.log('📱 usePosts: Recovered from timeout using cache');
               setPosts(cachedData);
               setLoading(false);
               setIsRefreshing(false);
+              setIsCached(true);
+              return;
+            } else {
+              // キャッシュもない場合は空の配列で初期化
+              console.log('📱 usePosts: No cache available, showing empty state');
+              setPosts([]);
+              setLoading(false);
+              setIsRefreshing(false);
+              setError('ネットワーク接続が不安定です。しばらく時間をおいてから再度お試しください。');
               return;
             }
           }

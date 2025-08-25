@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase, getProfile } from '../lib/supabase';
 import { Database } from '../types/database';
+import { useFailsafe } from './useFailsafe';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
@@ -10,12 +11,28 @@ interface CachedAuthState {
   profile: Profile | null;
   timestamp: number;
 }
+
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 初期化状態管理（シンプルに戻す）
+  // フェイルセーフ機能を追加
+  const failsafe = useFailsafe({
+    name: 'useAuth',
+    timeout: 8000, // 8秒でタイムアウト
+    onTimeout: () => {
+      console.warn('📱 Auth: Timeout reached, attempting recovery');
+      // キャッシュから復元を試行
+      if (restoreFromCache()) {
+        console.log('📱 Auth: Recovered from cache after timeout');
+      } else {
+        console.log('📱 Auth: No cache available, setting default state');
+        setLoading(false);
+      }
+    },
+  });
+
   const initializationRef = useRef(false);
   const profileLoadingRef = useRef(false);
   const authStateChangingRef = useRef(false);
@@ -61,10 +78,13 @@ export function useAuth() {
   useEffect(() => {
     if (initializationRef.current) return;
     initializationRef.current = true;
+    
+    failsafe.startLoading();
 
     // まずキャッシュから復元を試行
     if (restoreFromCache()) {
       // キャッシュから復元できた場合、バックグラウンドで最新データを取得
+      failsafe.stopLoading();
       setTimeout(async () => {
         try {
           const { data: { session } } = await supabase.auth.getSession();
@@ -85,15 +105,21 @@ export function useAuth() {
     const initializeAuth = async () => {
       try {
         console.log('📱 Auth: Starting initialization');
+        
+        // タイムアウト付きでセッション取得
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session timeout')), 5000)
+        );
 
-        // Get initial session
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
+        const { data: { session }, error } = await Promise.race([
+          sessionPromise,
+          timeoutPromise
+        ]) as any;
 
         if (error) {
           console.error('❌ Session error:', error);
+          failsafe.handleError(error);
           setLoading(false);
           return;
         }
@@ -107,9 +133,11 @@ export function useAuth() {
         }
 
         setLoading(false);
+        failsafe.stopLoading();
         console.log('📱 Auth: Initialization completed');
       } catch (error) {
         console.error('❌ Auth initialization error:', error);
+        failsafe.handleError(error instanceof Error ? error : new Error('Auth initialization failed'));
         setLoading(false);
       }
     };
@@ -156,10 +184,11 @@ export function useAuth() {
     // Force completion after timeout
     const timeoutId = setTimeout(() => {
       if (loading) {
-        console.log('📱 Auth: Timeout reached, forcing completion');
+        console.warn('📱 Auth: Final timeout reached, forcing completion');
+        failsafe.forceComplete();
         setLoading(false);
       }
-    }, 3000); // 3秒に短縮
+    }, 10000); // 10秒に延長（モバイル環境を考慮）
 
     return () => {
       subscription.unsubscribe();
@@ -175,7 +204,16 @@ export function useAuth() {
     profileLoadingRef.current = true;
 
     try {
-      const profileData = await getProfile(userId);
+      // タイムアウト付きでプロフィール取得
+      const profilePromise = getProfile(userId);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile timeout')), 8000)
+      );
+      
+      const profileData = await Promise.race([
+        profilePromise,
+        timeoutPromise
+      ]) as Profile | null;
 
       if (profileData) {
         setProfile(profileData);

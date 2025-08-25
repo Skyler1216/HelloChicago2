@@ -168,17 +168,22 @@ export function useInbox(userId: string): UseInboxReturn {
   useEffect(() => {
     if (!userId) return;
 
+    // モバイル環境に応じたタイムアウト時間の調整
+    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const timeoutDuration = isMobileDevice ? 12000 : 8000; // モバイルでは12秒
+
     const timeoutId = setTimeout(() => {
       if (loading) {
-        console.warn('📱 Inbox: Loading timeout reached, forcing completion');
+        console.warn(`📱 Inbox: Loading timeout reached (${timeoutDuration}ms), forcing completion`);
         setForceLoading(true);
+        setLoading(false);
         setError(
           notificationsError ||
             messagesError ||
-            '読み込みがタイムアウトしました。再試行してください。'
+            'ネットワーク接続が不安定です。画面を下に引っ張って更新してください。'
         );
       }
-    }, 5000); // 5秒でタイムアウト
+    }, timeoutDuration);
 
     return () => clearTimeout(timeoutId);
   }, [userId, loading, notificationsError, messagesError]);

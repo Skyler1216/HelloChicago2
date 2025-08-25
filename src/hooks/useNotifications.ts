@@ -155,26 +155,57 @@ export function useNotifications(userId: string): UseNotificationsReturn {
 
         console.log('📱 useNotifications: Fetching from database...');
 
-        const { data, error: fetchError } = await supabase
-          .from('notifications')
-          .select('*')
-          .eq('recipient_id', userId)
-          .is('deleted_at', null)
-          .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
-          .order('created_at', { ascending: false });
+        // モバイル環境でのタイムアウト付きクエリ
+        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const controller = new AbortController();
+        const timeoutDuration = isMobileDevice ? 12000 : 8000;
+        
+        const timeoutId = setTimeout(() => {
+          console.warn('📱 useNotifications: Query timeout, aborting...');
+          controller.abort();
+        }, timeoutDuration);
+        
+        try {
+          const { data, error: fetchError } = await supabase
+            .from('notifications')
+            .select('*')
+            .eq('recipient_id', userId)
+            .is('deleted_at', null)
+            .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
+            .order('created_at', { ascending: false })
+            .abortSignal(controller.signal);
 
-        if (fetchError) throw fetchError;
+          clearTimeout(timeoutId);
 
-        setNotifications(data || []);
+          if (fetchError) throw fetchError;
 
-        // データをキャッシュに保存
-        if (data) {
-          setCachedData(userId, data);
+          setNotifications(data || []);
+
+          // データをキャッシュに保存
+          if (data) {
+            setCachedData(userId, data);
+          }
+        } catch (err) {
+          clearTimeout(timeoutId);
+          
+          if (err instanceof Error && err.name === 'AbortError') {
+            console.warn('📱 useNotifications: Request aborted due to timeout');
+            // タイムアウト時はキャッシュデータを使用
+            const cachedData = getCachedData(userId);
+            if (cachedData) {
+              setNotifications(cachedData);
+              setLoading(false);
+              return;
+            }
+          }
+          throw err;
         }
       } catch (err) {
         console.error('📱 Notifications: Load error:', err);
         setError(
-          err instanceof Error ? err.message : '通知の読み込みに失敗しました'
+          err instanceof Error && err.name === 'AbortError' 
+            ? 'ネットワーク接続が不安定です。画面を下に引っ張って更新してください。'
+            : err instanceof Error ? err.message : '通知の読み込みに失敗しました'
         );
       } finally {
         setLoading(false);
