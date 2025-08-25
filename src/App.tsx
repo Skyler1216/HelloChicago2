@@ -219,7 +219,6 @@ export default function App() {
     });
     return (
       <LoadingScreen
-        onForceRefresh={forceInitialization}
         maxLoadingTime={5000} // 5秒で復旧オプションを表示
       />
     );

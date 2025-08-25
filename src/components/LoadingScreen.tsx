@@ -2,12 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Heart, MapPin, RefreshCw } from 'lucide-react';
 
 interface LoadingScreenProps {
-  onForceRefresh?: () => void;
   maxLoadingTime?: number; // 最大ローディング時間（ms）
 }
 
 export default function LoadingScreen({
-  onForceRefresh,
   maxLoadingTime = 30000, // デフォルト30秒
 }: LoadingScreenProps) {
   const [showRecovery, setShowRecovery] = useState(false);
@@ -26,15 +24,6 @@ export default function LoadingScreen({
 
     return () => clearInterval(timer);
   }, [maxLoadingTime, showRecovery]);
-
-  const handleForceRefresh = () => {
-    if (onForceRefresh) {
-      onForceRefresh();
-    } else {
-      // デフォルトの復旧処理
-      window.location.reload();
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-coral-500 via-coral-400 to-warm-400 flex items-center justify-center relative overflow-hidden">
@@ -82,20 +71,13 @@ export default function LoadingScreen({
             <p className="text-white/90 text-sm mb-3">
               読み込みに時間がかかっています
             </p>
-            <div className="flex flex-col sm:flex-row gap-2 justify-center">
-              <button
-                onClick={handleForceRefresh}
-                className="flex items-center justify-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors"
-              >
-                <RefreshCw className="w-4 h-4" />
-                再読み込み
-              </button>
+            <div className="flex justify-center">
               <button
                 onClick={() => window.location.reload()}
                 className="flex items-center justify-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors"
               >
                 <RefreshCw className="w-4 h-4" />
-                ページ更新
+                再読み込み
               </button>
             </div>
             <p className="text-white/70 text-xs mt-2">
