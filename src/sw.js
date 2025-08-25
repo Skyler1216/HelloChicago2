@@ -18,21 +18,21 @@ const CACHE_STRATEGIES = {
   // API: ネットワークファースト（Stale While Revalidate）
   API: 'network-first',
   // 画像: キャッシュファースト（長期間）
-  IMAGES: 'cache-first',
+  IMAGES: 30 * 24 * 60 * 60 * 1000, // 30日
 };
 
-// キャッシュの有効期限設定
+// キャッシュの有効期限設定（ユーザーフレンドリーな設定）
 const CACHE_EXPIRY = {
-  API: 5 * 60 * 1000, // 5分
+  API: 30 * 60 * 1000, // 30分（以前の5分から延長）
   STATIC: 7 * 24 * 60 * 60 * 1000, // 7日
   IMAGES: 30 * 24 * 60 * 60 * 1000, // 30日
 };
 
-// モバイル対応のキャッシュ設定
+// モバイル対応のキャッシュ設定（より長いキャッシュ時間）
 const MOBILE_CACHE_EXPIRY = {
-  API: 2 * 60 * 1000, // モバイルでは2分
-  STATIC: 3 * 24 * 60 * 60 * 1000, // モバイルでは3日
-  IMAGES: 7 * 24 * 60 * 60 * 1000, // モバイルでは7日
+  API: 60 * 60 * 1000, // モバイルでは1時間（アプリ切り替えでキャッシュ有効活用）
+  STATIC: 7 * 24 * 60 * 60 * 1000, // モバイルでは7日（静的ファイルは長期キャッシュ）
+  IMAGES: 14 * 24 * 60 * 60 * 1000, // モバイルでは14日（画像も長期キャッシュ）
 };
 
 // デバイス判定
@@ -121,26 +121,34 @@ function addCacheHeaders(response, cacheTime = Date.now()) {
   const headers = new Headers(response.headers);
   headers.set('sw-cached-time', cacheTime.toString());
 
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: headers,
-  });
+  return new Response(response.clone(), { headers });
 }
 
-// Stale While Revalidate 戦略
+// Stale While Revalidate 戦略（ユーザーフレンドリーなキャッシュ戦略）
 async function staleWhileRevalidate(request, cacheName) {
   const cache = await caches.open(cacheName);
   const cachedResponse = await cache.match(request);
 
-  // キャッシュがある場合は即座に返し、バックグラウンドで更新
+  // キャッシュがある場合は即座に返し、有効期限をチェックしてバックグラウンド更新
   if (cachedResponse) {
-    // バックグラウンドで更新
+    // キャッシュの新鮮さをチェック
+    const cachedTime = cachedResponse.headers.get('sw-cached-time');
+    const isStale =
+      cachedTime && Date.now() - parseInt(cachedTime) > getCacheExpiry('API');
+
+    // キャッシュが新鮮な場合はバックグラウンド更新をスキップ
+    if (!isStale) {
+      console.log('📱 SW: Using fresh cache, skipping background update');
+      return cachedResponse;
+    }
+
+    // キャッシュが古い場合のみバックグラウンドで更新
     fetch(request)
       .then(response => {
         if (response.status === 200) {
           const responseWithHeaders = addCacheHeaders(response.clone());
           cache.put(request, responseWithHeaders);
+          console.log('📱 SW: Background update completed for stale cache');
         }
       })
       .catch(error => {
@@ -294,11 +302,26 @@ self.addEventListener('message', event => {
           event.waitUntil(
             Promise.all(
               event.data.urls.map(url =>
-                staleWhileRevalidate(new Request(url), API_CACHE_NAME).catch(
-                  error => console.log('📱 SW: Preload failed for', url, error)
-                )
+                fetch(url).then(response => {
+                  if (response.status === 200) {
+                    return response.clone();
+                  }
+                  return null;
+                })
               )
             )
+              .then(responses => {
+                responses.forEach(response => {
+                  if (response) {
+                    caches.open(CACHE_NAME).then(cache => {
+                      cache.put(new Request(response.url), response);
+                    });
+                  }
+                });
+              })
+              .catch(error => {
+                console.error('📱 SW: Error preloading data:', error);
+              })
           );
         }
         break;

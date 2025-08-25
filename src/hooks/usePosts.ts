@@ -48,29 +48,32 @@ export function usePosts(
   // キャッシュキーを生成
   const cacheKey = `posts_${type || 'all'}_${categoryId || 'all'}`;
 
-  // モバイルデバイス判定
-  const isMobileDevice =
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      navigator.userAgent
-    );
+  // モバイル対応のキャッシュ設定
+  const effectiveTTL = 2 * 60 * 1000; // 2分
+  const effectivePriority = 9;
+  const effectiveMaxSize = 50;
+  const effectiveRefreshThreshold = 30 * 60 * 1000; // 30分
 
   // キャッシュと App Lifecycle の管理
   const cache = useCache<Post[]>(`posts`, {
-    ttl: isMobileDevice ? 2 * 60 * 1000 : 3 * 60 * 1000, // モバイルでは2分、デスクトップでは3分
-    priority: 9, // 投稿は最高優先度
+    ttl: effectiveTTL,
+    priority: effectivePriority,
     staleWhileRevalidate: true,
-    maxSize: isMobileDevice ? 50 : 100, // モバイルでは容量を制限
+    maxSize: effectiveMaxSize,
   });
 
   const { canFetchData, shouldRefreshData } = useAppLifecycle({
     onAppVisible: () => {
-      // アプリがフォアグラウンドに戻ったとき
+      // アプリがフォアグラウンドに戻ったとき（ユーザーフレンドリーなリフレッシュ）
+      // モバイルではキャッシュをより積極的に活用し、デスクトップでは適度に更新
       if (shouldRefreshData()) {
         console.log('📱 App visible: refreshing posts data');
         loadPosts(true); // 強制リフレッシュ
+      } else {
+        console.log('📱 App visible: using cached posts data');
       }
     },
-    refreshThreshold: 60 * 60 * 1000, // 60分（モバイル・デスクトップ共通）
+    refreshThreshold: effectiveRefreshThreshold,
   });
 
   useEffect(() => {
@@ -84,7 +87,7 @@ export function usePosts(
         if (!forceRefresh) {
           const cachedPosts = cache.get(cacheKey);
           if (cachedPosts) {
-            console.log('📱 usePosts: Cache hit', {
+            console.log('📱 usePosts: Using cached data', {
               cacheKey,
               postsCount: cachedPosts.length,
               type: type || 'all',

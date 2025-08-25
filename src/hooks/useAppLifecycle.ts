@@ -22,7 +22,7 @@ export function useAppLifecycle(options: UseAppLifecycleOptions = {}) {
     onAppHidden,
     onAppOnline,
     onAppOffline,
-    refreshThreshold = 30 * 60 * 1000, // デフォルト30分（5分から30分に延長）
+    refreshThreshold = 30 * 60 * 1000, // デスクトップデフォルト30分（モバイルはコード内で2時間に設定）
   } = options;
 
   const [appState, setAppState] = useState<AppState>({
@@ -59,17 +59,25 @@ export function useAppLifecycle(options: UseAppLifecycleOptions = {}) {
         pattern,
       });
 
-      // バックグラウンド時間に基づいて適切なコールバックを実行
-      if (bgTime > refreshThreshold || shouldForceRefresh(now - bgTime)) {
-        console.log('📱 Long background time detected, triggering refresh');
-        callbacksRef.current.onAppVisible?.();
-      } else if (bgTime > 5 * 60 * 1000) {
-        // 5分以上のバックグラウンドの場合のみ読み込み処理を実行
-        console.log('📱 Medium background time detected, triggering refresh');
+      // モバイルではより保守的な闾値で読み込み処理を判定
+      const isMobileDevice =
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        );
+      const actualRefreshThreshold = isMobileDevice
+        ? 2 * 60 * 60 * 1000
+        : refreshThreshold; // モバイルは2時間
+
+      if (bgTime > actualRefreshThreshold || shouldForceRefresh(now - bgTime)) {
+        console.log(
+          `📱 Long background time detected (${Math.round(bgTime / 1000)}s), triggering refresh`
+        );
         callbacksRef.current.onAppVisible?.();
       } else {
-        // 短時間のバックグラウンド（5分未満）では読み込み処理を実行しない
-        console.log('📱 Short background time, skipping refresh');
+        // 短時間のバックグラウンドではキャッシュを活用して読み込み処理をスキップ
+        console.log(
+          `📱 Short background time (${Math.round(bgTime / 1000)}s), using cached data`
+        );
       }
     },
     onHidden: () => {

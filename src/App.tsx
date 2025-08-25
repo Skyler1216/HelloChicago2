@@ -124,26 +124,38 @@ export default function App() {
         forceInitialization();
       }
 
-      // アプリ再起動の検出と処理
+      // アプリ再起動の検出と処理（ユーザーフレンドリーな闾値）
       const lastVisibleTime = sessionStorage.getItem('last_visible_time');
       const currentTime = Date.now();
+      const isMobileDevice =
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        );
+      // モバイルでは2時間、デスクトップでは30分以上の非表示でアプリ再起動とみなす
+      const restartThreshold = isMobileDevice
+        ? 2 * 60 * 60 * 1000
+        : 30 * 60 * 1000;
+
       if (lastVisibleTime) {
         const timeDiff = currentTime - parseInt(lastVisibleTime);
-        if (timeDiff > 5 * 60 * 1000) {
-          // 5分以上経過
+        if (timeDiff > restartThreshold) {
           console.log(
-            '📱 App: Long hidden duration detected, treating as app restart'
+            `📱 App: Long hidden duration detected (${Math.round(timeDiff / 60000)}min), treating as app restart`
           );
           // フラグを更新して重複実行を防ぐ
           sessionStorage.setItem('last_visible_time', currentTime.toString());
           handleAppRestart();
+        } else {
+          console.log(
+            `📱 App: Short hidden duration (${Math.round(timeDiff / 1000)}s), keeping current state`
+          );
         }
       }
-      // 現在時刻を更新（初回または短時間の場合は更新しない）
+      // 現在時刻を更新（初回または長時間非表示の場合のみ）
       if (
         !lastVisibleTime ||
         (lastVisibleTime &&
-          currentTime - parseInt(lastVisibleTime) > 5 * 60 * 1000)
+          currentTime - parseInt(lastVisibleTime) > restartThreshold)
       ) {
         sessionStorage.setItem('last_visible_time', currentTime.toString());
       }

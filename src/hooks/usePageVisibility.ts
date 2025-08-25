@@ -108,9 +108,14 @@ export function usePageVisibility(options: UsePageVisibilityOptions = {}) {
           });
         }
 
-        // 短時間のバックグラウンド（1時間未満）は無視
-        if (backgroundTime > 60 * 60 * 1000) {
-          // コールバック実行（モバイルでは遅延実行、短時間バックグラウンドでは読み込み処理を制限）
+        // モバイルでは短時間のアプリ切り替えでは読み込み処理を実行しない
+        // デスクトップでは30分、モバイルでは2時間以上のバックグラウンド時間でのみ読み込み
+        const refreshThreshold = isMobile.current
+          ? 2 * 60 * 60 * 1000
+          : 30 * 60 * 1000;
+
+        if (backgroundTime > refreshThreshold) {
+          // 長時間のバックグラウンドの場合のみコールバック実行
           if (isMobile.current) {
             setTimeout(() => {
               callbacksRef.current.onVisible?.(backgroundTime);
@@ -118,6 +123,11 @@ export function usePageVisibility(options: UsePageVisibilityOptions = {}) {
           } else {
             callbacksRef.current.onVisible?.(backgroundTime);
           }
+        } else {
+          // 短時間のバックグラウンドの場合はキャッシュ有効性のみチェック
+          console.log(
+            `📱 Short background time (${Math.round(backgroundTime / 1000)}s), skipping refresh`
+          );
         }
       } else if (!isVisible && prevState.isVisible) {
         // フォアグラウンドからバックグラウンドに移行
@@ -186,8 +196,11 @@ export function usePageVisibility(options: UsePageVisibilityOptions = {}) {
       const now = Date.now();
       const backgroundTime = now - stateRef.current.lastHiddenTime;
 
-      if (backgroundTime > 60 * 60 * 1000) {
-        // 1時間以上のバックグラウンド
+      const resumeThreshold = isMobile.current
+        ? 2 * 60 * 60 * 1000
+        : 30 * 60 * 1000;
+      if (backgroundTime > resumeThreshold) {
+        // 長時間のバックグラウンドの場合のみ
         if (!isMobile.current) {
           console.log('📱 App resume detected, triggering visibility check');
         }

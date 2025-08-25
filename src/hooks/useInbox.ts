@@ -399,6 +399,23 @@ export function useInbox(userId: string): UseInboxReturn {
     readStateCache,
   ]);
 
+  useEffect(() => {
+    // デバッグ用：初期状態のログ
+    console.log('📱 useInbox: Initial state', {
+      notifications: notifications.length,
+      messages: messages.length,
+      notificationsUnreadCount,
+      messagesUnreadCount,
+      unreadCount,
+    });
+  }, [
+    notifications.length,
+    messages.length,
+    notificationsUnreadCount,
+    messagesUnreadCount,
+    unreadCount,
+  ]);
+
   return {
     inboxItems,
     notifications,

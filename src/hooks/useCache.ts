@@ -22,6 +22,7 @@ interface CacheStats {
   misses: number;
   staleHits: number; // 古いデータのヒット数
   hitRate: number;
+  sets: number; // キャッシュ設定回数
 }
 
 export function useCache<T>(key: string, options: CacheOptions = {}) {
@@ -29,7 +30,6 @@ export function useCache<T>(key: string, options: CacheOptions = {}) {
     ttl = 5 * 60 * 1000,
     maxSize = 100,
     staleWhileRevalidate = true,
-    priority = 5,
   } = options;
 
   // モバイル対応のキャッシュ設定
@@ -50,6 +50,7 @@ export function useCache<T>(key: string, options: CacheOptions = {}) {
     misses: 0,
     staleHits: 0,
     hitRate: 0,
+    sets: 0,
   });
 
   const cacheRef = useRef<Map<string, CacheItem<T>>>(new Map());
@@ -76,8 +77,20 @@ export function useCache<T>(key: string, options: CacheOptions = {}) {
     const staleHits = cacheStats.staleHits;
     const hitRate = hits + misses > 0 ? (hits / (hits + misses)) * 100 : 0;
 
-    setCacheStats({ size, hits, misses, staleHits, hitRate });
-  }, [cacheStats.hits, cacheStats.misses, cacheStats.staleHits]); // 依存配列を追加
+    setCacheStats({
+      size,
+      hits,
+      misses,
+      staleHits,
+      hitRate,
+      sets: cacheStats.sets,
+    });
+  }, [
+    cacheStats.hits,
+    cacheStats.misses,
+    cacheStats.staleHits,
+    cacheStats.sets,
+  ]); // 依存配列を追加
 
   // 初期化時にキャッシュを復元
   useEffect(() => {
@@ -105,118 +118,50 @@ export function useCache<T>(key: string, options: CacheOptions = {}) {
 
   // キャッシュの取得
   const get = useCallback(
-    (cacheKey: string): T | null => {
-      const item = cacheRef.current.get(cacheKey);
+    (key: string): T | null => {
+      const cacheKey = `${key}:${key}`;
+      const cached = cacheRef.current.get(cacheKey);
+      if (!cached) return null;
 
-      if (!item) {
-        console.log('📱 useCache: Cache miss', { cacheKey, key });
-        setCacheStats(prev => ({ ...prev, misses: prev.misses + 1 }));
+      const now = Date.now();
+      if (now - cached.timestamp > effectiveTTL) {
+        cacheRef.current.delete(cacheKey);
         return null;
       }
 
-      const now = Date.now();
-
-      // TTLチェック
-      if (now > item.expiresAt) {
-        if (staleWhileRevalidate) {
-          // 古いデータでも返す（Stale-While-Revalidateパターン）
-          item.lastAccessed = now;
-          item.accessCount++;
-          console.log('📱 useCache: Stale cache hit', {
-            cacheKey,
-            key,
-            age: Math.floor((now - item.timestamp) / 1000) + 's',
-            ttl: Math.floor(ttl / 1000) + 's',
-          });
-          setCacheStats(prev => ({ ...prev, staleHits: prev.staleHits + 1 }));
-          return item.data;
-        } else {
-          console.log('📱 useCache: Cache expired', { cacheKey, key });
-          cacheRef.current.delete(cacheKey);
-          setCacheStats(prev => ({ ...prev, misses: prev.misses + 1 }));
-          return null;
-        }
-      }
-
-      // アクセス情報を更新
-      item.lastAccessed = now;
-      item.accessCount++;
-      console.log('📱 useCache: Cache hit', {
-        cacheKey,
-        key,
-        age: Math.floor((now - item.timestamp) / 1000) + 's',
-        remaining: Math.floor((item.expiresAt - now) / 1000) + 's',
-      });
-      setCacheStats(prev => ({ ...prev, hits: prev.hits + 1 }));
-      return item.data;
+      return cached.data;
     },
-    [staleWhileRevalidate, ttl, key]
+    [effectiveTTL]
   );
 
   // キャッシュの設定
   const set = useCallback(
-    (cacheKey: string, data: T): void => {
+    (key: string, data: T): void => {
+      const cacheKey = `${key}:${key}`;
       const now = Date.now();
-      console.log('📱 useCache: Setting cache', {
-        cacheKey,
-        key,
-        dataSize: Array.isArray(data) ? data.length : 'single',
-        ttl: Math.floor(ttl / 1000) + 's',
-        priority,
-      });
+      const expiresAt = now + effectiveTTL;
 
-      // 最大サイズチェック
+      // キャッシュサイズ制限チェック
       if (cacheRef.current.size >= effectiveMaxSize) {
-        // 優先度とアクセス頻度を考慮したLRU方式で削除
-        let candidateKey: string | null = null;
-        let lowestScore = Infinity;
-
-        for (const [key, item] of cacheRef.current.entries()) {
-          // スコア計算：優先度が低く、アクセス頻度が少なく、最近アクセスされていないほど削除候補
-          const timeSinceAccess = now - item.lastAccessed;
-          const score =
-            item.priority * 1000 + item.accessCount - timeSinceAccess / 10000;
-
-          if (score < lowestScore) {
-            lowestScore = score;
-            candidateKey = key;
-          }
-        }
-
-        if (candidateKey) {
-          console.log('📱 useCache: Evicting cache item', {
-            evictedKey: candidateKey,
-            key,
-            reason: 'maxSize reached',
-            device: isMobileDevice ? 'mobile' : 'desktop',
-          });
-          cacheRef.current.delete(candidateKey);
+        // LRU: 最も古いアイテムを削除
+        const oldestKey = cacheRef.current.keys().next().value;
+        if (oldestKey) {
+          cacheRef.current.delete(oldestKey);
         }
       }
 
-      const item: CacheItem<T> = {
+      cacheRef.current.set(cacheKey, {
         data,
         timestamp: now,
-        expiresAt: now + ttl,
-        priority,
-        accessCount: 1,
+        expiresAt,
         lastAccessed: now,
-      };
+        accessCount: 1,
+        priority: 1, // デフォルト優先度
+      });
 
-      cacheRef.current.set(cacheKey, item);
-      updateStats();
-      persistCache();
+      setCacheStats(prev => ({ ...prev, sets: prev.sets + 1 }));
     },
-    [
-      maxSize,
-      ttl,
-      priority,
-      updateStats,
-      persistCache,
-      key,
-      effectiveMaxSize,
-      isMobileDevice,
-    ] // keyが使用されているため追加
+    [effectiveTTL, effectiveMaxSize]
   );
 
   // キャッシュの削除

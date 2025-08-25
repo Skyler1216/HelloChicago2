@@ -155,28 +155,40 @@ export function useCacheManager() {
           '📱 CacheManager: App became visible, checking for restart...'
         );
 
-        // 前回の非表示時刻をチェック
+        // 前回の非表示時刻をチェック（ユーザーフレンドリーな闾値）
         const lastHiddenTime = sessionStorage.getItem('last_hidden_time');
         const currentTime = Date.now();
+        const isMobileDevice =
+          /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+            navigator.userAgent
+          );
+
+        // モバイルでは2時間、デスクトップでは30分以上の非表示でキャッシュクリア
+        const restartThreshold = isMobileDevice
+          ? 2 * 60 * 60 * 1000
+          : 30 * 60 * 1000;
 
         if (lastHiddenTime) {
           const hiddenDuration = currentTime - parseInt(lastHiddenTime);
-          // 5分以上非表示だった場合は再起動とみなす
-          if (hiddenDuration > 5 * 60 * 1000) {
+          if (hiddenDuration > restartThreshold) {
             console.log(
-              '📱 CacheManager: Long hidden duration detected, treating as app restart'
+              `📱 CacheManager: Long hidden duration detected (${Math.round(hiddenDuration / 60000)}min), treating as app restart`
             );
             // フラグを更新して重複実行を防ぐ
             sessionStorage.setItem('last_hidden_time', currentTime.toString());
             handleAppRestart();
+          } else {
+            console.log(
+              `📱 CacheManager: Short hidden duration (${Math.round(hiddenDuration / 1000)}s), keeping cache`
+            );
           }
         }
 
-        // 現在時刻を更新（初回または短時間の場合は更新しない）
+        // 現在時刻を更新（初回または長時間非表示の場合のみ）
         if (
           !lastHiddenTime ||
           (lastHiddenTime &&
-            currentTime - parseInt(lastHiddenTime) > 5 * 60 * 1000)
+            currentTime - parseInt(lastHiddenTime) > restartThreshold)
         ) {
           sessionStorage.setItem('last_visible_time', currentTime.toString());
         }

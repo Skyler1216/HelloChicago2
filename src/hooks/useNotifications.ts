@@ -191,43 +191,25 @@ export function useNotifications(userId: string): UseNotificationsReturn {
   }, [userId, loadNotifications]);
 
   // 既読にする
-  const markAsRead = useCallback(
-    async (id: string) => {
-      try {
-        const { error: updateError } = await supabase
-          .from('notifications')
-          .update({
-            is_read: true,
-            read_at: new Date().toISOString(),
-          })
-          .eq('id', id)
-          .eq('recipient_id', userId);
+  const markAsRead = useCallback(async (notificationId: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', notificationId);
 
-        if (updateError) throw updateError;
+      if (error) throw error;
 
-        // ローカル状態を更新
-        setNotifications(prev =>
-          prev.map(notification =>
-            notification.id === id
-              ? {
-                  ...notification,
-                  is_read: true,
-                  read_at: new Date().toISOString(),
-                }
-              : notification
-          )
-        );
+      // ローカル状態を更新
+      setNotifications(prev =>
+        prev.map(n => (n.id === notificationId ? { ...n, is_read: true } : n))
+      );
 
-        // キャッシュをクリア（強制リフレッシュは削除）
-        clearCache(userId);
-        console.log('📱 Notifications: Item marked as read successfully:', id);
-      } catch (err) {
-        console.error('📱 Notifications: Mark as read error:', err);
-        throw err;
-      }
-    },
-    [userId, clearCache]
-  );
+      console.log('📱 Notification marked as read:', notificationId);
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
+  }, []);
 
   // 全て既読にする
   const markAllAsRead = useCallback(async () => {
