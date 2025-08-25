@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { TrendingUp, Map as MapIcon, Search, MapPin } from 'lucide-react';
+import { TrendingUp, Map as MapIcon, MapPin } from 'lucide-react';
 import CategoryFilter from './CategoryFilter';
 import PopularSpots from './PopularSpots';
 import MapboxMap from './MapboxMap';
@@ -21,7 +21,7 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSpot, setSelectedSpot] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
   const [activeTab, setActiveTab] = useState<'map' | 'spots'>('map');
-  const [searchQuery, setSearchQuery] = useState('');
+
   const [distanceFilter] = useState<number>(10); // 固定: 上部フィルター撤去に伴い内部のみ
   // POIクリックで表示するアクションモーダルの状態
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
@@ -87,19 +87,9 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
       if (selectedCategory && spot.category_id !== selectedCategory) {
         return false;
       }
-      if (
-        searchQuery &&
-        !spot.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !(
-          spot.description &&
-          spot.description.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-      ) {
-        return false;
-      }
       return true;
     });
-  }, [mapSpots, selectedCategory, searchQuery]);
+  }, [mapSpots, selectedCategory]);
 
   const handleLocationClick = useCallback(
     (location: {
@@ -229,18 +219,6 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
       {/* Header with Search */}
       <div className="bg-white border-b border-gray-100 z-20 flex-shrink-0 sticky top-0 safe-area-top">
         <div className="px-2 sm:px-4 py-1.5 sm:py-3">
-          {/* Search Bar */}
-          <div className="relative mb-1.5 sm:mb-3">
-            <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
-            <input
-              type="text"
-              placeholder="場所やスポットを検索..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-7 sm:pl-10 pr-2 sm:pr-4 py-1.5 sm:py-3 text-sm sm:text-base border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-coral-500 focus:border-transparent transition-all"
-            />
-          </div>
-
           {/* Stats (count) */}
           <div className="flex items-center justify-end mb-1.5 sm:mb-3">
             <div className="flex items-center space-x-1 sm:space-x-2">
@@ -301,7 +279,6 @@ export default function MapView({ onRequestCreateSpotAt }: MapViewProps) {
             spots={filteredMapSpots}
             selectedCategory={selectedCategory}
             onSpotSelect={setSelectedSpot}
-            searchQuery={searchQuery}
             distanceFilter={distanceFilter}
             focusLocation={focusLocation}
             onLocationClick={handleLocationClick}
