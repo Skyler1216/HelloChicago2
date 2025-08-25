@@ -38,6 +38,11 @@ export function usePosts(
   type?: 'post' | 'consultation' | 'transfer',
   categoryId?: string
 ): UsePostsReturn {
+  // モバイルデバイス検出
+  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
