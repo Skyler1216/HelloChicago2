@@ -3,7 +3,14 @@
 
 const CACHE_NAME = 'hellochicago-v2';
 const API_CACHE_NAME = 'hellochicago-api-v2';
-const STATIC_ASSETS = ['/', '/index.html']; // Minimal initial assets
+const STATIC_ASSETS = [
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/favicon.ico',
+  '/favicon.png',
+  '/apple-touch-icon.png'
+]; // Essential app shell assets
 
 // Cache all same-origin GET requests
 const SAME_ORIGIN_GET_REQUESTS = true;
@@ -27,7 +34,7 @@ const CACHE_EXPIRY = {
 
 // モバイル対応のキャッシュ設定（より長いキャッシュ時間）
 const MOBILE_CACHE_EXPIRY = {
-  API: 60 * 60 * 1000, // モバイルでは1時間（アプリ切り替えでキャッシュ有効活用）
+  API: 4 * 60 * 60 * 1000, // モバイルでは4時間（アプリ切り替えでキャッシュ有効活用）
   STATIC: 7 * 24 * 60 * 60 * 1000, // モバイルでは7日（静的ファイルは長期キャッシュ）
   IMAGES: 14 * 24 * 60 * 60 * 1000, // モバイルでは14日（画像も長期キャッシュ）
 };
@@ -129,8 +136,10 @@ async function staleWhileRevalidate(request, cacheName) {
   // キャッシュがある場合は即座に返し、有効期限をチェックしてバックグラウンド更新
   if (cachedResponse) {
     console.log('📱 SW: Serving from cache:', request.url);
+    
     // バックグラウンドでネットワークから最新データを取得し、キャッシュを更新
-    event.waitUntil(
+    // ただし、ユーザーの応答をブロックしない
+    setTimeout(() => {
       fetch(request)
         .then(response => {
           if (response.status === 200) {
@@ -146,8 +155,9 @@ async function staleWhileRevalidate(request, cacheName) {
             request.url,
             error
           );
-        })
-    );
+        });
+    }, 0);
+    
     return cachedResponse;
   }
 
@@ -222,9 +232,9 @@ self.addEventListener('fetch', event => {
 
   // 同一オリジンのリクエストをキャッシュファーストで処理
   if (url.origin === self.location.origin) {
-    // HTMLドキュメントは常にネットワークファースト（最新のアプリシェルを保証）
-    if (event.request.mode === 'navigate' || url.pathname === '/index.html') {
-      event.respondWith(networkFirst(event.request, CACHE_NAME));
+    // HTMLドキュメントもキャッシュファーストに変更（高速復帰を優先）
+    if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/index.html') {
+      event.respondWith(staleWhileRevalidate(event.request, CACHE_NAME));
       return;
     }
 
@@ -234,8 +244,20 @@ self.addEventListener('fetch', event => {
       return;
     }
 
+    // JavaScript/CSSファイルもキャッシュファースト
+    if (url.pathname.match(/\.(js|css|mjs|jsx|ts|tsx)$/i)) {
+      event.respondWith(cacheFirst(event.request, CACHE_NAME));
+      return;
+    }
+
     // 画像ファイルはキャッシュファースト
     if (event.request.destination === 'image' || url.pathname.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)$/i)) {
+      event.respondWith(cacheFirst(event.request, CACHE_NAME));
+      return;
+    }
+
+    // マニフェストファイルもキャッシュファースト
+    if (url.pathname === '/manifest.json') {
       event.respondWith(cacheFirst(event.request, CACHE_NAME));
       return;
     }

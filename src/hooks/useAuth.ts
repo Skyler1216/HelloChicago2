@@ -2,40 +2,87 @@ import { useState, useEffect, useRef } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase, getProfile } from '../lib/supabase';
 import { Database } from '../types/database';
-import { useFailsafe } from './useFailsafe';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
+interface CachedAuthState {
+  user: User | null;
+  profile: Profile | null;
+  timestamp: number;
+}
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false);
 
   // 初期化状態管理（シンプルに戻す）
   const initializationRef = useRef(false);
   const profileLoadingRef = useRef(false);
   const authStateChangingRef = useRef(false);
-  const timeoutIdRef = useRef<NodeJS.Timeout>();
 
-  // フェイルセーフ機能
-  const authFailsafe = useFailsafe({
-    name: 'Auth',
-    timeout: 15000, // 15秒
-    onTimeout: () => {
-      console.warn('📱 Auth: Initialization timeout, forcing completion');
-      setLoading(false);
-      setInitialized(true);
-    },
-  });
+
+  // キャッシュからの復元
+  const restoreFromCache = () => {
+    try {
+      const cached = localStorage.getItem('auth_state_cache');
+      if (cached) {
+        const data: CachedAuthState = JSON.parse(cached);
+        const age = Date.now() - data.timestamp;
+        
+        // 24時間以内のキャッシュは有効
+        if (age < 24 * 60 * 60 * 1000) {
+          console.log('📱 Auth: Restored from cache', { age: Math.round(age / 1000) + 's' });
+          setUser(data.user);
+          setProfile(data.profile);
+          setLoading(false);
+          return true;
+        }
+      }
+    } catch (error) {
+      console.warn('📱 Auth: Cache restore failed:', error);
+    }
+    return false;
+  };
+
+  // キャッシュに保存
+  const saveToCache = (user: User | null, profile: Profile | null) => {
+    try {
+      const cacheData: CachedAuthState = {
+        user,
+        profile,
+        timestamp: Date.now(),
+      };
+      localStorage.setItem('auth_state_cache', JSON.stringify(cacheData));
+    } catch (error) {
+      console.warn('📱 Auth: Cache save failed:', error);
+    }
+  };
 
   useEffect(() => {
     if (initializationRef.current) return;
     initializationRef.current = true;
 
-    const initializeAuth = async () => {
-      authFailsafe.startLoading();
+    // まずキャッシュから復元を試行
+    if (restoreFromCache()) {
+      // キャッシュから復元できた場合、バックグラウンドで最新データを取得
+      setTimeout(async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            const profileData = await getProfile(session.user.id);
+            if (profileData) {
+              setProfile(profileData);
+              saveToCache(session.user, profileData);
+            }
+          }
+        } catch (error) {
+          console.warn('📱 Auth: Background refresh failed:', error);
+        }
+      }, 100);
+      return;
+    }
 
+    const initializeAuth = async () => {
       try {
         console.log('📱 Auth: Starting initialization');
 
@@ -47,9 +94,7 @@ export function useAuth() {
 
         if (error) {
           console.error('❌ Session error:', error);
-          authFailsafe.handleError(error);
           setLoading(false);
-          setInitialized(true);
           return;
         }
 
@@ -61,15 +106,11 @@ export function useAuth() {
           console.log('📱 Auth: No user session');
         }
 
-        setInitialized(true);
         setLoading(false);
-        authFailsafe.stopLoading();
         console.log('📱 Auth: Initialization completed');
       } catch (error) {
         console.error('❌ Auth initialization error:', error);
-        authFailsafe.handleError(error as Error);
         setLoading(false);
-        setInitialized(true);
       }
     };
 
@@ -99,13 +140,7 @@ export function useAuth() {
         if (event === 'SIGNED_IN' && session?.user) {
           setUser(session.user);
           // 初期化時以外はローディング表示しない（バックグラウンド更新）
-          if (initialized) {
-            await loadUserProfile(session.user.id);
-          } else {
-            setLoading(true);
-            await loadUserProfile(session.user.id);
-            setLoading(false);
-          }
+          await loadUserProfile(session.user.id);
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
           setUser(session.user);
           // トークン更新時はローディング不要、プロファイルがない場合のみ読み込み
@@ -119,19 +154,16 @@ export function useAuth() {
     });
 
     // Force completion after timeout
-    timeoutIdRef.current = setTimeout(() => {
-      if (!initialized) {
+    const timeoutId = setTimeout(() => {
+      if (loading) {
         console.log('📱 Auth: Timeout reached, forcing completion');
         setLoading(false);
-        setInitialized(true);
       }
-    }, 8000);
+    }, 3000); // 3秒に短縮
 
     return () => {
       subscription.unsubscribe();
-      if (timeoutIdRef.current) {
-        clearTimeout(timeoutIdRef.current);
-      }
+      clearTimeout(timeoutId);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -195,6 +227,11 @@ export function useAuth() {
           console.error('❌ Failed to create profile:', error);
         }
       }
+
+      // プロフィール取得後にキャッシュに保存
+      if (user) {
+        saveToCache(user, profile);
+      }
     } catch (error) {
       console.error('❌ Profile loading error:', error);
     } finally {
@@ -224,6 +261,11 @@ export function useAuth() {
 
       // 状態を更新
       setProfile(data);
+      
+      // キャッシュも更新
+      if (user) {
+        saveToCache(user, data);
+      }
       return true;
     } catch (error) {
       console.error('❌ Profile update error:', error);
@@ -242,7 +284,6 @@ export function useAuth() {
     user,
     profile,
     loading,
-    initialized,
     isAuthenticated,
     isApproved,
     updateProfile,

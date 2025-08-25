@@ -16,13 +16,8 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useAuth } from './hooks/useAuth';
 import { useToast } from './hooks/useToast';
-import { useAppLifecycle } from './hooks/useAppLifecycle';
-import { useAppState } from './hooks/useAppState';
-import { useAppStateManager } from './hooks/useAppStateManager';
 import { useInbox } from './hooks/useInbox';
-import { useCacheManager } from './hooks/useCacheManager';
 import { validateConfig } from './lib/config';
-import AppStateDebug from './components/debug/AppStateDebug';
 
 // Prevent page bounce on mobile while preserving scroll
 function preventPageBounce() {
@@ -65,40 +60,24 @@ export default function App() {
   const [reviewFormInitialLocation, setReviewFormInitialLocation] = useState<{ lat: number; lng: number; address?: string; } | null>(null);
   const [selectedPostType, setSelectedPostType] = useState<'post' | 'consultation' | 'transfer'>('post');
 
-  const { user, profile, loading: authLoading, isAuthenticated, isApproved, initialized: authInitialized } = useAuth();
-  const { ToastContainer } = useToast();
-
-  const { isInitialized, backgroundRefreshing, forceInitialization } = useAppState();
+  const { user, profile, loading: authLoading, isAuthenticated, isApproved } = useAuth();
   const { currentAnomaly } = useAppStateManager();
   const { handleAppRestart } = useCacheManager();
-  const { unreadCount } = useInbox(isAuthenticated ? user?.id || '' : '');
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  const { isOnline } = useAppLifecycle({
-    onAppVisible: (backgroundTime) => {
-      console.log('📱 App became visible, background time:', Math.round(backgroundTime / 1000), 's');
-      // アプリ再起動の検出と処理
-      const lastVisibleTime = sessionStorage.getItem('last_visible_time');
-      const currentTime = Date.now();
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      const restartThreshold = isMobileDevice ? 8 * 60 * 60 * 1000 : 4 * 60 * 60 * 1000;
-
-      if (lastVisibleTime) {
-        const timeDiff = currentTime - parseInt(lastVisibleTime);
-        if (timeDiff > restartThreshold) {
-          console.log(`📱 App: Long hidden duration detected (${Math.round(timeDiff / 60000)}min), treating as app restart`);
-          sessionStorage.setItem('last_visible_time', currentTime.toString());
-          handleAppRestart();
-        }
-      }
-      sessionStorage.setItem('last_visible_time', currentTime.toString());
-    },
-    onAppHidden: () => {
-      sessionStorage.setItem('last_hidden_time', Date.now().toString());
-    },
-    onAppOnline: () => console.log('📱 App came online'),
-    onAppOffline: () => console.log('📱 App went offline'),
-    refreshThreshold: 60 * 60 * 1000,
-  });
+  // Simple online/offline detection
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Validate configuration on app start
   useEffect(() => {
@@ -125,12 +104,11 @@ export default function App() {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
 
-  // Show loading screen only if auth is not initialized or still loading
-  if (!authInitialized || authLoading) {
-    console.log('📱 App: Showing loading screen (Auth state)', { authInitialized, authLoading, isAuthenticated, isApproved, timestamp: new Date().toISOString() });
+  // Show loading screen only if auth is still loading
+  if (authLoading) {
     return (
       <LoadingScreen
-        maxLoadingTime={5000} // 5秒で復旧オプションを表示
+        maxLoadingTime={3000} // 3秒で復旧オプションを表示
       />
     );
   }
@@ -351,26 +329,17 @@ export default function App() {
         </div>
       )}
 
-      {/* バックグラウンド更新インジケーター */}
-      {backgroundRefreshing && (
-        <div className="fixed top-0 left-0 right-0 z-40 bg-blue-500 text-white text-center py-1 text-xs font-medium">
-          🔄 データを更新中...
-        </div>
-      )}
-
       <Layout
         currentView={currentView}
         onViewChange={(view: 'home' | 'map' | 'inbox' | 'profile') =>
           setCurrentView(view)
         }
-        className={`${!isOnline ? 'pt-10' : ''} ${backgroundRefreshing ? 'pt-6' : ''} ${currentAnomaly ? 'pt-8' : ''}`}
+        className={`${!isOnline ? 'pt-10' : ''}`}
         unreadCount={unreadCount}
       >
         {renderCurrentView()}
       </Layout>
       <ToastContainer />
-      {/* Debug component - only in development */}
-      {process.env.NODE_ENV === 'development' && <AppStateDebug />}
     </ErrorBoundary>
   );
 }

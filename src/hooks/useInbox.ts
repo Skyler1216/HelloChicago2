@@ -178,7 +178,7 @@ export function useInbox(userId: string): UseInboxReturn {
             '読み込みがタイムアウトしました。再試行してください。'
         );
       }
-    }, 15000); // 15秒でタイムアウト
+    }, 5000); // 5秒でタイムアウト
 
     return () => clearTimeout(timeoutId);
   }, [userId, loading, notificationsError, messagesError]);

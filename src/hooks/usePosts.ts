@@ -85,7 +85,23 @@ export function usePosts(
 
   // 初期ローディング管理（緊急修正: シンプルに戻す）
   useEffect(() => {
-    loadPosts();
+    // キャッシュから即座に読み込み、その後バックグラウンドで更新
+    const cachedData = cache.get(cacheKey);
+    if (cachedData) {
+      console.log('📱 usePosts: Using cached data immediately');
+      setPosts(cachedData);
+      setLoading(false);
+      setIsCached(true);
+      
+      // バックグラウンドで更新
+      setTimeout(() => {
+        if (cache.isStale(cacheKey)) {
+          loadPosts(true);
+        }
+      }, 100);
+    } else {
+      loadPosts();
+    }
   }, [type, categoryId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadPosts = useCallback(
