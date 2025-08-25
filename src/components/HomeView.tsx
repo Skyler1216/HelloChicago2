@@ -97,11 +97,10 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
     deletePost,
     isCached,
     cacheAge,
-    forceReset,
   } = usePosts(selectedPostType);
 
-  // キャッシュが有効な場合はローディングを表示しない
-  const effectiveLoading = postsLoading && !isCached;
+  // キャッシュがある場合はローディングを表示しない
+  const effectiveLoading = postsLoading;
 
   // キャッシュ状態のデバッグ表示
   useEffect(() => {
@@ -111,6 +110,7 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
       cacheAge: cacheAge > 0 ? `${cacheAge}s` : 'N/A',
       postsCount: posts.length,
       effectiveLoading,
+      postsLoading,
     });
 
     if (isCached) {
@@ -119,7 +119,7 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
         type: selectedPostType,
       });
     }
-  }, [selectedPostType, isCached, cacheAge, posts.length, effectiveLoading]);
+  }, [selectedPostType, isCached, cacheAge, posts.length, effectiveLoading, postsLoading]);
 
   const postTypeTabs: TabItem[] = [
     {
@@ -225,12 +225,6 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
                     <p className="text-amber-700 text-sm">
                       📵 インターネット接続を確認してください
                     </p>
-                    <button
-                      onClick={forceReset}
-                      className="mt-2 px-3 py-1 bg-amber-200 text-amber-800 rounded text-xs hover:bg-amber-300"
-                    >
-                      キャッシュから復元
-                    </button>
                   </div>
                 )}
               </div>
