@@ -66,6 +66,7 @@ export default function App() {
   const { user, profile, loading: authLoading, isAuthenticated, isApproved } = useAuth();
   const { currentAnomaly } = useAppStateManager();
   const { handleAppRestart } = useCacheManager();
+  const { unreadCount } = useInbox();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   // Simple online/offline detection
