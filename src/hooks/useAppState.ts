@@ -117,6 +117,18 @@ export function useAppState(): UseAppStateReturn {
         lastRefreshTime: Date.now(),
       }));
 
+      // 永続化状態を更新
+      try {
+        const appStateData =
+          sessionStorage.getItem('app_persistent_state') || '{}';
+        const parsed = JSON.parse(appStateData);
+        parsed.isInitialized = true;
+        parsed.lastInitTime = Date.now();
+        sessionStorage.setItem('app_persistent_state', JSON.stringify(parsed));
+      } catch (error) {
+        console.warn('📱 AppState: Failed to save init state:', error);
+      }
+
       console.log('📱 AppState: Initialization completed');
     }
   }, [authLoading, isAuthenticated, isApproved, authInitialized]);
@@ -133,6 +145,18 @@ export function useAppState(): UseAppStateReturn {
         isInitialized: true,
         lastRefreshTime: Date.now(),
       }));
+
+      // 永続化状態を更新
+      try {
+        const appStateData =
+          sessionStorage.getItem('app_persistent_state') || '{}';
+        const parsed = JSON.parse(appStateData);
+        parsed.isInitialized = true;
+        parsed.lastInitTime = Date.now();
+        sessionStorage.setItem('app_persistent_state', JSON.stringify(parsed));
+      } catch (error) {
+        console.warn('📱 AppState: Failed to save init state:', error);
+      }
 
       console.log('📱 AppState: Fallback initialization completed');
     }

@@ -159,25 +159,26 @@ export function usePageVisibility(options: UsePageVisibilityOptions = {}) {
 
     // フォーカス・ブラーイベント（フォールバック）
     const handleFocus = () => {
+      // モバイルではフォーカスイベントを無視（キャッシュを完全活用）
+      if (isMobile.current) return;
+
       const now = Date.now();
       const backgroundTime = now - stateRef.current.lastHiddenTime;
 
-      if (!stateRef.current.isVisible && backgroundTime > 1000) {
-        // 1秒以上のバックグラウンド時間があった場合のみ処理
-        if (!isMobile.current) {
-          console.log('📱 App focus detected (fallback)');
-        }
+      if (!stateRef.current.isVisible && backgroundTime > 10000) {
+        // 10秒以上のバックグラウンド時間があった場合のみ処理
+        console.log('📱 App focus detected (fallback)');
         handleVisibilityChange();
       }
     };
 
     const handleBlur = () => {
+      // モバイルではブラーイベントを無視（キャッシュを完全活用）
+      if (isMobile.current) return;
       if (!document.hidden) return; // visibilitychange で処理される
 
       if (stateRef.current.isVisible) {
-        if (!isMobile.current) {
-          console.log('📱 App blur detected (fallback)');
-        }
+        console.log('📱 App blur detected (fallback)');
         handleVisibilityChange();
       }
     };
@@ -189,21 +190,18 @@ export function usePageVisibility(options: UsePageVisibilityOptions = {}) {
       }
     };
 
-    // アプリの状態復旧を促進するための追加イベント
+    // アプリの状態復旧を促進するための追加イベント（モバイルでは無効化）
     const handleResume = () => {
+      // モバイルではリジュームイベントを無視（キャッシュを完全活用）
+      if (isMobile.current) return;
       if (document.hidden) return;
 
       const now = Date.now();
       const backgroundTime = now - stateRef.current.lastHiddenTime;
 
-      const resumeThreshold = isMobile.current
-        ? 2 * 60 * 60 * 1000
-        : 30 * 60 * 1000;
-      if (backgroundTime > resumeThreshold) {
-        // 長時間のバックグラウンドの場合のみ
-        if (!isMobile.current) {
-          console.log('📱 App resume detected, triggering visibility check');
-        }
+      if (backgroundTime > 30 * 60 * 1000) {
+        // 30分以上のバックグラウンドの場合のみ
+        console.log('📱 App resume detected, triggering visibility check');
         handleVisibilityChange();
       }
     };
@@ -219,18 +217,18 @@ export function usePageVisibility(options: UsePageVisibilityOptions = {}) {
       window.addEventListener('load', handleLoad);
     }
 
-    // 定期的な状態チェック（フォールバック）- モバイルでは頻度を下げる
-    const intervalId = setInterval(
-      () => {
+    // 定期的な状態チェック（モバイルでは無効化）
+    let intervalId: NodeJS.Timeout | null = null;
+
+    if (!isMobile.current) {
+      // デスクトップでのみ定期チェックを実行
+      intervalId = setInterval(() => {
         if (document.hidden !== stateRef.current.isVisible) {
-          if (!isMobile.current) {
-            console.log('📱 State mismatch detected, correcting...');
-          }
+          console.log('📱 State mismatch detected, correcting...');
           handleVisibilityChange();
         }
-      },
-      isMobile.current ? 30000 : 10000
-    ); // モバイル: 30秒、PC: 10秒
+      }, 10000); // 10秒間隔
+    }
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -238,7 +236,9 @@ export function usePageVisibility(options: UsePageVisibilityOptions = {}) {
       window.removeEventListener('blur', handleBlur);
       window.removeEventListener('resume', handleResume);
       window.removeEventListener('load', handleLoad);
-      clearInterval(intervalId);
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
     };
   }, [handleVisibilityChange]);
 

@@ -54,6 +54,7 @@ function preventPageBounce() {
 }
 
 export default function App() {
+  // スプラッシュスクリーン表示状態（緊急修正: シンプルに戻す）
   const [showSplash, setShowSplash] = useState(true);
   const [currentView, setCurrentView] = useState<
     'home' | 'map' | 'inbox' | 'profile'
@@ -75,14 +76,12 @@ export default function App() {
     'post' | 'consultation' | 'transfer'
   >('post');
 
-  // モバイルデバイス判定
-  const isMobile = useRef(false);
-  useEffect(() => {
-    isMobile.current =
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent
-      );
-  }, []);
+  // モバイルデバイス判定（初期化時のみ実行）
+  const isMobile = useRef(
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    )
+  );
 
   const {
     user,
@@ -179,7 +178,7 @@ export default function App() {
     refreshThreshold: 60 * 60 * 1000, // 60分以上非アクティブだったら再読み込み
   });
 
-  // 無限ローディング防止のための追加チェック
+  // 無限ローディング防止のための追加チェック（緊急修正: シンプルに戻す）
   useEffect(() => {
     // 5秒後にローディング状態をチェック
     const checkTimer = setTimeout(() => {
@@ -194,19 +193,19 @@ export default function App() {
     return () => clearTimeout(checkTimer);
   }, [shouldShowLoading, authLoading, forceInitialization]);
 
-  // Validate configuration on app start
+  // Validate configuration on app start（緊急修正: シンプルに戻す）
   useEffect(() => {
     if (!validateConfig()) {
       console.error('❌ App configuration is invalid');
     }
   }, []);
 
-  // Prevent page bounce on mobile
+  // Prevent page bounce on mobile（緊急修正: シンプルに戻す）
   useEffect(() => {
     preventPageBounce();
   }, []);
 
-  // Splash screen timer
+  // Splash screen timer（緊急修正: シンプルに戻す）
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);

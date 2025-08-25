@@ -12,6 +12,7 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
 
+  // 初期化状態管理（シンプルに戻す）
   const initializationRef = useRef(false);
   const profileLoadingRef = useRef(false);
   const authStateChangingRef = useRef(false);

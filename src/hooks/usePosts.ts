@@ -76,6 +76,7 @@ export function usePosts(
     refreshThreshold: effectiveRefreshThreshold,
   });
 
+  // 初期ローディング管理（緊急修正: シンプルに戻す）
   useEffect(() => {
     loadPosts();
   }, [type, categoryId]); // eslint-disable-line react-hooks/exhaustive-deps

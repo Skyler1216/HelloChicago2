@@ -65,8 +65,8 @@ export function useAppLifecycle(options: UseAppLifecycleOptions = {}) {
           navigator.userAgent
         );
       const actualRefreshThreshold = isMobileDevice
-        ? 2 * 60 * 60 * 1000
-        : refreshThreshold; // モバイルは2時間
+        ? 10 * 60 * 1000
+        : 5 * 60 * 1000; // 緊急修正: モバイル10分、デスクトップ5分
 
       if (bgTime > actualRefreshThreshold || shouldForceRefresh(now - bgTime)) {
         console.log(
