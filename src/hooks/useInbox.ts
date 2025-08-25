@@ -50,15 +50,32 @@ export function useInbox(userId: string): UseInboxReturn {
   useEffect(() => {
     if (userId) {
       try {
-        const cached = localStorage.getItem(`inbox_read_state_${userId}`);
+        const deviceId = getDeviceId();
+        const cacheKey = `inbox_read_state_${userId}_${deviceId}`;
+        const cached = localStorage.getItem(cacheKey);
+
         if (cached) {
           const readItems = new Set<string>(JSON.parse(cached));
           setReadStateCache(readItems);
           console.log(
             '📱 Inbox: Read state restored from cache:',
             readItems.size,
-            'items'
+            'items for device:',
+            deviceId
           );
+        } else {
+          // デバイス固有のキャッシュがない場合は、共通キャッシュを試行
+          const commonCacheKey = `inbox_read_state_${userId}`;
+          const commonCached = localStorage.getItem(commonCacheKey);
+          if (commonCached) {
+            const readItems = new Set<string>(JSON.parse(commonCached));
+            setReadStateCache(readItems);
+            console.log(
+              '📱 Inbox: Read state restored from common cache:',
+              readItems.size,
+              'items'
+            );
+          }
         }
       } catch (err) {
         console.warn('📱 Inbox: Failed to restore read state from cache:', err);
@@ -68,6 +85,20 @@ export function useInbox(userId: string): UseInboxReturn {
       setReadStateCache(new Set());
     }
   }, [userId]);
+
+  // デバイスIDを生成（簡易版）
+  const getDeviceId = useCallback(() => {
+    try {
+      const existingId = localStorage.getItem('device_id');
+      if (existingId) return existingId;
+
+      const newId = `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem('device_id', newId);
+      return newId;
+    } catch {
+      return `fallback_${Date.now()}`;
+    }
+  }, []);
 
   // 既読状態を永続化
   const persistReadState = useCallback(
@@ -79,8 +110,10 @@ export function useInbox(userId: string): UseInboxReturn {
         newReadState.add(id);
         setReadStateCache(newReadState);
 
+        const deviceId = getDeviceId();
+        const cacheKey = `inbox_read_state_${userId}_${deviceId}`;
         localStorage.setItem(
-          `inbox_read_state_${userId}`,
+          cacheKey,
           JSON.stringify(Array.from(newReadState))
         );
 
@@ -94,7 +127,7 @@ export function useInbox(userId: string): UseInboxReturn {
         console.warn('📱 Inbox: Failed to persist read state:', err);
       }
     },
-    [userId, readStateCache]
+    [userId, readStateCache, getDeviceId]
   );
 
   // 通知とメッセージを個別に管理

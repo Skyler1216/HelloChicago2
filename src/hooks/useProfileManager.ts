@@ -55,8 +55,12 @@ export function useProfileManager(userId: string) {
   const [forceLoading, setForceLoading] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
-  // キャッシュの有効期限（2時間に延長）
-  const CACHE_TTL = 2 * 60 * 60 * 1000; // 2時間
+  // キャッシュの有効期限（モバイル対応）
+  const isMobileDevice =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    );
+  const CACHE_TTL = isMobileDevice ? 1 * 60 * 60 * 1000 : 2 * 60 * 60 * 1000; // モバイルでは1時間、デスクトップでは2時間
 
   // キャッシュからデータを取得
   const getCachedProfileData = useCallback((): ProfileCacheData | null => {

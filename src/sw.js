@@ -28,6 +28,31 @@ const CACHE_EXPIRY = {
   IMAGES: 30 * 24 * 60 * 60 * 1000, // 30日
 };
 
+// モバイル対応のキャッシュ設定
+const MOBILE_CACHE_EXPIRY = {
+  API: 2 * 60 * 1000, // モバイルでは2分
+  STATIC: 3 * 24 * 60 * 60 * 1000, // モバイルでは3日
+  IMAGES: 7 * 24 * 60 * 60 * 1000, // モバイルでは7日
+};
+
+// デバイス判定
+const isMobile = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+};
+
+// デバイスに応じたキャッシュ有効期限を取得
+const getCacheExpiry = type => {
+  const device = isMobile() ? 'mobile' : 'desktop';
+  const expiry = isMobile() ? MOBILE_CACHE_EXPIRY[type] : CACHE_EXPIRY[type];
+
+  console.log(
+    `📱 SW: Cache expiry for ${type} on ${device}: ${Math.round(expiry / 1000)}s`
+  );
+  return expiry;
+};
+
 // インストール時
 self.addEventListener('install', event => {
   console.log('📱 SW: Installing...');
@@ -75,9 +100,13 @@ async function cleanExpiredCache() {
         const cachedTime = response.headers.get('sw-cached-time');
         if (cachedTime) {
           const age = Date.now() - parseInt(cachedTime);
-          if (age > CACHE_EXPIRY.API) {
+          const expiry = getCacheExpiry('API');
+
+          if (age > expiry) {
             await cache.delete(request);
-            console.log('📱 SW: Deleted expired cache entry');
+            console.log(
+              `📱 SW: Deleted expired cache entry (age: ${Math.round(age / 1000)}s, expiry: ${Math.round(expiry / 1000)}s)`
+            );
           }
         }
       }

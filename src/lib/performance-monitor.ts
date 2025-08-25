@@ -37,6 +37,39 @@ export interface DatabaseMetrics {
   query?: string;
 }
 
+// パフォーマンス監視の設定
+const PERFORMANCE_CONFIG = {
+  // モバイル対応の設定
+  isMobile:
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    ),
+
+  // モバイルではより厳しい閾値
+  thresholds: {
+    mobile: {
+      pageLoad: 3000, // 3秒
+      apiResponse: 2000, // 2秒
+      cacheHit: 100, // 100ms
+      memoryUsage: 50 * 1024 * 1024, // 50MB
+    },
+    desktop: {
+      pageLoad: 5000, // 5秒
+      apiResponse: 3000, // 3秒
+      cacheHit: 200, // 200ms
+      memoryUsage: 100 * 1024 * 1024, // 100MB
+    },
+  },
+
+  // モバイルではより頻繁な監視
+  monitoringInterval:
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    )
+      ? 10000
+      : 30000, // モバイル: 10秒、デスクトップ: 30秒
+};
+
 class PerformanceMonitor {
   private metrics: PerformanceMetrics[] = [];
   private errors: ErrorMetrics[] = [];

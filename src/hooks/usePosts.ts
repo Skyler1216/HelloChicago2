@@ -48,11 +48,18 @@ export function usePosts(
   // キャッシュキーを生成
   const cacheKey = `posts_${type || 'all'}_${categoryId || 'all'}`;
 
+  // モバイルデバイス判定
+  const isMobileDevice =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    );
+
   // キャッシュと App Lifecycle の管理
   const cache = useCache<Post[]>(`posts`, {
-    ttl: 3 * 60 * 1000, // 3分のTTL
-    priority: 8, // 投稿は高優先度
+    ttl: isMobileDevice ? 2 * 60 * 1000 : 3 * 60 * 1000, // モバイルでは2分、デスクトップでは3分
+    priority: 9, // 投稿は最高優先度
     staleWhileRevalidate: true,
+    maxSize: isMobileDevice ? 50 : 100, // モバイルでは容量を制限
   });
 
   const { canFetchData, shouldRefreshData } = useAppLifecycle({
@@ -63,7 +70,7 @@ export function usePosts(
         loadPosts(true); // 強制リフレッシュ
       }
     },
-    refreshThreshold: 2 * 60 * 1000, // 2分以上非アクティブだったら再読み込み
+    refreshThreshold: isMobileDevice ? 1 * 60 * 1000 : 2 * 60 * 1000, // モバイルでは1分、デスクトップでは2分
   });
 
   useEffect(() => {

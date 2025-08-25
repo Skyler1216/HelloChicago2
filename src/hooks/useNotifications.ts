@@ -22,9 +22,17 @@ interface UseNotificationsReturn {
 const CACHE_KEY_PREFIX = 'notifications_cache_';
 const CACHE_TTL = 10 * 60 * 1000; // 10分
 
+// モバイルでのキャッシュ制限
+const isMobile = () =>
+  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+const MOBILE_CACHE_TTL = 5 * 60 * 1000; // モバイルでは5分
+
 interface CacheData {
   data: Notification[];
   timestamp: number;
+  deviceId?: string; // デバイス識別用
 }
 
 export function useNotifications(userId: string): UseNotificationsReturn {
@@ -46,8 +54,20 @@ export function useNotifications(userId: string): UseNotificationsReturn {
       const cacheData: CacheData = JSON.parse(cached);
       const now = Date.now();
 
+      // モバイルでは短いキャッシュTTLを使用
+      const effectiveTTL = isMobile() ? MOBILE_CACHE_TTL : CACHE_TTL;
+
       // キャッシュが有効期限切れかチェック
-      if (now - cacheData.timestamp > CACHE_TTL) {
+      if (now - cacheData.timestamp > effectiveTTL) {
+        localStorage.removeItem(cacheKey);
+        return null;
+      }
+
+      // デバイスIDが異なる場合はキャッシュを無効化（パソコンとスマホの同期問題を回避）
+      if (cacheData.deviceId && cacheData.deviceId !== getDeviceId()) {
+        console.log(
+          '📱 useNotifications: Device ID mismatch, invalidating cache'
+        );
         localStorage.removeItem(cacheKey);
         return null;
       }
@@ -56,7 +76,10 @@ export function useNotifications(userId: string): UseNotificationsReturn {
       setCacheAge(age);
       setIsCached(true);
 
-      console.log('📱 useNotifications: Cache hit', { age: age + 's' });
+      console.log('📱 useNotifications: Cache hit', {
+        age: age + 's',
+        device: isMobile() ? 'mobile' : 'desktop',
+      });
       return cacheData.data;
     } catch (err) {
       console.warn('📱 useNotifications: Cache read error', err);
@@ -64,21 +87,42 @@ export function useNotifications(userId: string): UseNotificationsReturn {
     }
   }, []);
 
-  // データをキャッシュに保存
-  const setCachedData = useCallback((id: string, data: Notification[]) => {
+  // デバイスIDを生成（簡易版）
+  const getDeviceId = useCallback(() => {
     try {
-      const cacheKey = CACHE_KEY_PREFIX + id;
-      const cacheData: CacheData = {
-        data,
-        timestamp: Date.now(),
-      };
+      const existingId = localStorage.getItem('device_id');
+      if (existingId) return existingId;
 
-      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
-      console.log('📱 useNotifications: Data cached');
-    } catch (err) {
-      console.warn('📱 useNotifications: Cache write error', err);
+      const newId = `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem('device_id', newId);
+      return newId;
+    } catch {
+      return `fallback_${Date.now()}`;
     }
   }, []);
+
+  // データをキャッシュに保存
+  const setCachedData = useCallback(
+    (id: string, data: Notification[]) => {
+      try {
+        const cacheKey = CACHE_KEY_PREFIX + id;
+        const cacheData: CacheData = {
+          data,
+          timestamp: Date.now(),
+          deviceId: getDeviceId(), // デバイスIDを含める
+        };
+
+        localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+        console.log(
+          '📱 useNotifications: Data cached with device ID:',
+          cacheData.deviceId
+        );
+      } catch (err) {
+        console.warn('📱 useNotifications: Cache write error', err);
+      }
+    },
+    [getDeviceId]
+  );
 
   // キャッシュをクリア
   const clearCache = useCallback((id: string) => {

@@ -31,6 +31,18 @@ export function useCache<T>(key: string, options: CacheOptions = {}) {
     staleWhileRevalidate = true,
     priority = 5,
   } = options;
+
+  // モバイル対応のキャッシュ設定
+  const isMobileDevice =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    );
+  const mobileTTL = Math.floor(ttl * 0.6); // モバイルではTTLを短く
+  const mobileMaxSize = Math.floor(maxSize * 0.7); // モバイルでは容量を制限
+
+  const effectiveTTL = isMobileDevice ? mobileTTL : ttl;
+  const effectiveMaxSize = isMobileDevice ? mobileMaxSize : maxSize;
+
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [cacheStats, setCacheStats] = useState<CacheStats>({
     size: 0,
@@ -154,7 +166,7 @@ export function useCache<T>(key: string, options: CacheOptions = {}) {
       });
 
       // 最大サイズチェック
-      if (cacheRef.current.size >= maxSize) {
+      if (cacheRef.current.size >= effectiveMaxSize) {
         // 優先度とアクセス頻度を考慮したLRU方式で削除
         let candidateKey: string | null = null;
         let lowestScore = Infinity;
@@ -176,6 +188,7 @@ export function useCache<T>(key: string, options: CacheOptions = {}) {
             evictedKey: candidateKey,
             key,
             reason: 'maxSize reached',
+            device: isMobileDevice ? 'mobile' : 'desktop',
           });
           cacheRef.current.delete(candidateKey);
         }
@@ -194,7 +207,16 @@ export function useCache<T>(key: string, options: CacheOptions = {}) {
       updateStats();
       persistCache();
     },
-    [maxSize, ttl, priority, updateStats, persistCache, key] // keyが使用されているため追加
+    [
+      maxSize,
+      ttl,
+      priority,
+      updateStats,
+      persistCache,
+      key,
+      effectiveMaxSize,
+      isMobileDevice,
+    ] // keyが使用されているため追加
   );
 
   // キャッシュの削除
@@ -268,11 +290,12 @@ export function useCache<T>(key: string, options: CacheOptions = {}) {
         key,
         isStale: isStaleResult,
         age: Math.floor((Date.now() - item.timestamp) / 1000) + 's',
-        ttl: Math.floor(ttl / 1000) + 's',
+        ttl: Math.floor(effectiveTTL / 1000) + 's',
+        device: isMobileDevice ? 'mobile' : 'desktop',
       });
       return isStaleResult;
     },
-    [ttl]
+    [effectiveTTL, isMobileDevice]
   );
 
   // キャッシュの効率的な一括更新
