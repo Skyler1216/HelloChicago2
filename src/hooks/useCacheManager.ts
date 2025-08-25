@@ -165,8 +165,8 @@ export function useCacheManager() {
 
         // モバイルでは2時間、デスクトップでは30分以上の非表示でキャッシュクリア
         const restartThreshold = isMobileDevice
-          ? 2 * 60 * 60 * 1000
-          : 30 * 60 * 1000;
+          ? 8 * 60 * 60 * 1000
+          : 4 * 60 * 60 * 1000; // モバイル8時間、デスクトップ4時間に大幅延長
 
         if (lastHiddenTime) {
           const hiddenDuration = currentTime - parseInt(lastHiddenTime);

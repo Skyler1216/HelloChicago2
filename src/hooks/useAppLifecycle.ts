@@ -22,7 +22,7 @@ export function useAppLifecycle(options: UseAppLifecycleOptions = {}) {
     onAppHidden,
     onAppOnline,
     onAppOffline,
-    refreshThreshold = 30 * 60 * 1000, // デスクトップデフォルト30分（モバイルはコード内で2時間に設定）
+    refreshThreshold = 60 * 60 * 1000, // デスクトップデフォルト60分（モバイルはコード内で4時間に設定）
   } = options;
 
   const [appState, setAppState] = useState<AppState>({
@@ -65,8 +65,8 @@ export function useAppLifecycle(options: UseAppLifecycleOptions = {}) {
           navigator.userAgent
         );
       const actualRefreshThreshold = isMobileDevice
-        ? 10 * 60 * 1000
-        : 5 * 60 * 1000; // 緊急修正: モバイル10分、デスクトップ5分
+        ? 4 * 60 * 60 * 1000
+        : 60 * 60 * 1000; // モバイル4時間、デスクトップ60分に大幅延長
 
       if (bgTime > actualRefreshThreshold || shouldForceRefresh(now - bgTime)) {
         console.log(

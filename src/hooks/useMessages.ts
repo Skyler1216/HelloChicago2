@@ -32,7 +32,7 @@ const isMobileDevice =
   /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
     navigator.userAgent
   );
-const CACHE_TTL = isMobileDevice ? 5 * 60 * 1000 : 10 * 60 * 1000; // モバイルでは5分、デスクトップでは10分
+const CACHE_TTL = isMobileDevice ? 2 * 60 * 60 * 1000 : 60 * 60 * 1000; // モバイルでは2時間、デスクトップでは60分
 
 interface CacheData {
   data: Message[];

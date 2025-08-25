@@ -25,7 +25,7 @@ export function usePageVisibility(options: UsePageVisibilityOptions = {}) {
     onVisible,
     onHidden,
     staleThreshold = 2 * 60 * 1000, // 2分
-    refreshThreshold = 30 * 60 * 1000, // 30分（5分から30分に延長）
+    refreshThreshold = 2 * 60 * 60 * 1000, // 2時間に大幅延長
   } = options;
 
   const [state, setState] = useState<VisibilityState>(() => ({

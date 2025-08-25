@@ -49,10 +49,10 @@ export function usePosts(
   const cacheKey = `posts_${type || 'all'}_${categoryId || 'all'}`;
 
   // モバイル対応のキャッシュ設定
-  const effectiveTTL = 2 * 60 * 1000; // 2分
+  const effectiveTTL = isMobileDevice ? 30 * 60 * 1000 : 15 * 60 * 1000; // モバイル30分、デスクトップ15分
   const effectivePriority = 9;
   const effectiveMaxSize = 50;
-  const effectiveRefreshThreshold = 30 * 60 * 1000; // 30分
+  const effectiveRefreshThreshold = isMobileDevice ? 4 * 60 * 60 * 1000 : 2 * 60 * 60 * 1000; // モバイル4時間、デスクトップ2時間
 
   // キャッシュと App Lifecycle の管理
   const cache = useCache<Post[]>(`posts`, {

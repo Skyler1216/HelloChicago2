@@ -25,7 +25,7 @@ interface UseUserStatsReturn {
 
 // キャッシュの設定
 const CACHE_KEY_PREFIX = 'user_stats_cache_';
-const CACHE_TTL = 15 * 60 * 1000; // 15分（統計情報は頻繁に変わる可能性があるため短め）
+const CACHE_TTL = 60 * 60 * 1000; // 60分に延長（統計情報の更新頻度を考慮）
 
 interface CacheData {
   data: UserStats;

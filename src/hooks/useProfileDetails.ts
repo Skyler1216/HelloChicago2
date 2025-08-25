@@ -24,7 +24,7 @@ interface UseProfileDetailsReturn {
 
 // キャッシュの設定
 const CACHE_KEY_PREFIX = 'profile_details_cache_';
-const CACHE_TTL = 2 * 60 * 60 * 1000; // 2時間
+const CACHE_TTL = 8 * 60 * 60 * 1000; // 8時間に延長（プロフィール情報は変更頻度が低い）
 
 interface CacheData {
   data: ProfileDetails;

@@ -20,14 +20,14 @@ interface UseNotificationsReturn {
 
 // キャッシュの設定
 const CACHE_KEY_PREFIX = 'notifications_cache_';
-const CACHE_TTL = 10 * 60 * 1000; // 10分
+const CACHE_TTL = 60 * 60 * 1000; // 60分に延長
 
 // モバイルでのキャッシュ制限
 const isMobile = () =>
   /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
     navigator.userAgent
   );
-const MOBILE_CACHE_TTL = 5 * 60 * 1000; // モバイルでは5分
+const MOBILE_CACHE_TTL = 2 * 60 * 60 * 1000; // モバイルでは2時間
 
 interface CacheData {
   data: Notification[];
