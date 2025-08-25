@@ -265,11 +265,58 @@ export function usePosts(
             throw error;
           }
 
-          const postsWithDetails = (data || []).map(post => ({
-            ...post,
-            likes_count: post.likes_count || 0,
-            comments_count: post.comments_count || 0,
-          }));
+          // 投稿IDのリストを作成
+          const postIds = (data || []).map(post => post.id);
+
+          let postsWithDetails = data || [];
+
+          // いいね数とコメント数を一括取得（投稿がある場合のみ）
+          if (postIds.length > 0) {
+            const [likesResult, commentsResult] = await Promise.all([
+              // いいね数を一括取得
+              supabase.from('likes').select('post_id').in('post_id', postIds),
+              // コメント数を一括取得
+              supabase
+                .from('comments')
+                .select('post_id')
+                .in('post_id', postIds)
+                .eq('is_approved', true),
+            ]);
+
+            // いいね数とコメント数をカウント
+            const likesCountMap = new Map<string, number>();
+            const commentsCountMap = new Map<string, number>();
+
+            // いいね数をカウント
+            if (likesResult.data) {
+              likesResult.data.forEach(like => {
+                const count = likesCountMap.get(like.post_id) || 0;
+                likesCountMap.set(like.post_id, count + 1);
+              });
+            }
+
+            // コメント数をカウント
+            if (commentsResult.data) {
+              commentsResult.data.forEach(comment => {
+                const count = commentsCountMap.get(comment.post_id) || 0;
+                commentsCountMap.set(comment.post_id, count + 1);
+              });
+            }
+
+            // 投稿データにいいね数とコメント数を追加
+            postsWithDetails = (data || []).map(post => ({
+              ...post,
+              likes_count: likesCountMap.get(post.id) || 0,
+              comments_count: commentsCountMap.get(post.id) || 0,
+            }));
+          } else {
+            // 投稿がない場合はそのまま
+            postsWithDetails = (data || []).map(post => ({
+              ...post,
+              likes_count: 0,
+              comments_count: 0,
+            }));
+          }
 
           setPosts(postsWithDetails);
           setLoading(false);
