@@ -85,42 +85,27 @@ export function usePosts(
 
   // 初期ローディング管理（緊急修正: シンプルに戻す）
   useEffect(() => {
-    // モバイル環境での安全な初期化
-    const initializePosts = async () => {
-      try {
-        // キャッシュから即座に読み込み
-        const cachedData = cache.get(cacheKey);
-        if (cachedData) {
-          console.log('📱 usePosts: Using cached data immediately');
-          setPosts(cachedData);
-          setLoading(false);
-          setIsCached(true);
-          
-          // バックグラウンドで更新（モバイルでは控えめに）
-          if (isMobileDevice) {
-            setTimeout(() => {
-              if (cache.isStale(cacheKey)) {
-                loadPosts(true);
-              }
-            }, 2000); // モバイルでは2秒待機
-          } else {
-            setTimeout(() => {
-              if (cache.isStale(cacheKey)) {
-                loadPosts(true);
-              }
-            }, 100);
-          }
-        } else {
-          await loadPosts();
-        }
-      } catch (error) {
-        console.error('📱 usePosts: Initialization error:', error);
-        setError('投稿の初期化に失敗しました');
-        setLoading(false);
+    // キャッシュから即座に読み込み（ローディング表示なし）
+    const cachedData = cache.get(cacheKey);
+    if (cachedData) {
+      console.log('📱 usePosts: Immediate cache hit - no loading screen');
+      setPosts(cachedData);
+      setLoading(false);
+      setIsCached(true);
+      setError(null);
+      
+      // バックグラウンドで更新（ユーザーには見えない）
+      if (cache.isStale(cacheKey)) {
+        console.log('📱 usePosts: Background refresh (silent)');
+        setTimeout(() => {
+          loadPosts(true);
+        }, 100);
       }
-    };
-    
-    initializePosts();
+    } else {
+      // キャッシュがない場合のみローディング表示
+      console.log('📱 usePosts: No cache - showing loading');
+      loadPosts();
+    }
   }, [type, categoryId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadPosts = useCallback(
@@ -160,27 +145,22 @@ export function usePosts(
         if (!forceRefresh) {
           const cachedPosts = cache.get(cacheKey);
           if (cachedPosts) {
-            console.log('📱 usePosts: Using cached data', {
-              cacheKey,
-              postsCount: cachedPosts.length,
-              type: type || 'all',
-              categoryId: categoryId || 'all',
-            });
-            setPosts(cachedPosts);
-            setLoading(false);
-            setIsCached(true);
-            setCacheAge(Math.floor((Date.now() - Date.now()) / 1000)); // キャッシュヒット時は0秒
-
-            // 古いデータの場合はバックグラウンドで更新
-            if (cache.isStale(cacheKey)) {
-              console.log(
-                '📱 usePosts: Cache is stale, updating in background'
-              );
-              setIsRefreshing(true);
-              // バックグラウンド更新は続行
-            } else {
-              console.log('📱 usePosts: Using fresh cached data');
-              return; // 有効なキャッシュがあるので終了
+            // キャッシュがある場合は即座に表示（ローディング終了）
+            if (!isRefreshing) {
+              console.log('📱 usePosts: Cache hit - immediate display');
+              setPosts(cachedPosts);
+              setLoading(false);
+              setIsCached(true);
+              setError(null);
+              
+              // 古いデータの場合のみバックグラウンド更新
+              if (cache.isStale(cacheKey)) {
+                console.log('📱 usePosts: Silent background update');
+                setIsRefreshing(true);
+                // バックグラウンド更新は続行
+              } else {
+                return; // 新しいキャッシュなので終了
+              }
             }
           } else {
             console.log('📱 usePosts: Cache miss', {

@@ -97,6 +97,7 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
     deletePost,
     isCached,
     cacheAge,
+    forceReset,
   } = usePosts(selectedPostType);
 
   // キャッシュが有効な場合はローディングを表示しない
@@ -215,6 +216,9 @@ export default function HomeView({ onShowPostForm }: HomeViewProps) {
                 <div className="w-8 h-8 border-2 border-coral-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
                 <p className="text-gray-500">
                   {navigator.onLine ? '読み込み中...' : 'オフライン - 接続を確認中...'}
+                </p>
+                <p className="text-xs text-gray-400">
+                  {isCached ? `キャッシュ: ${cacheAge}秒前` : '初回読み込み'}
                 </p>
                 {!navigator.onLine && (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mx-4">
