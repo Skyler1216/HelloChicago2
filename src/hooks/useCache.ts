@@ -150,7 +150,7 @@ export function useCache<T>(key: string, options: CacheOptions = {}) {
       setCacheStats(prev => ({ ...prev, hits: prev.hits + 1 }));
       return item.data;
     },
-    [staleWhileRevalidate, ttl]
+    [staleWhileRevalidate, ttl, key]
   );
 
   // キャッシュの設定

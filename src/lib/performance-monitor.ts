@@ -37,38 +37,50 @@ export interface DatabaseMetrics {
   query?: string;
 }
 
-// パフォーマンス監視の設定
-const PERFORMANCE_CONFIG = {
-  // モバイル対応の設定
-  isMobile:
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      navigator.userAgent
-    ),
-
-  // モバイルではより厳しい閾値
-  thresholds: {
-    mobile: {
-      pageLoad: 3000, // 3秒
-      apiResponse: 2000, // 2秒
-      cacheHit: 100, // 100ms
-      memoryUsage: 50 * 1024 * 1024, // 50MB
-    },
-    desktop: {
-      pageLoad: 5000, // 5秒
-      apiResponse: 3000, // 3秒
-      cacheHit: 200, // 200ms
-      memoryUsage: 100 * 1024 * 1024, // 100MB
-    },
-  },
-
-  // モバイルではより頻繁な監視
-  monitoringInterval:
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      navigator.userAgent
-    )
-      ? 10000
-      : 30000, // モバイル: 10秒、デスクトップ: 30秒
+// モバイル対応のパフォーマンス設定
+const MOBILE_THRESHOLDS = {
+  pageLoad: 3000, // 3秒
+  apiResponse: 2000, // 2秒
+  cacheHit: 100, // 100ms
+  memoryUsage: 50 * 1024 * 1024, // 50MB
+  monitoringInterval: 10000, // 10秒
 };
+
+const DESKTOP_THRESHOLDS = {
+  pageLoad: 2000, // 2秒
+  apiResponse: 1000, // 1秒
+  cacheHit: 50, // 50ms
+  memoryUsage: 100 * 1024 * 1024, // 100MB
+  monitoringInterval: 5000, // 5秒
+};
+
+// デバイスタイプの判定
+const isMobileDevice =
+  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+
+// 現在のデバイスに応じた閾値を取得
+const getCurrentThresholds = () => {
+  return isMobileDevice ? MOBILE_THRESHOLDS : DESKTOP_THRESHOLDS;
+};
+
+// パフォーマンス監視の開始
+export function startPerformanceMonitoring() {
+  const thresholds = getCurrentThresholds();
+
+  console.log('📱 PerformanceMonitor: Starting with thresholds:', {
+    device: isMobileDevice ? 'mobile' : 'desktop',
+    ...thresholds,
+  });
+
+  // 監視間隔でパフォーマンスチェック
+  const interval = setInterval(() => {
+    checkPerformance(thresholds);
+  }, thresholds.monitoringInterval);
+
+  return () => clearInterval(interval);
+}
 
 class PerformanceMonitor {
   private metrics: PerformanceMetrics[] = [];
