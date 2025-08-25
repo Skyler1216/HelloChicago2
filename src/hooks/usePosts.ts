@@ -1,15 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { Database } from '../types/database';
-import { useCache } from './useCache';
-import { useAppLifecycle } from './useAppLifecycle';
 
 type Post = Database['public']['Tables']['posts']['Row'] & {
   profiles: Database['public']['Tables']['profiles']['Row'];
   categories: Database['public']['Tables']['categories']['Row'];
-  likes_count?: number; // データベースのlikesカラムは削除されたため、オプショナルに
-  comments_count?: number; // データベースのrepliesカラムは削除されたため、オプショナルに
-
+  likes_count?: number;
+  comments_count?: number;
 };
 
 interface UsePostsReturn {
@@ -30,21 +27,25 @@ interface UsePostsReturn {
   ) => Promise<Post>;
   refetch: () => Promise<void>;
   deletePost: (id: string) => Promise<void>;
-  // キャッシュ状態を追加
   isCached: boolean;
   cacheAge: number;
 }
+
+// シンプルなキャッシュ実装
+interface CacheData {
+  posts: Post[];
+  timestamp: number;
+  type: string;
+  categoryId: string;
+}
+
+// グローバルキャッシュ（ページ切り替えで消えない）
+const postsCache = new Map<string, CacheData>();
 
 export function usePosts(
   type?: 'post' | 'consultation' | 'transfer',
   categoryId?: string
 ): UsePostsReturn {
-  // モバイルデバイス検出
-  const isMobileDevice =
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      navigator.userAgent
-  );
-
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,151 +56,83 @@ export function usePosts(
   // キャッシュキーを生成
   const cacheKey = `posts_${type || 'all'}_${categoryId || 'all'}`;
 
-  // モバイル対応のキャッシュ設定
-  const effectiveTTL = isMobileDevice ? 30 * 60 * 1000 : 15 * 60 * 1000; // モバイル30分、デスクトップ15分
-  const effectivePriority = 9;
-  const effectiveMaxSize = 50;
-  const effectiveRefreshThreshold = isMobileDevice ? 4 * 60 * 60 * 1000 : 2 * 60 * 60 * 1000; // モバイル4時間、デスクトップ2時間
+  // モバイル環境の検出
+  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
 
-  // キャッシュと App Lifecycle の管理
-  const cache = useCache<Post[]>(`posts`, {
-    ttl: effectiveTTL,
-    priority: effectivePriority,
-    staleWhileRevalidate: true,
-    maxSize: effectiveMaxSize,
-  });
+  // キャッシュの有効期限（モバイルでは長めに設定）
+  const CACHE_TTL = isMobileDevice ? 30 * 60 * 1000 : 15 * 60 * 1000; // モバイル30分、デスクトップ15分
 
-  const { canFetchData, shouldRefreshData } = useAppLifecycle({
-    onAppVisible: () => {
-      // アプリがフォアグラウンドに戻ったとき（ユーザーフレンドリーなリフレッシュ）
-      // モバイルではキャッシュをより積極的に活用し、デスクトップでは適度に更新
-      if (shouldRefreshData()) {
-        console.log('📱 App visible: refreshing posts data');
-        loadPosts(true); // 強制リフレッシュ
-      } else {
-        console.log('📱 App visible: using cached posts data');
-      }
-    },
-    refreshThreshold: effectiveRefreshThreshold,
-  });
+  // キャッシュからデータを取得
+  const getCachedData = useCallback((key: string): Post[] | null => {
+    const cached = postsCache.get(key);
+    if (!cached) return null;
 
-  // 初期ローディング管理（緊急修正: シンプルに戻す）
-  useEffect(() => {
-    // キャッシュから即座に読み込み（ローディング表示なし）
-    const cachedData = cache.get(cacheKey);
-    if (cachedData) {
-      console.log('📱 usePosts: Immediate cache hit - no loading screen');
-      setPosts(cachedData);
-      setLoading(false);
+    const now = Date.now();
+    const age = now - cached.timestamp;
+
+    // キャッシュが有効期限内かチェック
+    if (age < CACHE_TTL) {
+      setCacheAge(Math.floor(age / 1000));
       setIsCached(true);
-      setError(null);
-      
-      // バックグラウンドで更新（ユーザーには見えない）
-      if (cache.isStale(cacheKey)) {
-        console.log('📱 usePosts: Background refresh (silent)');
-        setTimeout(() => {
-          loadPosts(true);
-        }, 100);
-      }
-    } else {
-      // キャッシュがない場合のみローディング表示
-      console.log('📱 usePosts: No cache - showing loading');
-      loadPosts();
+      console.log('📱 usePosts: Cache hit', {
+        key,
+        age: Math.floor(age / 1000) + 's',
+        postsCount: cached.posts.length,
+      });
+      return cached.posts;
     }
-  }, [type, categoryId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // 期限切れのキャッシュを削除
+    postsCache.delete(key);
+    return null;
+  }, [CACHE_TTL]);
+
+  // キャッシュにデータを保存
+  const setCachedData = useCallback((key: string, data: Post[]) => {
+    const cacheData: CacheData = {
+      posts: data,
+      timestamp: Date.now(),
+      type: type || 'all',
+      categoryId: categoryId || 'all',
+    };
+
+    postsCache.set(key, cacheData);
+    setIsCached(false);
+    setCacheAge(0);
+
+    console.log('📱 usePosts: Data cached', {
+      key,
+      postsCount: data.length,
+    });
+  }, [type, categoryId]);
+
+  // データを読み込み
   const loadPosts = useCallback(
     async (forceRefresh = false) => {
       try {
-        // 即座にキャッシュをチェック（モバイル最適化）
-        if (!forceRefresh) {
-          const cachedPosts = cache.get(cacheKey);
-          if (cachedPosts) {
-            console.log('📱 usePosts: Immediate cache hit', {
-              postsCount: cachedPosts.length,
-              device: isMobileDevice ? 'mobile' : 'desktop',
-            });
-            setPosts(cachedPosts);
-            setLoading(false);
-            setIsCached(true);
-            setError(null);
-            
-            // モバイルでは古いデータでもバックグラウンド更新を控えめに
-            if (isMobileDevice && !cache.isStale(cacheKey)) {
-              console.log('📱 usePosts: Fresh cache on mobile, skipping background update');
-              return;
-            }
-            
-            // バックグラウンド更新（デスクトップまたは古いキャッシュの場合）
-            if (cache.isStale(cacheKey)) {
-              console.log('📱 usePosts: Cache is stale, updating in background');
-              setIsRefreshing(true);
-              // バックグラウンド更新は続行
-            } else {
-              return; // 新しいキャッシュなので終了
-            }
-          }
-        }
+        setError(null);
 
-        // キャッシュをチェック
+        // キャッシュをチェック（強制更新でない場合）
         if (!forceRefresh) {
-          const cachedPosts = cache.get(cacheKey);
-          if (cachedPosts) {
-            // キャッシュがある場合は即座に表示（ローディング終了）
-            if (!isRefreshing) {
-              console.log('📱 usePosts: Cache hit - immediate display');
-              setPosts(cachedPosts);
-              setLoading(false);
-              setIsCached(true);
-              setError(null);
-              
-              // 古いデータの場合のみバックグラウンド更新
-              if (cache.isStale(cacheKey)) {
-                console.log('📱 usePosts: Silent background update');
-                setIsRefreshing(true);
-                // バックグラウンド更新は続行
-              } else {
-                return; // 新しいキャッシュなので終了
-              }
-            }
-          } else {
-            console.log('📱 usePosts: Cache miss', {
-              cacheKey,
-              type: type || 'all',
-              categoryId: categoryId || 'all',
-            });
-            setIsCached(false);
-            setCacheAge(0);
-          }
-        } else {
-          console.log('📱 usePosts: Force refresh requested');
-          setIsCached(false);
-          setCacheAge(0);
-        }
-
-        // ネットワークが利用できない場合はオフラインデータを使用
-        if (!canFetchData) {
-          const offlineData = cache.getOfflineData(cacheKey);
-          if (offlineData) {
-            console.log('📱 usePosts: Using offline cached data', {
-              postsCount: offlineData.length,
-            });
-            setPosts(offlineData);
+          const cachedData = getCachedData(cacheKey);
+          if (cachedData) {
+            console.log('📱 usePosts: Using cached data immediately');
+            setPosts(cachedData);
             setLoading(false);
-            setIsCached(true);
             return;
           }
         }
 
         console.log('📱 usePosts: Fetching from database...');
+        setLoading(true);
 
-        // モバイル環境に最適化されたタイムアウト付きAPIリクエスト（短縮）
+        // タイムアウト付きでデータを取得
         const controller = new AbortController();
-        const timeoutDuration = isMobileDevice ? 8000 : 6000; // モバイルでは8秒に短縮
         const timeoutId = setTimeout(() => {
-          console.warn('📱 usePosts: Request timeout, aborting...');
           controller.abort();
-        }, timeoutDuration);
+        }, isMobileDevice ? 8000 : 5000);
 
         try {
           let query = supabase
@@ -212,7 +145,8 @@ export function usePosts(
             `
             )
             .eq('approved', true)
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false })
+            .abortSignal(controller.signal);
 
           if (type) {
             query = query.eq('type', type);
@@ -223,27 +157,9 @@ export function usePosts(
           }
 
           const { data, error } = await query;
-
           clearTimeout(timeoutId);
 
-          if (error) {
-            console.error('📱 usePosts: Database error:', error);
-            
-            // モバイルでのネットワークエラーに対する寛容な処理
-            if (isMobileDevice) {
-              const cachedData = cache.get(cacheKey);
-              if (cachedData) {
-                console.log('📱 usePosts: Using cached data due to mobile network error');
-                setPosts(cachedData);
-                setLoading(false);
-                setIsRefreshing(false);
-                setIsCached(true);
-                return;
-              }
-            }
-            
-            throw error;
-          }
+          if (error) throw error;
 
           // 投稿IDのリストを作成
           const postIds = (data || []).map(post => post.id);
@@ -253,9 +169,7 @@ export function usePosts(
           // いいね数とコメント数を一括取得（投稿がある場合のみ）
           if (postIds.length > 0) {
             const [likesResult, commentsResult] = await Promise.all([
-              // いいね数を一括取得
               supabase.from('likes').select('post_id').in('post_id', postIds),
-              // コメント数を一括取得
               supabase
                 .from('comments')
                 .select('post_id')
@@ -267,7 +181,6 @@ export function usePosts(
             const likesCountMap = new Map<string, number>();
             const commentsCountMap = new Map<string, number>();
 
-            // いいね数をカウント
             if (likesResult.data) {
               likesResult.data.forEach(like => {
                 const count = likesCountMap.get(like.post_id) || 0;
@@ -275,7 +188,6 @@ export function usePosts(
               });
             }
 
-            // コメント数をカウント
             if (commentsResult.data) {
               commentsResult.data.forEach(comment => {
                 const count = commentsCountMap.get(comment.post_id) || 0;
@@ -289,98 +201,68 @@ export function usePosts(
               likes_count: likesCountMap.get(post.id) || 0,
               comments_count: commentsCountMap.get(post.id) || 0,
             }));
-          } else {
-            // 投稿がない場合はそのまま
-            postsWithDetails = (data || []).map(post => ({
-              ...post,
-              likes_count: 0,
-              comments_count: 0,
-            }));
           }
 
           setPosts(postsWithDetails);
           setLoading(false);
-          setIsRefreshing(false);
 
           // データをキャッシュに保存
-          cache.set(cacheKey, postsWithDetails);
+          setCachedData(cacheKey, postsWithDetails);
+
           console.log('📱 usePosts: Data fetched and cached successfully', {
             postsCount: postsWithDetails.length,
             type: type || 'all',
-            categoryId: categoryId || 'all',
           });
         } catch (err) {
           clearTimeout(timeoutId);
 
           if (err instanceof Error && err.name === 'AbortError') {
-            console.warn(
-              '📱 usePosts: Request timeout (mobile network issue), using cached data'
-            );
-            // タイムアウトの場合はキャッシュデータを使用
-            const cachedData = cache.get(cacheKey);
+            console.warn('📱 usePosts: Request timeout, using cached data');
+            const cachedData = getCachedData(cacheKey);
             if (cachedData) {
-              console.log('📱 usePosts: Recovered from timeout using cache');
               setPosts(cachedData);
               setLoading(false);
-              setIsRefreshing(false);
-              setIsCached(true);
-              return;
-            } else {
-              // キャッシュもない場合は空の配列で初期化
-              console.log('📱 usePosts: No cache available, showing empty state');
-              setPosts([]);
-              setLoading(false);
-              setIsRefreshing(false);
-              setError('ネットワーク接続が不安定です。しばらく時間をおいてから再度お試しください。');
               return;
             }
           }
 
-          // ネットワークエラーの場合はキャッシュデータを使用
-          if (
-            err instanceof Error &&
-            (err.message.includes('network') ||
-              err.message.includes('fetch') ||
-              err.message.includes('timeout'))
-          ) {
-            console.warn(
-              '📱 usePosts: Network error, using cached data if available'
-            );
-            const cachedData = cache.get(cacheKey);
-            if (cachedData) {
-              setPosts(cachedData);
-              setLoading(false);
-              setIsRefreshing(false);
-              return;
-            }
-          }
-
-          console.error('📱 usePosts: Fetch error:', err);
-          setError(
-            err instanceof Error ? err.message : '投稿の読み込みに失敗しました'
-          );
-          setLoading(false);
-          setIsRefreshing(false);
+          throw err;
         }
       } catch (err) {
-        console.error('❌ Error loading posts:', err);
-        setError(err instanceof Error ? err.message : 'An error occurred');
-
-        // エラー時はキャッシュからフォールバック
-        const fallbackData = cache.getOfflineData(cacheKey);
-        if (fallbackData) {
-          console.log('📱 usePosts: Using cached data as fallback', {
-            postsCount: fallbackData.length,
-          });
-          setPosts(fallbackData);
-        }
-      } finally {
+        console.error('📱 usePosts: Load error:', err);
+        setError(
+          err instanceof Error ? err.message : '投稿の読み込みに失敗しました'
+        );
         setLoading(false);
-        setIsRefreshing(false);
       }
     },
-    [cacheKey, cache, canFetchData, categoryId, type]
+    [cacheKey, getCachedData, setCachedData, type, categoryId, isMobileDevice]
   );
+
+  // 初期化時の処理
+  useEffect(() => {
+    // まずキャッシュをチェック
+    const cachedData = getCachedData(cacheKey);
+    if (cachedData) {
+      console.log('📱 usePosts: Initial load from cache');
+      setPosts(cachedData);
+      setLoading(false);
+      
+      // バックグラウンドで更新（古いキャッシュの場合のみ）
+      const now = Date.now();
+      const cached = postsCache.get(cacheKey);
+      if (cached && now - cached.timestamp > CACHE_TTL * 0.5) {
+        console.log('📱 usePosts: Background refresh (cache is getting old)');
+        setTimeout(() => {
+          setIsRefreshing(true);
+          loadPosts(true).finally(() => setIsRefreshing(false));
+        }, 100);
+      }
+    } else {
+      console.log('📱 usePosts: Initial load from database');
+      loadPosts();
+    }
+  }, [cacheKey, getCachedData, loadPosts, CACHE_TTL]);
 
   const createPost = async (
     postData: Database['public']['Tables']['posts']['Insert']
@@ -410,7 +292,6 @@ export function usePosts(
 
       if (error) throw error;
 
-      // Add to local state if approved (for immediate feedback)
       if (data.approved) {
         const postWithCounts = {
           ...data,
@@ -419,9 +300,7 @@ export function usePosts(
         };
         const updatedPosts = [postWithCounts, ...posts];
         setPosts(updatedPosts);
-
-        // キャッシュも更新
-        cache.set(cacheKey, updatedPosts);
+        setCachedData(cacheKey, updatedPosts);
       }
 
       return data;
@@ -460,14 +339,11 @@ export function usePosts(
 
       if (error) throw error;
 
-      // Update local state
       const updatedPosts = posts.map(post =>
         post.id === postId ? { ...post, status: data.status } : post
       );
       setPosts(updatedPosts);
-
-      // キャッシュも更新
-      cache.set(cacheKey, updatedPosts);
+      setCachedData(cacheKey, updatedPosts);
 
       return data;
     } catch (err) {
@@ -510,14 +386,11 @@ export function usePosts(
 
       if (error) throw error;
 
-      // Update local state with the full updated record
       const updatedPosts = posts.map(post =>
         post.id === postId ? (data as unknown as Post) : post
       );
       setPosts(updatedPosts);
-
-      // キャッシュも更新
-      cache.set(cacheKey, updatedPosts);
+      setCachedData(cacheKey, updatedPosts);
 
       return data as unknown as Post;
     } catch (err) {
@@ -530,16 +403,19 @@ export function usePosts(
       const { error } = await supabase.from('posts').delete().eq('id', postId);
       if (error) throw error;
 
-      // Remove from local state
       const updatedPosts = posts.filter(post => post.id !== postId);
       setPosts(updatedPosts);
-
-      // キャッシュも更新
-      cache.set(cacheKey, updatedPosts);
+      setCachedData(cacheKey, updatedPosts);
     } catch (err) {
       throw err instanceof Error ? err : new Error('Failed to delete post');
     }
   };
+
+  const refetch = useCallback(async () => {
+    setIsRefreshing(true);
+    await loadPosts(true);
+    setIsRefreshing(false);
+  }, [loadPosts]);
 
   return {
     posts,
@@ -550,7 +426,7 @@ export function usePosts(
     updatePostStatus,
     updatePost,
     deletePost,
-    refetch: () => loadPosts(true),
+    refetch,
     isCached,
     cacheAge,
   };
