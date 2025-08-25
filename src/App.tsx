@@ -54,158 +54,66 @@ function preventPageBounce() {
 }
 
 export default function App() {
-  // スプラッシュスクリーン表示状態（緊急修正: シンプルに戻す）
+export default function App() {
   const [showSplash, setShowSplash] = useState(true);
-  const [currentView, setCurrentView] = useState<
-    'home' | 'map' | 'inbox' | 'profile'
-  >('home');
+  const [currentView, setCurrentView] = useState<'home' | 'map' | 'inbox' | 'profile'>('home');
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
-  const [selectedInboxTab, setSelectedInboxTab] = useState<
-    'notification' | 'message'
-  >('notification');
+  const [selectedInboxTab, setSelectedInboxTab] = useState<'notification' | 'message'>('notification');
   const [showAdminView, setShowAdminView] = useState(false);
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const [showPostForm, setShowPostForm] = useState(false);
   const [showReviewFormView, setShowReviewFormView] = useState(false);
-  const [reviewFormInitialLocation, setReviewFormInitialLocation] = useState<{
-    lat: number;
-    lng: number;
-    address?: string;
-  } | null>(null);
-  const [selectedPostType, setSelectedPostType] = useState<
-    'post' | 'consultation' | 'transfer'
-  >('post');
+  const [reviewFormInitialLocation, setReviewFormInitialLocation] = useState<{ lat: number; lng: number; address?: string; } | null>(null);
+  const [selectedPostType, setSelectedPostType] = useState<'post' | 'consultation' | 'transfer'>('post');
 
-  // モバイルデバイス判定（初期化時のみ実行）
-  const isMobile = useRef(
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      navigator.userAgent
-    )
-  );
-
-  const {
-    user,
-    profile,
-    loading: authLoading,
-    isAuthenticated,
-    isApproved,
-  } = useAuth();
+  const { user, profile, loading: authLoading, isAuthenticated, isApproved, initialized: authInitialized } = useAuth();
   const { ToastContainer } = useToast();
 
-  // アプリ状態管理
-  const { shouldShowLoading, backgroundRefreshing, forceInitialization } =
-    useAppState();
-
-  // 状態異常検知・回復
+  const { isInitialized, backgroundRefreshing, forceInitialization } = useAppState();
   const { currentAnomaly } = useAppStateManager();
-
-  // キャッシュ管理（一時的に無効化）
   const { handleAppRestart } = useCacheManager();
-
-  // 受信トレイの未読数を取得（認証済みの場合のみ）
   const { unreadCount } = useInbox(isAuthenticated ? user?.id || '' : '');
 
-  // アプリライフサイクル管理
   const { isOnline } = useAppLifecycle({
-    onAppVisible: () => {
-      if (!isMobile.current) {
-        console.log('📱 App became visible');
-      }
-
-      // アプリが表示された際の状態復旧処理
-      if (shouldShowLoading && !authLoading) {
-        if (!isMobile.current) {
-          console.log(
-            '📱 App visible but stuck in loading, attempting recovery'
-          );
-        }
-        // 強制初期化を即座に実行
-        forceInitialization();
-      }
-
-      // アプリ再起動の検出と処理（ユーザーフレンドリーな闾値）
+    onAppVisible: (backgroundTime) => {
+      console.log('📱 App became visible, background time:', Math.round(backgroundTime / 1000), 's');
+      // アプリ再起動の検出と処理
       const lastVisibleTime = sessionStorage.getItem('last_visible_time');
       const currentTime = Date.now();
-      const isMobileDevice =
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-          navigator.userAgent
-        );
-      // モバイルでは2時間、デスクトップでは30分以上の非表示でアプリ再起動とみなす
-      const restartThreshold = isMobileDevice
-        ? 8 * 60 * 60 * 1000
-        : 4 * 60 * 60 * 1000; // モバイル8時間、デスクトップ4時間に大幅延長
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const restartThreshold = isMobileDevice ? 8 * 60 * 60 * 1000 : 4 * 60 * 60 * 1000;
 
       if (lastVisibleTime) {
         const timeDiff = currentTime - parseInt(lastVisibleTime);
         if (timeDiff > restartThreshold) {
-          console.log(
-            `📱 App: Long hidden duration detected (${Math.round(timeDiff / 60000)}min), treating as app restart`
-          );
-          // フラグを更新して重複実行を防ぐ
+          console.log(`📱 App: Long hidden duration detected (${Math.round(timeDiff / 60000)}min), treating as app restart`);
           sessionStorage.setItem('last_visible_time', currentTime.toString());
           handleAppRestart();
-        } else {
-          console.log(
-            `📱 App: Short hidden duration (${Math.round(timeDiff / 1000)}s), keeping current state`
-          );
         }
       }
-      // 現在時刻を更新（初回または長時間非表示の場合のみ）
-      if (
-        !lastVisibleTime ||
-        (lastVisibleTime &&
-          currentTime - parseInt(lastVisibleTime) > restartThreshold)
-      ) {
-        sessionStorage.setItem('last_visible_time', currentTime.toString());
-      }
+      sessionStorage.setItem('last_visible_time', currentTime.toString());
     },
     onAppHidden: () => {
-      if (!isMobile.current) {
-        console.log('📱 App hidden');
-      }
       sessionStorage.setItem('last_hidden_time', Date.now().toString());
     },
-    onAppOnline: () => {
-      if (!isMobile.current) {
-        console.log('📱 App came online');
-      }
-    },
-    onAppOffline: () => {
-      if (!isMobile.current) {
-        console.log('📱 App went offline');
-      }
-    },
-    refreshThreshold: 60 * 60 * 1000, // 60分以上非アクティブだったら再読み込み
+    onAppOnline: () => console.log('📱 App came online'),
+    onAppOffline: () => console.log('📱 App went offline'),
+    refreshThreshold: 60 * 60 * 1000,
   });
 
-  // 無限ローディング防止のための追加チェック（緊急修正: シンプルに戻す）
-  useEffect(() => {
-    // 5秒後にローディング状態をチェック
-    const checkTimer = setTimeout(() => {
-      if (shouldShowLoading && !authLoading) {
-        console.warn(
-          '📱 App: Loading timeout detected, forcing initialization'
-        );
-        forceInitialization();
-      }
-    }, 5000);
-
-    return () => clearTimeout(checkTimer);
-  }, [shouldShowLoading, authLoading, forceInitialization]);
-
-  // Validate configuration on app start（緊急修正: シンプルに戻す）
+  // Validate configuration on app start
   useEffect(() => {
     if (!validateConfig()) {
       console.error('❌ App configuration is invalid');
     }
   }, []);
 
-  // Prevent page bounce on mobile（緊急修正: シンプルに戻す）
+  // Prevent page bounce on mobile
   useEffect(() => {
     preventPageBounce();
   }, []);
 
-  // Splash screen timer（緊急修正: シンプルに戻す）
+  // Splash screen timer
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
@@ -218,16 +126,9 @@ export default function App() {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
 
-  // Show loading screen - only show when actually needed
-  // デバッグログ
-  if (shouldShowLoading || authLoading) {
-    console.log('📱 App: Showing loading screen', {
-      shouldShowLoading,
-      authLoading,
-      isAuthenticated,
-      isApproved,
-      timestamp: new Date().toISOString(),
-    });
+  // Show loading screen only if auth is not initialized or still loading
+  if (!authInitialized || authLoading) {
+    console.log('📱 App: Showing loading screen (Auth state)', { authInitialized, authLoading, isAuthenticated, isApproved, timestamp: new Date().toISOString() });
     return (
       <LoadingScreen
         maxLoadingTime={5000} // 5秒で復旧オプションを表示
@@ -235,7 +136,7 @@ export default function App() {
     );
   }
 
-  // Show login screen if not authenticated
+  // Show login screen if not authenticated after auth initialization
   if (!isAuthenticated) {
     return <LoginScreen />;
   }

@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from './useAuth';
 
-interface AppState {
+interface InternalAppState {
   isInitialized: boolean;
-  hasShownInitialLoading: boolean;
-  backgroundRefreshing: boolean;
   lastRefreshTime: number;
   lastForegroundTime: number;
 }
@@ -12,10 +10,7 @@ interface AppState {
 interface UseAppStateReturn {
   isInitialized: boolean;
   shouldShowLoading: boolean;
-  shouldRefreshData: boolean;
-  backgroundRefreshing: boolean;
   markDataRefreshed: () => void;
-  setBackgroundRefreshing: (refreshing: boolean) => void;
   forceInitialization: () => void;
 }
 
@@ -31,10 +26,8 @@ export function useAppState(): UseAppStateReturn {
     initialized: authInitialized,
   } = useAuth();
 
-  const [appState, setAppState] = useState<AppState>({
+  const [appState, setAppState] = useState<InternalAppState>({
     isInitialized: false,
-    hasShownInitialLoading: false,
-    backgroundRefreshing: false,
     lastRefreshTime: 0,
     lastForegroundTime: Date.now(),
   });
@@ -60,9 +53,7 @@ export function useAppState(): UseAppStateReturn {
 
     // 状態をリセット
     setAppState(prev => ({
-      ...prev,
       isInitialized: false,
-      hasShownInitialLoading: false,
     }));
 
     // 即座に初期化完了（setTimeoutを使わない）
@@ -162,13 +153,6 @@ export function useAppState(): UseAppStateReturn {
     }
   }, [authInitialized, authLoading]); // initializationRef.currentを削除
 
-  // 初回ローディング完了フラグの管理
-  useEffect(() => {
-    if (appState.isInitialized && !appState.hasShownInitialLoading) {
-      setAppState(prev => ({ ...prev, hasShownInitialLoading: true }));
-    }
-  }, [appState.isInitialized, appState.hasShownInitialLoading]);
-
   // ローディング表示の判定
   const shouldShowLoading = useMemo(() => {
     // 認証が初期化されていない場合はローディング表示
@@ -180,34 +164,18 @@ export function useAppState(): UseAppStateReturn {
     // アプリが初期化されていない場合はローディング表示
     if (!appState.isInitialized) return true;
 
+    // それ以外の場合はローディング不要
     return false;
   }, [authInitialized, authLoading, appState.isInitialized]);
 
   // データ更新が必要かの判定
-  const shouldRefreshData = useCallback(() => {
-    if (!appState.isInitialized) return false;
-
-    const now = Date.now();
-    const timeSinceLastRefresh = now - appState.lastRefreshTime;
-
-    // 30分以上経過している場合は更新
-    return timeSinceLastRefresh > 30 * 60 * 1000;
-  }, [appState.isInitialized, appState.lastRefreshTime]);
+  // このロジックはuseAppLifecycleに移動
 
   // データ更新完了の記録
   const markDataRefreshed = useCallback(() => {
     setAppState(prev => ({
       ...prev,
       lastRefreshTime: Date.now(),
-      backgroundRefreshing: false,
-    }));
-  }, []);
-
-  // バックグラウンド更新状態の設定
-  const setBackgroundRefreshing = useCallback((refreshing: boolean) => {
-    setAppState(prev => ({
-      ...prev,
-      backgroundRefreshing: refreshing,
     }));
   }, []);
 
@@ -235,11 +203,8 @@ export function useAppState(): UseAppStateReturn {
 
   return {
     isInitialized: appState.isInitialized,
-    shouldShowLoading,
-    shouldRefreshData: shouldRefreshData(),
-    backgroundRefreshing: appState.backgroundRefreshing,
+    shouldShowLoading, // App.tsxで認証ローディングの表示制御に使用
     markDataRefreshed,
-    setBackgroundRefreshing,
     forceInitialization,
   };
 }
